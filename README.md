@@ -2,13 +2,23 @@
 
 Jogo digital de tabuleiro e estratégia desenvolvido pela **QiP Games**.
 
-Durante a noite, **Kin**, um gato branco, assume sua forma de samurai: roupas vermelhas e uma espada dourada. Sua missão é enfrentar demônios, proteger o tabuleiro e impedir que o caos tome conta do mundo.
+Durante a noite, **Kin**, um gato branco, assume sua forma de samurai. Sua missão é enfrentar demônios, proteger o tabuleiro e impedir que o caos tome conta do mundo.
+
+![Direção de arte 3D atual de Cats vs Demons](docs/images/current-3d-art-direction.png)
 
 ## Status
 
 🧪 Pré-produção / protótipo digital
 
 O projeto está começando sua implementação em **Unity**, inspirado no protótipo físico desenvolvido e testado com peças impressas em 3D.
+
+## Evolução do projeto
+
+Cats vs Demons nasceu em **2016** como um projeto do curso Técnico em Programação de Jogos Digitais do **SENAI**, com uma primeira versão 2D programada em **Java**. O desenvolvimento já incluía GDD, Scrum, concept art, protótipos digitais e uma adaptação física de tabuleiro.
+
+![Painel do projeto original em Java, 2016](docs/images/java-2016-game-concept.png)
+
+A versão atual retoma esse conceito com nova direção de arte 3D, regras revisadas e implementação em Unity 6.5. O objetivo do repositório é documentar publicamente essa evolução e apresentar o processo como portfólio de game design e programação.
 
 ## Visão do jogo
 
@@ -23,13 +33,13 @@ O projeto está começando sua implementação em **Unity**, inspirado no protó
 
 ### Herói
 
-- **Kin** — gato branco que se transforma em samurai durante a noite.
+- **Kin** — gato branco samurai.
 
 ### Demônios
 
-- Demônio do Sono
-- Demônio da Poeira
-- Demônio do Fogo
+- **Sonegron** — associado ao sono.
+- **Poerix** — associado à poeira.
+- **Flamurk** — associado ao fogo.
 
 ### Elementos do tabuleiro
 
@@ -89,6 +99,7 @@ docs/
 - [Game Design Document](docs/GDD.md)
 - [Arquitetura técnica](docs/ARCHITECTURE.md)
 - [Como contribuir](CONTRIBUTING.md)
+- [Game Concept original no Prezi](https://prezi.com/view/dgeKHwZEjqjX1hIC55NR/?referral_token=8JTueZlnB3FN)
 
 ## Autoria
 
