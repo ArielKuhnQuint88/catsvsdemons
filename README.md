@@ -1,16 +1,32 @@
 # Cats vs Demons
 
-Jogo digital de tabuleiro e estratégia desenvolvido pela **QiP Games**.
+**Cats vs Demons** é um jogo 3D de ação e Tower Defense desenvolvido pela **QiP Games**.
 
-Durante a noite, **Kin**, um gato branco, assume sua forma de samurai. Sua missão é enfrentar demônios, proteger o tabuleiro e impedir que o caos tome conta do mundo.
+Kin, um gato branco samurai, precisa proteger uma casa oriental contra ondas de demônios. As criaturas surgem no início dos caminhos e avançam continuamente até a casa. Kin combate os inimigos, recebe moedas por cada demônio derrotado e usa os recursos para comprar torres de defesa.
 
 ![Direção de arte 3D atual de Cats vs Demons](docs/images/current-3d-art-direction.png)
 
 ## Status
 
-🧪 Pré-produção / protótipo digital
+🧪 Pré-produção / protótipo digital em Unity.
 
-O projeto está começando sua implementação em **Unity**, inspirado no protótipo físico desenvolvido e testado com peças impressas em 3D.
+## Loop principal
+
+1. Demônios surgem nas entradas do mapa.
+2. Eles percorrem os caminhos em direção à casa central.
+3. Kin se movimenta pelo mapa e enfrenta os demônios.
+4. Cada inimigo derrotado concede moedas.
+5. As moedas são usadas para comprar torres de defesa.
+6. A proximidade de Kin ativa ou potencializa o poder de cada torre.
+7. Portais, bonsais e lanternas ajudam Kin a conter as ondas.
+8. A partida termina se os demônios alcançarem e destruírem a casa.
+
+## Mecânicas especiais
+
+- **Torres:** compradas com moedas; cada tipo possui um poder quando Kin está próximo.
+- **Portais:** transportam Kin para áreas próximas do portal atual ou de outros portais.
+- **Bonsais:** recuperam a vida de Kin.
+- **Lanternas:** reduzem a velocidade dos demônios próximos.
 
 ## Evolução do projeto
 
@@ -18,22 +34,13 @@ Cats vs Demons nasceu em **2016** como um projeto do curso Técnico em Programa�
 
 ![Painel do projeto original em Java, 2016](docs/images/java-2016-game-concept.png)
 
-A versão atual retoma esse conceito com nova direção de arte 3D, regras revisadas e implementação em Unity 6.5. O objetivo do repositório é documentar publicamente essa evolução e apresentar o processo como portfólio de game design e programação.
+A versão atual retoma o conceito como Tower Defense 3D, com nova direção de arte e implementação em Unity 6.5. Este repositório documenta publicamente sua evolução como portfólio de game design e programação.
 
-## Visão do jogo
-
-- Estratégia por turnos
-- Tabuleiro digital
-- Partidas para múltiplos jogadores
-- Regras simples e decisões táticas
-- Plataformas planejadas: PC, celular e realidade virtual
-- Estado de partida determinístico e preparado para multiplayer autoritativo
-
-## Elementos principais
+## Personagens
 
 ### Herói
 
-- **Kin** — gato branco samurai.
+- **Kin** — gato branco samurai controlado pelo jogador.
 
 ### Demônios
 
@@ -41,24 +48,15 @@ A versão atual retoma esse conceito com nova direção de arte 3D, regras revis
 - **Poerix** — associado à poeira.
 - **Flamurk** — associado ao fogo.
 
-### Elementos do tabuleiro
-
-- Portais
-- Bonsais
-- Lanternas
-- Torres e áreas de proteção
-
-## Tecnologia planejada
+## Tecnologia
 
 - Unity **6.5 (6000.5.4f1)**
 - Universal Render Pipeline (URP)
 - C#
-- Multiplayer baseado em ações e eventos
-- Estado único e serializável
-- Seed determinística
-- Snapshots ocasionais para sincronização
-
-A solução de rede será definida durante o protótipo, considerando Photon Fusion e Unity Netcode + Relay.
+- NavMesh ou sistema de caminhos para movimentação dos inimigos
+- ScriptableObjects para dados de inimigos, torres e ondas
+- Arquitetura orientada a eventos
+- Plataformas planejadas: PC e Android
 
 ## Estrutura planejada
 
@@ -70,11 +68,16 @@ Assets/
     ├── Materials/
     ├── Prefabs/
     ├── Scenes/
+    ├── ScriptableObjects/
     ├── Scripts/
     │   ├── Core/
-    │   ├── Gameplay/
-    │   ├── Networking/
-    │   └── UI/
+    │   ├── Combat/
+    │   ├── Economy/
+    │   ├── Enemies/
+    │   ├── Player/
+    │   ├── Towers/
+    │   ├── UI/
+    │   └── Waves/
     └── Tests/
 Packages/
 ProjectSettings/
@@ -84,14 +87,17 @@ docs/
 ## Roadmap inicial
 
 - [x] Definir versão da Unity
+- [x] Definir o loop principal do Tower Defense
 - [ ] Criar projeto-base
-- [ ] Modelar o estado serializável da partida
-- [ ] Implementar tabuleiro e movimentação
-- [ ] Implementar Kin e demônios
-- [ ] Implementar cartas, dados e turnos
+- [ ] Montar o mapa com a casa oriental e os caminhos
+- [ ] Implementar movimentação e combate de Kin
+- [ ] Implementar demônios seguindo os caminhos
+- [ ] Implementar vida e dano da casa
+- [ ] Implementar ondas de inimigos
+- [ ] Implementar moedas e compra de torres
+- [ ] Implementar poderes das torres ativados por proximidade
+- [ ] Implementar portais, bonsais e lanternas
 - [ ] Criar protótipo local jogável
-- [ ] Adicionar testes das regras
-- [ ] Prototipar multiplayer
 - [ ] Preparar builds para PC e Android
 
 ## Documentação
