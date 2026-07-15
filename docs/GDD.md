@@ -4,41 +4,50 @@
 
 ## 1. Conceito
 
-**Cats vs Demons** é um jogo de estratégia por turnos em um tabuleiro digital. Os jogadores controlam Kin, um gato branco que à noite se transforma em samurai, enquanto diferentes demônios avançam e alteram o estado da partida.
+**Cats vs Demons** é um jogo de estratégia por turnos em um tabuleiro digital. Os jogadores controlam Kin, um gato branco samurai, enquanto diferentes demônios avançam e alteram o estado da partida.
 
-## 2. Pilares
+![Direção de arte 3D atual](images/current-3d-art-direction.png)
+
+## 2. Histórico
+
+O projeto começou em **2016**, durante o curso Técnico em Programação de Jogos Digitais do SENAI. A primeira versão foi programada em **Java** e usava arte 2D. O processo já envolvia GDD, Scrum, concept art, protótipos digitais e uma adaptação física.
+
+![Painel da versão Java de 2016](images/java-2016-game-concept.png)
+
+A versão atual migra para Unity 6.5 e adota personagens e peças em 3D.
+
+## 3. Pilares
 
 1. Regras fáceis de compreender.
 2. Decisões táticas a cada turno.
 3. Partidas rejogáveis com eventos e posicionamentos variáveis.
-4. Identidade visual forte, misturando gatos, samurais e demônios.
+4. Identidade visual forte, misturando gatos, fantasia e demônios.
 5. Mesma lógica de jogo em PC, celular e realidade virtual.
 
-## 3. Personagens e peças
+## 4. Personagens e peças
 
 ### Kin
 
 - Gato branco.
-- Forma samurai com roupas vermelhas.
-- Espada dourada.
+- Samurai com roupa verde-escura, detalhes vermelhos e acessórios dourados.
 - Retorna ao centro quando atingido por um demônio.
 
 ### Demônios
 
-- Demônio do Sono
-- Demônio da Poeira
-- Demônio do Fogo
+- **Sonegron:** demônio roxo associado ao sono; entra em um caminho laranja.
+- **Poerix:** demônio felpudo associado à poeira; entra em um caminho laranja.
+- **Flamurk:** demônio de fogo; entra em um caminho laranja.
 
-Cada tipo deverá receber comportamento, habilidade e identidade visual próprios durante a prototipação.
+Os comportamentos e habilidades individuais serão definidos durante a prototipação.
 
 ### Elementos especiais
 
-- **Portal:** transporta personagens entre pontos conectados.
-- **Bonsai:** elemento estratégico a detalhar.
-- **Lanterna:** elemento estratégico a detalhar.
+- **Portal:** entra em um quadrado azul e transporta personagens entre pontos conectados.
+- **Bonsai:** entra em um quadrado azul; função estratégica a detalhar.
+- **Lanterna:** entra em um quadrado azul; função estratégica a detalhar.
 - **Torre:** atua nas oito casas adjacentes.
 
-## 4. Fluxo provisório do turno
+## 5. Fluxo provisório do turno
 
 1. Revelar ou resolver uma carta.
 2. Posicionar a peça ou aplicar o evento indicado.
@@ -48,7 +57,7 @@ Cada tipo deverá receber comportamento, habilidade e identidade visual próprio
 6. Verificar vitória ou derrota.
 7. Passar o turno.
 
-## 5. Regras conhecidas do protótipo físico
+## 6. Regras conhecidas do protótipo físico
 
 - Kin começa no centro.
 - O dado vermelho movimenta os demônios.
@@ -60,7 +69,7 @@ Cada tipo deverá receber comportamento, habilidade e identidade visual próprio
 
 Essas regras devem ser tratadas como hipóteses até serem testadas no protótipo digital.
 
-## 6. Modos planejados
+## 7. Modos planejados
 
 - Protótipo local
 - Multiplayer
@@ -68,16 +77,16 @@ Essas regras devem ser tratadas como hipóteses até serem testadas no protótip
 - Android
 - Realidade virtual em etapa posterior
 
-## 7. Direção visual
+## 8. Direção visual
 
-Fantasia estilizada com contraste entre o cotidiano felino e o mundo sobrenatural noturno. Kin deve ser reconhecível pela silhueta branca, roupa vermelha e espada dourada.
+Fantasia 3D estilizada, com proporções fofas e leitura clara das peças. Kin é reconhecível pela pelagem branca, olhos grandes, roupa verde-escura, faixa vermelha e acessórios dourados. Cada demônio possui cor e silhueta próprias para ser identificado rapidamente no tabuleiro.
 
-## 8. Perguntas em aberto
+## 9. Perguntas em aberto
 
 - Condição exata de vitória e derrota
 - Quantidade de jogadores
 - Tamanho e formato do tabuleiro
 - Função definitiva de bonsais e lanternas
-- Diferenças mecânicas entre os tipos de demônio
+- Habilidades específicas de Sonegron, Poerix e Flamurk
 - Duração desejada de uma partida
 - Progressão e recompensas
