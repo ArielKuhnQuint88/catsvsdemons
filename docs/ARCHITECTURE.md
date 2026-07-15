@@ -2,81 +2,148 @@
 
 ## Objetivo
 
-Construir primeiro um protótipo local confiável e manter a lógica preparada para multiplayer sem acoplar as regras à interface ou ao serviço de rede.
+Construir um protótipo local de Tower Defense em Unity no qual Kin combate demônios, protege a casa central, compra torres e interage com portais, bonsais e lanternas.
 
 ## Princípios
 
-- Servidor autoritativo no multiplayer.
-- Estado único e serializável da partida.
-- Jogadores enviam ações; a autoridade valida e produz eventos.
-- Aleatoriedade controlada por seed.
-- Snapshots ocasionais para recuperação e sincronização.
-- Regras independentes de GameObjects e cenas Unity.
-- Interface reage ao estado; não decide as regras.
+- Sistemas de gameplay separados da interface.
+- Dados de inimigos, torres e ondas configuráveis por ScriptableObjects.
+- Comunicação entre sistemas por eventos.
+- Pooling de inimigos e projéteis.
+- Caminhos dos inimigos independentes da lógica visual.
+- Valores de balanceamento editáveis sem alterar código.
+- Primeiro protótipo local; multiplayer fica fora do MVP.
 
-## Fluxo
+## Fluxo principal
 
 ```text
-PlayerAction
+WaveManager
     ↓
-ActionValidator
+EnemySpawner
     ↓
-GameRules
+Enemy follows Path
     ↓
-GameEvent[]
+Kin + Towers attack
     ↓
-GameState
+Enemy defeated → Coins
     ↓
-View / UI
+Build / Upgrade Towers
+    ↓
+Protect House
 ```
 
 ## Módulos sugeridos
 
 ### Core
 
+- `GameManager`
 - `GameState`
-- `MatchSettings`
-- `PlayerState`
-- `BoardState`
-- `DeterministicRandom`
+- `EventBus`
+- `ObjectPool`
 
-### Gameplay
+### Player
 
-- `TurnSystem`
-- `MovementSystem`
-- `CardSystem`
-- `DiceSystem`
-- `CombatSystem`
-- `VictorySystem`
+- `KinController`
+- `KinMovement`
+- `KinCombat`
+- `KinHealth`
+- `KinProximitySensor`
 
-### Actions
+### Enemies
 
-- `RollDiceAction`
-- `MoveKinAction`
-- `PlacePieceAction`
-- `UsePortalAction`
-- `EndTurnAction`
+- `EnemyController`
+- `EnemyMovement`
+- `EnemyHealth`
+- `EnemyAttack`
+- `EnemyData`
 
-### Events
+### Waves
 
-- `DiceRolledEvent`
-- `PieceMovedEvent`
-- `DemonRemovedEvent`
-- `PlayerReturnedToCenterEvent`
-- `TurnEndedEvent`
-- `MatchFinishedEvent`
+- `WaveManager`
+- `EnemySpawner`
+- `WaveData`
+- `SpawnEntry`
+- `PathController`
 
-### Presentation
+### House
 
-- Tabuleiro e peças
-- Animação
-- Áudio
-- UI e feedback
-- Input específico de cada plataforma
+- `HouseHealth`
+- `HouseDamageReceiver`
+- `DefeatController`
 
-### Networking
+### Economy
 
-A camada de rede deverá transportar ações, eventos e snapshots. A primeira versão será local. Photon Fusion e Unity Netcode + Relay serão comparados somente após a lógica central estar testável.
+- `Wallet`
+- `CoinReward`
+- `TowerShop`
+- `BuildSpot`
+
+### Towers
+
+- `TowerController`
+- `TowerTargeting`
+- `TowerAttack`
+- `TowerData`
+- `TowerProximityPower`
+
+### Map Elements
+
+- `Portal`
+- `PortalNetwork`
+- `BonsaiHealingZone`
+- `LanternSlowZone`
+
+### UI
+
+- Vida de Kin
+- Vida da casa
+- Moedas
+- Onda atual
+- Loja de torres
+- Indicadores de áreas de efeito
+
+## Dados configuráveis
+
+### EnemyData
+
+- Vida
+- Velocidade
+- Dano
+- Recompensa
+- Prefab
+- Habilidades
+
+### TowerData
+
+- Custo
+- Alcance
+- Dano ou efeito
+- Cadência
+- Poder de proximidade
+- Prefab
+
+### WaveData
+
+- Tipos de inimigos
+- Quantidades
+- Intervalos
+- Entradas e caminhos
+- Recompensa da onda
+
+## Ordem de implementação
+
+1. Casa central com vida.
+2. Um caminho e uma entrada.
+3. Um demônio seguindo o caminho.
+4. Kin com movimento, ataque e vida.
+5. Dano e recompensa em moedas.
+6. Uma torre comprável.
+7. Poder da torre ativado pela proximidade de Kin.
+8. Sistema de ondas.
+9. Portais.
+10. Bonsais.
+11. Lanternas.
+12. Novos inimigos, torres e caminhos.
 
 ## Estrutura Unity
 
@@ -88,12 +155,20 @@ Assets/_Project/
 ├── Prefabs/
 ├── Scenes/
 ├── ScriptableObjects/
+│   ├── Enemies/
+│   ├── Towers/
+│   └── Waves/
 ├── Scripts/
 │   ├── Core/
-│   ├── Gameplay/
-│   ├── Networking/
-│   ├── Presentation/
-│   └── UI/
+│   ├── Combat/
+│   ├── Economy/
+│   ├── Enemies/
+│   ├── House/
+│   ├── Map/
+│   ├── Player/
+│   ├── Towers/
+│   ├── UI/
+│   └── Waves/
 └── Tests/
     ├── EditMode/
     └── PlayMode/
@@ -101,4 +176,4 @@ Assets/_Project/
 
 ## Segurança
 
-Nunca versionar chaves, tokens, senhas, keystores ou arquivos locais de serviços. Usar variáveis de ambiente e arquivos de exemplo sem valores reais.
+Nunca versionar chaves, tokens, senhas, keystores ou arquivos locais de serviços.
