@@ -40,7 +40,8 @@ O projeto está começando sua implementação em **Unity**, inspirado no protó
 
 ## Tecnologia planejada
 
-- Unity
+- Unity **6.5 (6000.5.4f1)**
+- Universal Render Pipeline (URP)
 - C#
 - Multiplayer baseado em ações e eventos
 - Estado único e serializável
@@ -72,7 +73,7 @@ docs/
 
 ## Roadmap inicial
 
-- [ ] Definir versão da Unity
+- [x] Definir versão da Unity
 - [ ] Criar projeto-base
 - [ ] Modelar o estado serializável da partida
 - [ ] Implementar tabuleiro e movimentação
