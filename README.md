@@ -88,6 +88,7 @@ docs/
 
 - [x] Definir versão da Unity
 - [x] Definir o loop principal do Tower Defense
+- [x] Definir câmera isométrica estática e composição da tela
 - [ ] Criar projeto-base
 - [ ] Montar o mapa com a casa oriental e os caminhos
 - [ ] Implementar movimentação e combate de Kin
@@ -103,6 +104,7 @@ docs/
 ## Documentação
 
 - [Game Design Document](docs/GDD.md)
+- [Level design e layout da interface](docs/LEVEL_DESIGN.md)
 - [Arquitetura técnica](docs/ARCHITECTURE.md)
 - [Como contribuir](CONTRIBUTING.md)
 - [Game Concept original no Prezi](https://prezi.com/view/dgeKHwZEjqjX1hIC55NR/?referral_token=8JTueZlnB3FN)
