@@ -61,6 +61,27 @@ namespace CatsVsDemons.Defense
             }
         }
 
+        public void ClearDefense()
+        {
+            if (!isOccupied)
+            {
+                return;
+            }
+
+            for (int index = transform.childCount - 1; index >= 0; index--)
+            {
+                Destroy(transform.GetChild(index).gameObject);
+            }
+
+            isOccupied = false;
+
+            Renderer spotRenderer = GetComponent<Renderer>();
+            if (spotRenderer != null)
+            {
+                spotRenderer.enabled = true;
+            }
+        }
+
         private void CreateLantern()
         {
             GameObject tower = CreateRoot("LanternTower_Prototype");
