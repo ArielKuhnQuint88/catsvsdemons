@@ -20,6 +20,8 @@ namespace CatsVsDemons.UI
         private GUIStyle messageStyle;
         private int currentWave;
         private int totalWaves;
+        private int preparationSeconds;
+        private bool preparing;
         private bool gameOver;
         private bool kinDown;
         private bool victory;
@@ -61,6 +63,8 @@ namespace CatsVsDemons.UI
                 currentWave = waves.CurrentWave;
                 totalWaves = waves.TotalWaves;
                 waves.WaveStarted += HandleWaveStarted;
+                waves.PreparationChanged += HandlePreparation;
+                waves.PreparationEnded += HandlePreparationEnded;
                 waves.Victory += HandleVictory;
             }
         }
@@ -80,6 +84,8 @@ namespace CatsVsDemons.UI
             if (waves != null)
             {
                 waves.WaveStarted -= HandleWaveStarted;
+                waves.PreparationChanged -= HandlePreparation;
+                waves.PreparationEnded -= HandlePreparationEnded;
                 waves.Victory -= HandleVictory;
             }
 
@@ -130,7 +136,7 @@ namespace CatsVsDemons.UI
             );
             GUI.Label(
                 new Rect(34f, 132f, 500f, 30f),
-                $"Onda: {currentWave}/{totalWaves}",
+                GetWaveText(),
                 helpStyle
             );
             GUI.Label(
@@ -190,6 +196,28 @@ namespace CatsVsDemons.UI
         {
             currentWave = wave;
             totalWaves = total;
+        }
+
+        private void HandlePreparation(int nextWave, int seconds)
+        {
+            preparing = true;
+            currentWave = nextWave;
+            preparationSeconds = seconds;
+        }
+
+        private void HandlePreparationEnded()
+        {
+            preparing = false;
+        }
+
+        private string GetWaveText()
+        {
+            if (preparing)
+            {
+                return $"Onda {currentWave} começa em: {preparationSeconds}s";
+            }
+
+            return $"Onda: {currentWave}/{totalWaves}";
         }
 
         private void HandleGameOver()
