@@ -4,6 +4,7 @@ using CatsVsDemons.House;
 using CatsVsDemons.Player;
 using CatsVsDemons.Waves;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CatsVsDemons.UI
 {
@@ -22,6 +23,7 @@ namespace CatsVsDemons.UI
         private int totalWaves;
         private int preparationSeconds;
         private bool preparing;
+        private bool paused;
         private bool gameOver;
         private bool kinDown;
         private bool victory;
@@ -96,6 +98,11 @@ namespace CatsVsDemons.UI
         {
             DrawStatusPanel();
 
+            if (!gameOver && !kinDown && !victory)
+            {
+                DrawPauseButton();
+            }
+
             if (gameOver)
             {
                 DrawResult("A CASA CAIU!");
@@ -107,6 +114,10 @@ namespace CatsVsDemons.UI
             else if (victory)
             {
                 DrawResult("VITÓRIA!");
+            }
+            else if (paused)
+            {
+                DrawPauseMenu();
             }
         }
 
@@ -187,9 +198,86 @@ namespace CatsVsDemons.UI
             );
             GUI.Label(
                 new Rect(0f, Screen.height * 0.5f, Screen.width, 60f),
-                "Pare e aperte Play para tentar novamente.",
+                "A floresta ainda precisa de Kin.",
                 messageStyle
             );
+
+            if (GUI.Button(
+                new Rect(
+                    (Screen.width - 220f) * 0.5f,
+                    Screen.height * 0.6f,
+                    220f,
+                    52f
+                ),
+                "Reiniciar"))
+            {
+                RestartGame();
+            }
+        }
+
+        private void DrawPauseButton()
+        {
+            if (GUI.Button(
+                new Rect(Screen.width - 130f, 22f, 105f, 42f),
+                paused ? "Continuar" : "Pausar"))
+            {
+                paused = !paused;
+                Time.timeScale = paused ? 0f : 1f;
+            }
+        }
+
+        private void DrawPauseMenu()
+        {
+            GUI.Box(
+                new Rect(0f, 0f, Screen.width, Screen.height),
+                GUIContent.none
+            );
+            GUI.Label(
+                new Rect(0f, Screen.height * 0.34f, Screen.width, 90f),
+                "PAUSADO",
+                resultStyle
+            );
+
+            if (GUI.Button(
+                new Rect(
+                    (Screen.width - 220f) * 0.5f,
+                    Screen.height * 0.5f,
+                    220f,
+                    52f
+                ),
+                "Continuar"))
+            {
+                paused = false;
+                Time.timeScale = 1f;
+            }
+
+            if (GUI.Button(
+                new Rect(
+                    (Screen.width - 220f) * 0.5f,
+                    Screen.height * 0.5f + 66f,
+                    220f,
+                    52f
+                ),
+                "Reiniciar"))
+            {
+                RestartGame();
+            }
+        }
+
+        private void RestartGame()
+        {
+            Time.timeScale = 1f;
+            Scene activeScene = SceneManager.GetActiveScene();
+
+            if (activeScene.buildIndex < 0)
+            {
+                Debug.LogError(
+                    "Execute Tools/Cats vs Demons/Prepare Playable Build."
+                );
+                return;
+            }
+
+            SceneManager.LoadScene(activeScene.buildIndex);
         }
 
         private void HandleWaveStarted(int wave, int total)
