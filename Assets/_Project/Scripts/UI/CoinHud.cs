@@ -20,6 +20,8 @@ namespace CatsVsDemons.UI
         private GUIStyle resultStyle;
         private GUIStyle messageStyle;
         private GUIStyle countdownStyle;
+        private int currentPhase;
+        private int totalPhases;
         private int currentWave;
         private int totalWaves;
         private int preparationSeconds;
@@ -69,8 +71,11 @@ namespace CatsVsDemons.UI
 
             if (waves != null)
             {
+                currentPhase = waves.CurrentPhase;
+                totalPhases = waves.TotalPhases;
                 currentWave = waves.CurrentWave;
                 totalWaves = waves.TotalWaves;
+                waves.PhaseStarted += HandlePhaseStarted;
                 waves.WaveStarted += HandleWaveStarted;
                 waves.PreparationChanged += HandlePreparation;
                 waves.PreparationEnded += HandlePreparationEnded;
@@ -92,6 +97,7 @@ namespace CatsVsDemons.UI
 
             if (waves != null)
             {
+                waves.PhaseStarted -= HandlePhaseStarted;
                 waves.WaveStarted -= HandleWaveStarted;
                 waves.PreparationChanged -= HandlePreparation;
                 waves.PreparationEnded -= HandlePreparationEnded;
@@ -232,7 +238,7 @@ namespace CatsVsDemons.UI
                     Screen.width,
                     130f
                 ),
-                preparationSeconds.ToString(),
+                $"FASE {currentPhase}\n{preparationSeconds}",
                 countdownStyle
             );
         }
@@ -332,6 +338,13 @@ namespace CatsVsDemons.UI
             SceneManager.LoadScene(activeScene.buildIndex);
         }
 
+        private void HandlePhaseStarted(int phase, int total)
+        {
+            currentPhase = phase;
+            totalPhases = total;
+            currentWave = 0;
+        }
+
         private void HandleWaveStarted(int wave, int total)
         {
             currentWave = wave;
@@ -354,10 +367,14 @@ namespace CatsVsDemons.UI
         {
             if (preparing)
             {
-                return $"Onda {currentWave} começa em: {preparationSeconds}s";
+                return
+                    $"Fase {currentPhase}/{totalPhases} | " +
+                    $"Onda {currentWave} em {preparationSeconds}s";
             }
 
-            return $"Onda: {currentWave}/{totalWaves}";
+            return
+                $"Fase: {currentPhase}/{totalPhases} | " +
+                $"Onda: {currentWave}/{totalWaves}";
         }
 
         private void HandleGameOver()
