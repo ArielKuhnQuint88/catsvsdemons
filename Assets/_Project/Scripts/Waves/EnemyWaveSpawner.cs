@@ -27,6 +27,8 @@ namespace CatsVsDemons.Waves
         public int TotalWaves => totalWaves;
 
         public event System.Action<int, int> WaveStarted;
+        public event System.Action<int, int> PreparationChanged;
+        public event System.Action PreparationEnded;
         public event System.Action Victory;
 
         public void Initialize(GameObject template, Transform root)
@@ -60,10 +62,20 @@ namespace CatsVsDemons.Waves
 
         private IEnumerator RunWaves()
         {
-            yield return new WaitForSeconds(1f);
-
             for (int wave = 1; wave <= totalWaves; wave++)
             {
+                if (HouseWasDestroyed())
+                {
+                    yield break;
+                }
+
+                float preparation =
+                    wave == 1 ? 8f : timeBetweenWaves;
+
+                yield return StartCoroutine(
+                    RunPreparation(wave, preparation)
+                );
+
                 if (HouseWasDestroyed())
                 {
                     yield break;
@@ -95,10 +107,6 @@ namespace CatsVsDemons.Waves
                     () => HouseWasDestroyed() || CountActiveEnemies() == 0
                 );
 
-                if (wave < totalWaves && !HouseWasDestroyed())
-                {
-                    yield return new WaitForSeconds(timeBetweenWaves);
-                }
             }
 
             if (!HouseWasDestroyed())
@@ -106,6 +114,27 @@ namespace CatsVsDemons.Waves
                 Debug.Log("Victory: all test waves were completed.");
                 Victory?.Invoke();
             }
+        }
+
+        private IEnumerator RunPreparation(
+            int nextWave,
+            float duration)
+        {
+            int seconds = Mathf.CeilToInt(duration);
+
+            while (seconds > 0)
+            {
+                if (HouseWasDestroyed())
+                {
+                    yield break;
+                }
+
+                PreparationChanged?.Invoke(nextWave, seconds);
+                yield return new WaitForSeconds(1f);
+                seconds--;
+            }
+
+            PreparationEnded?.Invoke();
         }
 
         private void SpawnEnemy(int enemyIndex)
