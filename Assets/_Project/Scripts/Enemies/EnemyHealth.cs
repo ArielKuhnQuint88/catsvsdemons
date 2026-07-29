@@ -20,7 +20,7 @@ namespace CatsVsDemons.Enemies
         private void Awake()
         {
             CurrentHealth = maxHealth;
-            wallet = Object.FindFirstObjectByType<Wallet>();
+            wallet = UnityEngine.Object.FindFirstObjectByType<Wallet>();
         }
 
         private void Start()
@@ -50,7 +50,7 @@ namespace CatsVsDemons.Enemies
         {
             if (wallet == null)
             {
-                wallet = Object.FindFirstObjectByType<Wallet>();
+                wallet = UnityEngine.Object.FindFirstObjectByType<Wallet>();
             }
 
             if (wallet != null)
