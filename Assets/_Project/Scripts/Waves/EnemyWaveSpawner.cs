@@ -111,19 +111,19 @@ namespace CatsVsDemons.Waves
         private void SpawnEnemy(int enemyIndex)
         {
             GameObject enemy = Instantiate(enemyTemplate, enemiesRoot);
-            enemy.name = $"Demon_Wave_{enemyIndex + 1:00}";
+
+            string selectedPath =
+                pathNames[enemyIndex % pathNames.Length];
 
             EnemyPathFollower follower =
                 enemy.GetComponent<EnemyPathFollower>();
 
             if (follower != null)
             {
-                string selectedPath =
-                    pathNames[enemyIndex % pathNames.Length];
-
                 follower.Configure(selectedPath);
-                follower.SetHouseDamage(10);
             }
+
+            ConfigureDemon(enemy, enemyIndex);
 
             if (enemy.GetComponent<EnemyContactDamage>() == null)
             {
@@ -131,6 +131,67 @@ namespace CatsVsDemons.Waves
             }
 
             enemy.SetActive(true);
+        }
+
+        private void ConfigureDemon(GameObject enemy, int enemyIndex)
+        {
+            int type = enemyIndex % 3;
+            string demonName;
+            int health;
+            int reward;
+            float speed;
+            int houseDamage;
+            Color color;
+
+            switch (type)
+            {
+                case 1:
+                    demonName = "Poeirix";
+                    health = 20;
+                    reward = 4;
+                    speed = 4.2f;
+                    houseDamage = 8;
+                    color = new Color(0.78f, 0.68f, 0.48f);
+                    break;
+                case 2:
+                    demonName = "Flamur";
+                    health = 50;
+                    reward = 8;
+                    speed = 2.1f;
+                    houseDamage = 20;
+                    color = new Color(1f, 0.22f, 0.04f);
+                    break;
+                default:
+                    demonName = "Sonegron";
+                    health = 30;
+                    reward = 5;
+                    speed = 3f;
+                    houseDamage = 10;
+                    color = new Color(0.38f, 0.12f, 0.68f);
+                    break;
+            }
+
+            enemy.name = $"{demonName}_{enemyIndex + 1:00}";
+
+            EnemyHealth enemyHealth = enemy.GetComponent<EnemyHealth>();
+            if (enemyHealth != null)
+            {
+                enemyHealth.Configure(health, reward);
+            }
+
+            EnemyPathFollower follower =
+                enemy.GetComponent<EnemyPathFollower>();
+
+            if (follower != null)
+            {
+                follower.ConfigureMovement(speed, houseDamage);
+            }
+
+            Renderer renderer = enemy.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = color;
+            }
         }
 
         private int CountActiveEnemies()
