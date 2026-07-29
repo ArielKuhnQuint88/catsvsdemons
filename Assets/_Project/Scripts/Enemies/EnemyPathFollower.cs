@@ -24,6 +24,12 @@ namespace CatsVsDemons.Enemies
             pathName = newPathName;
         }
 
+        public void ConfigureMovement(float speed, int damage)
+        {
+            moveSpeed = Mathf.Max(0.1f, speed);
+            houseDamage = Mathf.Max(0, damage);
+        }
+
         public void SetHouseDamage(int damage)
         {
             houseDamage = Mathf.Max(0, damage);
