@@ -23,9 +23,13 @@ namespace CatsVsDemons.Waves
         private HouseHealth houseHealth;
         private Transform enemiesRoot;
 
-        public void Initialize(
-            GameObject template,
-            Transform root)
+        public int CurrentWave { get; private set; }
+        public int TotalWaves => totalWaves;
+
+        public event System.Action<int, int> WaveStarted;
+        public event System.Action Victory;
+
+        public void Initialize(GameObject template, Transform root)
         {
             enemyTemplate = template;
             enemiesRoot = root;
@@ -66,6 +70,9 @@ namespace CatsVsDemons.Waves
                     yield break;
                 }
 
+                CurrentWave = wave;
+                WaveStarted?.Invoke(CurrentWave, totalWaves);
+
                 int enemyCount =
                     firstWaveEnemies +
                     ((wave - 1) * enemiesAddedPerWave);
@@ -98,16 +105,13 @@ namespace CatsVsDemons.Waves
             if (!HouseWasDestroyed())
             {
                 Debug.Log("Victory: all test waves were completed.");
+                Victory?.Invoke();
             }
         }
 
         private void SpawnEnemy(int enemyIndex)
         {
-            GameObject enemy = Instantiate(
-                enemyTemplate,
-                enemiesRoot
-            );
-
+            GameObject enemy = Instantiate(enemyTemplate, enemiesRoot);
             enemy.name = $"Demon_Wave_{enemyIndex + 1:00}";
 
             EnemyPathFollower follower =
