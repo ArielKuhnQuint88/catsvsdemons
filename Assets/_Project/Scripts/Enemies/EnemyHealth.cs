@@ -28,6 +28,14 @@ namespace CatsVsDemons.Enemies
             HealthChanged?.Invoke(CurrentHealth, maxHealth);
         }
 
+        public void Configure(int health, int reward)
+        {
+            maxHealth = Mathf.Max(1, health);
+            coinReward = Mathf.Max(0, reward);
+            CurrentHealth = maxHealth;
+            HealthChanged?.Invoke(CurrentHealth, maxHealth);
+        }
+
         public void TakeDamage(int amount)
         {
             if (amount <= 0 || IsDead)
