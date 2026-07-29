@@ -1,3 +1,4 @@
+using System;
 using CatsVsDemons.Economy;
 using UnityEngine;
 
@@ -9,7 +10,10 @@ namespace CatsVsDemons.Enemies
         [SerializeField] private int coinReward = 5;
 
         public int CurrentHealth { get; private set; }
+        public int MaxHealth => maxHealth;
         public bool IsDead => CurrentHealth <= 0;
+
+        public event Action<int, int> HealthChanged;
 
         private Wallet wallet;
 
@@ -17,6 +21,11 @@ namespace CatsVsDemons.Enemies
         {
             CurrentHealth = maxHealth;
             wallet = Object.FindFirstObjectByType<Wallet>();
+        }
+
+        private void Start()
+        {
+            HealthChanged?.Invoke(CurrentHealth, maxHealth);
         }
 
         public void TakeDamage(int amount)
@@ -27,6 +36,8 @@ namespace CatsVsDemons.Enemies
             }
 
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
+            HealthChanged?.Invoke(CurrentHealth, maxHealth);
+
             Debug.Log($"{name} health: {CurrentHealth}/{maxHealth}");
 
             if (IsDead)
