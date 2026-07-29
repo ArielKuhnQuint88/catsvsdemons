@@ -49,22 +49,16 @@ namespace CatsVsDemons.Editor
                 walletData.ApplyModifiedProperties();
             }
 
-            CoinHud hud = systems.GetComponent<CoinHud>();
-            if (hud == null)
+            if (systems.GetComponent<CoinHud>() == null)
             {
                 systems.AddComponent<CoinHud>();
             }
 
             int configuredSpots = 0;
-            Transform[] transforms =
-                buildSpots.GetComponentsInChildren<Transform>(true);
 
-            foreach (Transform spot in transforms)
+            for (int index = 0; index < buildSpots.transform.childCount; index++)
             {
-                if (spot == buildSpots.transform)
-                {
-                    continue;
-                }
+                Transform spot = buildSpots.transform.GetChild(index);
 
                 if (spot.GetComponent<BuildSpot>() == null)
                 {
