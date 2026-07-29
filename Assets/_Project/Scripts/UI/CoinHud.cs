@@ -234,9 +234,9 @@ namespace CatsVsDemons.UI
             GUI.Label(
                 new Rect(
                     0f,
-                    (Screen.height - 130f) * 0.5f,
+                    (Screen.height - 220f) * 0.5f,
                     Screen.width,
-                    130f
+                    220f
                 ),
                 $"FASE {currentPhase}\n{preparationSeconds}",
                 countdownStyle
