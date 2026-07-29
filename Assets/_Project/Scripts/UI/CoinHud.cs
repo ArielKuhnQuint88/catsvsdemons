@@ -156,7 +156,7 @@ namespace CatsVsDemons.UI
 
             if (GUI.Button(
                 new Rect(376f, 205f, 155f, 42f),
-                "Portal - 20"))
+                "Portal - 10"))
             {
                 TowerBuildSelection.Select(DefenseType.Portal);
             }
