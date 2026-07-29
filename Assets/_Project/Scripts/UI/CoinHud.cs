@@ -1,5 +1,6 @@
 using CatsVsDemons.Economy;
 using CatsVsDemons.House;
+using CatsVsDemons.Waves;
 using UnityEngine;
 
 namespace CatsVsDemons.UI
@@ -8,16 +9,22 @@ namespace CatsVsDemons.UI
     {
         private Wallet wallet;
         private HouseHealth house;
+        private EnemyWaveSpawner waves;
         private GUIStyle coinStyle;
         private GUIStyle healthStyle;
         private GUIStyle helpStyle;
-        private GUIStyle gameOverStyle;
+        private GUIStyle resultStyle;
+        private GUIStyle messageStyle;
+        private int currentWave;
+        private int totalWaves;
         private bool gameOver;
+        private bool victory;
 
         private void Awake()
         {
             wallet = Object.FindFirstObjectByType<Wallet>();
             house = Object.FindFirstObjectByType<HouseHealth>();
+            waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
 
             coinStyle = CreateStyle(
                 28,
@@ -30,20 +37,25 @@ namespace CatsVsDemons.UI
                 FontStyle.Bold
             );
             helpStyle = CreateStyle(17, Color.white, FontStyle.Normal);
-            gameOverStyle = CreateStyle(52, Color.white, FontStyle.Bold);
-            gameOverStyle.alignment = TextAnchor.MiddleCenter;
+            resultStyle = CreateStyle(52, Color.white, FontStyle.Bold);
+            resultStyle.alignment = TextAnchor.MiddleCenter;
+            messageStyle = CreateStyle(22, Color.white, FontStyle.Normal);
+            messageStyle.alignment = TextAnchor.MiddleCenter;
         }
 
         private void Start()
         {
-            if (house == null)
-            {
-                house = Object.FindFirstObjectByType<HouseHealth>();
-            }
-
             if (house != null)
             {
                 house.Destroyed += HandleGameOver;
+            }
+
+            if (waves != null)
+            {
+                currentWave = waves.CurrentWave;
+                totalWaves = waves.TotalWaves;
+                waves.WaveStarted += HandleWaveStarted;
+                waves.Victory += HandleVictory;
             }
         }
 
@@ -52,6 +64,12 @@ namespace CatsVsDemons.UI
             if (house != null)
             {
                 house.Destroyed -= HandleGameOver;
+            }
+
+            if (waves != null)
+            {
+                waves.WaveStarted -= HandleWaveStarted;
+                waves.Victory -= HandleVictory;
             }
 
             Time.timeScale = 1f;
@@ -63,7 +81,11 @@ namespace CatsVsDemons.UI
 
             if (gameOver)
             {
-                DrawGameOver();
+                DrawResult("A CASA CAIU!");
+            }
+            else if (victory)
+            {
+                DrawResult("VITÓRIA!");
             }
         }
 
@@ -73,7 +95,7 @@ namespace CatsVsDemons.UI
             int currentHealth = house != null ? house.CurrentHealth : 0;
             int maxHealth = house != null ? house.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 390f, 132f), GUIContent.none);
+            GUI.Box(new Rect(18f, 18f, 390f, 170f), GUIContent.none);
             GUI.Label(
                 new Rect(34f, 28f, 350f, 38f),
                 $"Moedas: {coins}",
@@ -85,13 +107,18 @@ namespace CatsVsDemons.UI
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 108f, 350f, 28f),
+                new Rect(34f, 100f, 350f, 30f),
+                $"Onda: {currentWave}/{totalWaves}",
+                helpStyle
+            );
+            GUI.Label(
+                new Rect(34f, 142f, 350f, 28f),
                 "Clique em um ponto para construir (10)",
                 helpStyle
             );
         }
 
-        private void DrawGameOver()
+        private void DrawResult(string title)
         {
             GUI.Box(
                 new Rect(0f, 0f, Screen.width, Screen.height),
@@ -99,14 +126,9 @@ namespace CatsVsDemons.UI
             );
             GUI.Label(
                 new Rect(0f, Screen.height * 0.36f, Screen.width, 90f),
-                "A CASA CAIU!",
-                gameOverStyle
+                title,
+                resultStyle
             );
-
-            GUIStyle messageStyle =
-                CreateStyle(22, Color.white, FontStyle.Normal);
-            messageStyle.alignment = TextAnchor.MiddleCenter;
-
             GUI.Label(
                 new Rect(0f, Screen.height * 0.5f, Screen.width, 60f),
                 "Pare e aperte Play para tentar novamente.",
@@ -114,9 +136,21 @@ namespace CatsVsDemons.UI
             );
         }
 
+        private void HandleWaveStarted(int wave, int total)
+        {
+            currentWave = wave;
+            totalWaves = total;
+        }
+
         private void HandleGameOver()
         {
             gameOver = true;
+            Time.timeScale = 0f;
+        }
+
+        private void HandleVictory()
+        {
+            victory = true;
             Time.timeScale = 0f;
         }
 
