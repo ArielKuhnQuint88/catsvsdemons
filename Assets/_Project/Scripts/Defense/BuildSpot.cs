@@ -35,11 +35,11 @@ namespace CatsVsDemons.Defense
             }
 
             isOccupied = true;
-            CreateTowerVisual();
+            CreateTower();
             Debug.Log($"Torre construída por {towerCost} moedas.");
         }
 
-        private void CreateTowerVisual()
+        private void CreateTower()
         {
             GameObject tower = new GameObject("LanternTower_Prototype");
             tower.transform.SetParent(transform);
@@ -69,6 +69,8 @@ namespace CatsVsDemons.Defense
             lantern.transform.localScale = new Vector3(0.75f, 0.75f, 0.75f);
             RemoveCollider(lantern);
             SetColor(lantern, new Color(1f, 0.35f, 0.05f));
+
+            tower.AddComponent<TowerAttack>();
 
             Renderer spotRenderer = GetComponent<Renderer>();
             if (spotRenderer != null)
