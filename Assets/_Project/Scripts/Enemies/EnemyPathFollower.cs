@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CatsVsDemons.House;
 using UnityEngine;
 
 namespace CatsVsDemons.Enemies
@@ -10,6 +11,7 @@ namespace CatsVsDemons.Enemies
         [SerializeField] private float moveSpeed = 3f;
         [SerializeField] private float rotationSpeed = 10f;
         [SerializeField] private float waypointDistance = 0.15f;
+        [SerializeField] private int houseDamage = 10;
 
         private readonly List<Transform> waypoints = new();
         private int currentWaypoint;
@@ -18,6 +20,11 @@ namespace CatsVsDemons.Enemies
         public void Configure(string newPathName)
         {
             pathName = newPathName;
+        }
+
+        public void SetHouseDamage(int damage)
+        {
+            houseDamage = Mathf.Max(0, damage);
         }
 
         private void Start()
@@ -51,8 +58,7 @@ namespace CatsVsDemons.Enemies
 
                 if (currentWaypoint >= waypoints.Count)
                 {
-                    reachedDestination = true;
-                    Debug.Log($"{name} reached the house.");
+                    ReachHouse();
                 }
 
                 return;
@@ -66,6 +72,25 @@ namespace CatsVsDemons.Enemies
                 Quaternion.LookRotation(direction, Vector3.up),
                 rotationSpeed * Time.deltaTime
             );
+        }
+
+        private void ReachHouse()
+        {
+            reachedDestination = true;
+
+            HouseHealth house =
+                UnityEngine.Object.FindFirstObjectByType<HouseHealth>();
+
+            if (house != null)
+            {
+                house.TakeDamage(houseDamage);
+            }
+            else
+            {
+                Debug.LogWarning("HouseHealth was not found.", this);
+            }
+
+            Destroy(gameObject);
         }
 
         private void LoadPath()
