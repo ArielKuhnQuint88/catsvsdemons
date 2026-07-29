@@ -169,6 +169,11 @@ namespace CatsVsDemons.UI
                 helpStyle
             );
 
+            int previousButtonSize = GUI.skin.button.fontSize;
+            FontStyle previousButtonStyle = GUI.skin.button.fontStyle;
+            GUI.skin.button.fontSize = 20;
+            GUI.skin.button.fontStyle = FontStyle.Bold;
+
             DrawDefenseButton(
                 new Rect(34f, 205f, 200f, 70f),
                 "LANTERNA\n10 moedas",
@@ -187,6 +192,9 @@ namespace CatsVsDemons.UI
                 DefenseType.Portal,
                 new Color(0.08f, 0.55f, 1f)
             );
+
+            GUI.skin.button.fontSize = previousButtonSize;
+            GUI.skin.button.fontStyle = previousButtonStyle;
 
             GUI.Label(
                 new Rect(34f, 290f, 620f, 24f),
