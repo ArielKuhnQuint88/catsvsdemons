@@ -1,3 +1,4 @@
+using CatsVsDemons.Defense;
 using CatsVsDemons.Economy;
 using CatsVsDemons.House;
 using CatsVsDemons.Player;
@@ -115,30 +116,51 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 390f, 202f), GUIContent.none);
+            GUI.Box(new Rect(18f, 18f, 410f, 280f), GUIContent.none);
             GUI.Label(
-                new Rect(34f, 28f, 350f, 38f),
+                new Rect(34f, 28f, 360f, 38f),
                 $"Moedas: {coins}",
                 coinStyle
             );
             GUI.Label(
-                new Rect(34f, 64f, 350f, 31f),
+                new Rect(34f, 64f, 360f, 31f),
                 $"Casa: {houseHealth}/{houseMax}",
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 96f, 350f, 31f),
+                new Rect(34f, 96f, 360f, 31f),
                 $"Kin: {kinHealth}/{kinMax}",
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 132f, 350f, 30f),
+                new Rect(34f, 132f, 360f, 30f),
                 $"Onda: {currentWave}/{totalWaves}",
                 helpStyle
             );
             GUI.Label(
-                new Rect(34f, 174f, 350f, 28f),
-                "Clique em um ponto para construir (10)",
+                new Rect(34f, 166f, 360f, 28f),
+                $"Selecionado: {TowerBuildSelection.GetDisplayName()} " +
+                $"({TowerBuildSelection.GetCost()})",
+                helpStyle
+            );
+
+            if (GUI.Button(
+                new Rect(34f, 205f, 165f, 42f),
+                "Lanterna - 10"))
+            {
+                TowerBuildSelection.Select(DefenseType.Lantern);
+            }
+
+            if (GUI.Button(
+                new Rect(215f, 205f, 165f, 42f),
+                "Bonsai - 15"))
+            {
+                TowerBuildSelection.Select(DefenseType.Bonsai);
+            }
+
+            GUI.Label(
+                new Rect(34f, 254f, 360f, 24f),
+                "Escolha e clique em um ponto livre.",
                 helpStyle
             );
         }
