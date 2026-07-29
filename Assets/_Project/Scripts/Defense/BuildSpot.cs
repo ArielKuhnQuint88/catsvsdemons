@@ -5,7 +5,6 @@ namespace CatsVsDemons.Defense
 {
     public sealed class BuildSpot : MonoBehaviour
     {
-        [SerializeField] private int towerCost = 10;
         [SerializeField] private bool isOccupied;
 
         private Wallet wallet;
@@ -19,7 +18,7 @@ namespace CatsVsDemons.Defense
         {
             if (isOccupied)
             {
-                Debug.Log("Este ponto já possui uma torre.");
+                Debug.Log("Este ponto já possui uma defesa.");
                 return;
             }
 
@@ -28,49 +27,28 @@ namespace CatsVsDemons.Defense
                 wallet = Object.FindFirstObjectByType<Wallet>();
             }
 
-            if (wallet == null || !wallet.TrySpend(towerCost))
+            int cost = TowerBuildSelection.GetCost();
+
+            if (wallet == null || !wallet.TrySpend(cost))
             {
-                Debug.Log("Moedas insuficientes para construir a torre.");
+                Debug.Log("Moedas insuficientes para construir.");
                 return;
             }
 
             isOccupied = true;
-            CreateTower();
-            Debug.Log($"Torre construída por {towerCost} moedas.");
-        }
 
-        private void CreateTower()
-        {
-            GameObject tower = new GameObject("LanternTower_Prototype");
-            tower.transform.SetParent(transform);
-            tower.transform.localPosition = Vector3.zero;
-            tower.transform.localRotation = Quaternion.identity;
+            if (TowerBuildSelection.Selected == DefenseType.Bonsai)
+            {
+                CreateBonsai();
+            }
+            else
+            {
+                CreateLantern();
+            }
 
-            GameObject basePart = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            basePart.name = "Base";
-            basePart.transform.SetParent(tower.transform);
-            basePart.transform.localPosition = new Vector3(0f, 0.35f, 0f);
-            basePart.transform.localScale = new Vector3(0.7f, 0.35f, 0.7f);
-            RemoveCollider(basePart);
-            SetColor(basePart, new Color(0.18f, 0.12f, 0.1f));
-
-            GameObject pillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            pillar.name = "Pillar";
-            pillar.transform.SetParent(tower.transform);
-            pillar.transform.localPosition = new Vector3(0f, 1.05f, 0f);
-            pillar.transform.localScale = new Vector3(0.22f, 1.1f, 0.22f);
-            RemoveCollider(pillar);
-            SetColor(pillar, new Color(0.3f, 0.18f, 0.12f));
-
-            GameObject lantern = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            lantern.name = "Lantern";
-            lantern.transform.SetParent(tower.transform);
-            lantern.transform.localPosition = new Vector3(0f, 1.75f, 0f);
-            lantern.transform.localScale = new Vector3(0.75f, 0.75f, 0.75f);
-            RemoveCollider(lantern);
-            SetColor(lantern, new Color(1f, 0.35f, 0.05f));
-
-            tower.AddComponent<TowerAttack>();
+            Debug.Log(
+                $"{TowerBuildSelection.GetDisplayName()} construído por {cost} moedas."
+            );
 
             Renderer spotRenderer = GetComponent<Renderer>();
             if (spotRenderer != null)
@@ -79,17 +57,99 @@ namespace CatsVsDemons.Defense
             }
         }
 
-        private static void RemoveCollider(GameObject part)
+        private void CreateLantern()
         {
+            GameObject tower = CreateRoot("LanternTower_Prototype");
+
+            CreatePart(
+                "Base",
+                PrimitiveType.Cylinder,
+                tower.transform,
+                new Vector3(0f, 0.35f, 0f),
+                new Vector3(0.7f, 0.35f, 0.7f),
+                new Color(0.18f, 0.12f, 0.1f)
+            );
+            CreatePart(
+                "Pillar",
+                PrimitiveType.Cube,
+                tower.transform,
+                new Vector3(0f, 1.05f, 0f),
+                new Vector3(0.22f, 1.1f, 0.22f),
+                new Color(0.3f, 0.18f, 0.12f)
+            );
+            CreatePart(
+                "Lantern",
+                PrimitiveType.Cube,
+                tower.transform,
+                new Vector3(0f, 1.75f, 0f),
+                new Vector3(0.75f, 0.75f, 0.75f),
+                new Color(1f, 0.35f, 0.05f)
+            );
+
+            tower.AddComponent<TowerAttack>();
+        }
+
+        private void CreateBonsai()
+        {
+            GameObject bonsai = CreateRoot("Bonsai_Prototype");
+
+            CreatePart(
+                "Pot",
+                PrimitiveType.Cylinder,
+                bonsai.transform,
+                new Vector3(0f, 0.3f, 0f),
+                new Vector3(0.85f, 0.3f, 0.85f),
+                new Color(0.45f, 0.18f, 0.08f)
+            );
+            CreatePart(
+                "Trunk",
+                PrimitiveType.Cylinder,
+                bonsai.transform,
+                new Vector3(0f, 1f, 0f),
+                new Vector3(0.25f, 0.75f, 0.25f),
+                new Color(0.3f, 0.14f, 0.05f)
+            );
+            CreatePart(
+                "Leaves",
+                PrimitiveType.Sphere,
+                bonsai.transform,
+                new Vector3(0f, 1.75f, 0f),
+                new Vector3(1.5f, 0.9f, 1.2f),
+                new Color(0.1f, 0.65f, 0.18f)
+            );
+
+            bonsai.AddComponent<BonsaiHealing>();
+        }
+
+        private GameObject CreateRoot(string objectName)
+        {
+            GameObject root = new GameObject(objectName);
+            root.transform.SetParent(transform);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            return root;
+        }
+
+        private static void CreatePart(
+            string partName,
+            PrimitiveType primitive,
+            Transform parent,
+            Vector3 position,
+            Vector3 scale,
+            Color color)
+        {
+            GameObject part = GameObject.CreatePrimitive(primitive);
+            part.name = partName;
+            part.transform.SetParent(parent);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+
             Collider partCollider = part.GetComponent<Collider>();
             if (partCollider != null)
             {
                 Destroy(partCollider);
             }
-        }
 
-        private static void SetColor(GameObject part, Color color)
-        {
             Renderer renderer = part.GetComponent<Renderer>();
             Shader shader = Shader.Find("Universal Render Pipeline/Lit");
 
