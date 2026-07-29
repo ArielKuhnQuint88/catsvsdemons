@@ -3,7 +3,8 @@ namespace CatsVsDemons.Defense
     public enum DefenseType
     {
         Lantern,
-        Bonsai
+        Bonsai,
+        Portal
     }
 
     public static class TowerBuildSelection
@@ -18,14 +19,28 @@ namespace CatsVsDemons.Defense
 
         public static int GetCost()
         {
-            return Selected == DefenseType.Bonsai ? 15 : 10;
+            switch (Selected)
+            {
+                case DefenseType.Bonsai:
+                    return 15;
+                case DefenseType.Portal:
+                    return 20;
+                default:
+                    return 10;
+            }
         }
 
         public static string GetDisplayName()
         {
-            return Selected == DefenseType.Bonsai
-                ? "Bonsai"
-                : "Lanterna";
+            switch (Selected)
+            {
+                case DefenseType.Bonsai:
+                    return "Bonsai";
+                case DefenseType.Portal:
+                    return "Portal";
+                default:
+                    return "Lanterna";
+            }
         }
     }
 }
