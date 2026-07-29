@@ -19,6 +19,7 @@ namespace CatsVsDemons.UI
         private GUIStyle helpStyle;
         private GUIStyle resultStyle;
         private GUIStyle messageStyle;
+        private GUIStyle countdownStyle;
         private int currentWave;
         private int totalWaves;
         private int preparationSeconds;
@@ -46,6 +47,12 @@ namespace CatsVsDemons.UI
             resultStyle.alignment = TextAnchor.MiddleCenter;
             messageStyle = CreateStyle(22, Color.white, FontStyle.Normal);
             messageStyle.alignment = TextAnchor.MiddleCenter;
+            countdownStyle = CreateStyle(
+                72,
+                new Color(1f, 0.84f, 0.05f),
+                FontStyle.Bold
+            );
+            countdownStyle.alignment = TextAnchor.MiddleCenter;
         }
 
         private void Start()
@@ -98,6 +105,11 @@ namespace CatsVsDemons.UI
         {
             DrawStatusPanel();
 
+            if (preparing && !paused && !gameOver && !kinDown && !victory)
+            {
+                DrawCountdown();
+            }
+
             if (!gameOver && !kinDown && !victory)
             {
                 DrawPauseButton();
@@ -129,7 +141,7 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 560f, 280f), GUIContent.none);
+            GUI.Box(new Rect(18f, 18f, 680f, 320f), GUIContent.none);
             GUI.Label(
                 new Rect(34f, 28f, 500f, 38f),
                 $"Moedas: {coins}",
@@ -157,31 +169,63 @@ namespace CatsVsDemons.UI
                 helpStyle
             );
 
-            if (GUI.Button(
-                new Rect(34f, 205f, 155f, 42f),
-                "Lanterna - 10"))
-            {
-                TowerBuildSelection.Select(DefenseType.Lantern);
-            }
-
-            if (GUI.Button(
-                new Rect(205f, 205f, 155f, 42f),
-                "Bonsai - 15"))
-            {
-                TowerBuildSelection.Select(DefenseType.Bonsai);
-            }
-
-            if (GUI.Button(
-                new Rect(376f, 205f, 155f, 42f),
-                "Portal - 10"))
-            {
-                TowerBuildSelection.Select(DefenseType.Portal);
-            }
+            DrawDefenseButton(
+                new Rect(34f, 205f, 200f, 70f),
+                "LANTERNA\n10 moedas",
+                DefenseType.Lantern,
+                new Color(1f, 0.42f, 0.06f)
+            );
+            DrawDefenseButton(
+                new Rect(250f, 205f, 200f, 70f),
+                "BONSAI\n15 moedas",
+                DefenseType.Bonsai,
+                new Color(0.15f, 0.72f, 0.22f)
+            );
+            DrawDefenseButton(
+                new Rect(466f, 205f, 200f, 70f),
+                "PORTAL\n10 moedas",
+                DefenseType.Portal,
+                new Color(0.08f, 0.55f, 1f)
+            );
 
             GUI.Label(
-                new Rect(34f, 254f, 500f, 24f),
+                new Rect(34f, 290f, 620f, 24f),
                 "Escolha e clique em um ponto livre.",
                 helpStyle
+            );
+        }
+
+        private void DrawDefenseButton(
+            Rect area,
+            string label,
+            DefenseType type,
+            Color color)
+        {
+            Color previousColor = GUI.backgroundColor;
+            GUI.backgroundColor =
+                TowerBuildSelection.Selected == type
+                    ? Color.Lerp(color, Color.white, 0.25f)
+                    : color;
+
+            if (GUI.Button(area, label))
+            {
+                TowerBuildSelection.Select(type);
+            }
+
+            GUI.backgroundColor = previousColor;
+        }
+
+        private void DrawCountdown()
+        {
+            GUI.Label(
+                new Rect(
+                    0f,
+                    (Screen.height - 130f) * 0.5f,
+                    Screen.width,
+                    130f
+                ),
+                preparationSeconds.ToString(),
+                countdownStyle
             );
         }
 
