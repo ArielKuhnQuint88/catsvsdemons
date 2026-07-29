@@ -1,0 +1,144 @@
+using System.Collections;
+using CatsVsDemons.Enemies;
+using CatsVsDemons.House;
+using UnityEngine;
+
+namespace CatsVsDemons.Waves
+{
+    public sealed class EnemyWaveSpawner : MonoBehaviour
+    {
+        [SerializeField] private GameObject enemyTemplate;
+        [SerializeField] private int totalWaves = 3;
+        [SerializeField] private int firstWaveEnemies = 5;
+        [SerializeField] private int enemiesAddedPerWave = 2;
+        [SerializeField] private float spawnInterval = 1.2f;
+        [SerializeField] private float timeBetweenWaves = 4f;
+        [SerializeField] private string[] pathNames =
+        {
+            "Path_Left",
+            "Path_Right",
+            "Path_Bottom"
+        };
+
+        private HouseHealth houseHealth;
+        private Transform enemiesRoot;
+
+        public void Initialize(
+            GameObject template,
+            Transform root)
+        {
+            enemyTemplate = template;
+            enemiesRoot = root;
+        }
+
+        private void Start()
+        {
+            houseHealth =
+                Object.FindFirstObjectByType<HouseHealth>();
+
+            if (enemiesRoot == null)
+            {
+                GameObject root = GameObject.Find("Game/Enemies");
+                enemiesRoot = root != null ? root.transform : null;
+            }
+
+            if (enemyTemplate == null || enemiesRoot == null)
+            {
+                Debug.LogError(
+                    "WaveSpawner needs an enemy template and Enemies root.",
+                    this
+                );
+                enabled = false;
+                return;
+            }
+
+            StartCoroutine(RunWaves());
+        }
+
+        private IEnumerator RunWaves()
+        {
+            yield return new WaitForSeconds(1f);
+
+            for (int wave = 1; wave <= totalWaves; wave++)
+            {
+                if (HouseWasDestroyed())
+                {
+                    yield break;
+                }
+
+                int enemyCount =
+                    firstWaveEnemies +
+                    ((wave - 1) * enemiesAddedPerWave);
+
+                Debug.Log(
+                    $"Wave {wave}/{totalWaves}: {enemyCount} enemies."
+                );
+
+                for (int i = 0; i < enemyCount; i++)
+                {
+                    if (HouseWasDestroyed())
+                    {
+                        yield break;
+                    }
+
+                    SpawnEnemy(i);
+                    yield return new WaitForSeconds(spawnInterval);
+                }
+
+                yield return new WaitUntil(
+                    () => HouseWasDestroyed() || CountActiveEnemies() == 0
+                );
+
+                if (wave < totalWaves && !HouseWasDestroyed())
+                {
+                    yield return new WaitForSeconds(timeBetweenWaves);
+                }
+            }
+
+            if (!HouseWasDestroyed())
+            {
+                Debug.Log("Victory: all test waves were completed.");
+            }
+        }
+
+        private void SpawnEnemy(int enemyIndex)
+        {
+            GameObject enemy = Instantiate(
+                enemyTemplate,
+                enemiesRoot
+            );
+
+            enemy.name = $"Demon_Wave_{enemyIndex + 1:00}";
+
+            EnemyPathFollower follower =
+                enemy.GetComponent<EnemyPathFollower>();
+
+            if (follower != null)
+            {
+                string selectedPath =
+                    pathNames[enemyIndex % pathNames.Length];
+
+                follower.Configure(selectedPath);
+                follower.SetHouseDamage(10);
+            }
+
+            enemy.SetActive(true);
+        }
+
+        private int CountActiveEnemies()
+        {
+            EnemyPathFollower[] activeEnemies =
+                Object.FindObjectsByType<EnemyPathFollower>(
+                    FindObjectsInactive.Exclude,
+                    FindObjectsSortMode.None
+                );
+
+            return activeEnemies.Length;
+        }
+
+        private bool HouseWasDestroyed()
+        {
+            return houseHealth != null && houseHealth.IsDestroyed;
+        }
+    }
+}
