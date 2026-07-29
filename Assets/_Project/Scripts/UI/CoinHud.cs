@@ -1,5 +1,6 @@
 using CatsVsDemons.Economy;
 using CatsVsDemons.House;
+using CatsVsDemons.Player;
 using CatsVsDemons.Waves;
 using UnityEngine;
 
@@ -9,6 +10,7 @@ namespace CatsVsDemons.UI
     {
         private Wallet wallet;
         private HouseHealth house;
+        private KinHealth kin;
         private EnemyWaveSpawner waves;
         private GUIStyle coinStyle;
         private GUIStyle healthStyle;
@@ -18,12 +20,14 @@ namespace CatsVsDemons.UI
         private int currentWave;
         private int totalWaves;
         private bool gameOver;
+        private bool kinDown;
         private bool victory;
 
         private void Awake()
         {
             wallet = Object.FindFirstObjectByType<Wallet>();
             house = Object.FindFirstObjectByType<HouseHealth>();
+            kin = Object.FindFirstObjectByType<KinHealth>();
             waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
 
             coinStyle = CreateStyle(
@@ -32,7 +36,7 @@ namespace CatsVsDemons.UI
                 FontStyle.Bold
             );
             healthStyle = CreateStyle(
-                24,
+                22,
                 new Color(0.35f, 1f, 0.45f),
                 FontStyle.Bold
             );
@@ -50,6 +54,11 @@ namespace CatsVsDemons.UI
                 house.Destroyed += HandleGameOver;
             }
 
+            if (kin != null)
+            {
+                kin.Downed += HandleKinDown;
+            }
+
             if (waves != null)
             {
                 currentWave = waves.CurrentWave;
@@ -64,6 +73,11 @@ namespace CatsVsDemons.UI
             if (house != null)
             {
                 house.Destroyed -= HandleGameOver;
+            }
+
+            if (kin != null)
+            {
+                kin.Downed -= HandleKinDown;
             }
 
             if (waves != null)
@@ -83,6 +97,10 @@ namespace CatsVsDemons.UI
             {
                 DrawResult("A CASA CAIU!");
             }
+            else if (kinDown)
+            {
+                DrawResult("KIN CAIU!");
+            }
             else if (victory)
             {
                 DrawResult("VITÓRIA!");
@@ -92,27 +110,34 @@ namespace CatsVsDemons.UI
         private void DrawStatusPanel()
         {
             int coins = wallet != null ? wallet.Coins : 0;
-            int currentHealth = house != null ? house.CurrentHealth : 0;
-            int maxHealth = house != null ? house.MaxHealth : 0;
+            int houseHealth = house != null ? house.CurrentHealth : 0;
+            int houseMax = house != null ? house.MaxHealth : 0;
+            int kinHealth = kin != null ? kin.CurrentHealth : 0;
+            int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 390f, 170f), GUIContent.none);
+            GUI.Box(new Rect(18f, 18f, 390f, 202f), GUIContent.none);
             GUI.Label(
                 new Rect(34f, 28f, 350f, 38f),
                 $"Moedas: {coins}",
                 coinStyle
             );
             GUI.Label(
-                new Rect(34f, 64f, 350f, 34f),
-                $"Casa: {currentHealth}/{maxHealth}",
+                new Rect(34f, 64f, 350f, 31f),
+                $"Casa: {houseHealth}/{houseMax}",
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 100f, 350f, 30f),
+                new Rect(34f, 96f, 350f, 31f),
+                $"Kin: {kinHealth}/{kinMax}",
+                healthStyle
+            );
+            GUI.Label(
+                new Rect(34f, 132f, 350f, 30f),
                 $"Onda: {currentWave}/{totalWaves}",
                 helpStyle
             );
             GUI.Label(
-                new Rect(34f, 142f, 350f, 28f),
+                new Rect(34f, 174f, 350f, 28f),
                 "Clique em um ponto para construir (10)",
                 helpStyle
             );
@@ -145,6 +170,12 @@ namespace CatsVsDemons.UI
         private void HandleGameOver()
         {
             gameOver = true;
+            Time.timeScale = 0f;
+        }
+
+        private void HandleKinDown()
+        {
+            kinDown = true;
             Time.timeScale = 0f;
         }
 
