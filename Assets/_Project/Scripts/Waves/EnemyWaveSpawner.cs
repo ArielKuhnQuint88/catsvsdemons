@@ -37,8 +37,7 @@ namespace CatsVsDemons.Waves
 
         private void Start()
         {
-            houseHealth =
-                Object.FindFirstObjectByType<HouseHealth>();
+            houseHealth = Object.FindFirstObjectByType<HouseHealth>();
 
             if (enemiesRoot == null)
             {
@@ -124,6 +123,11 @@ namespace CatsVsDemons.Waves
 
                 follower.Configure(selectedPath);
                 follower.SetHouseDamage(10);
+            }
+
+            if (enemy.GetComponent<EnemyContactDamage>() == null)
+            {
+                enemy.AddComponent<EnemyContactDamage>();
             }
 
             enemy.SetActive(true);
