@@ -113,7 +113,7 @@ namespace CatsVsDemons.Waves
             GameObject enemy = Instantiate(enemyTemplate, enemiesRoot);
 
             string selectedPath =
-                pathNames[enemyIndex % pathNames.Length];
+                pathNames[Random.Range(0, pathNames.Length)];
 
             EnemyPathFollower follower =
                 enemy.GetComponent<EnemyPathFollower>();
@@ -135,7 +135,7 @@ namespace CatsVsDemons.Waves
 
         private void ConfigureDemon(GameObject enemy, int enemyIndex)
         {
-            int type = enemyIndex % 3;
+            int type = (enemyIndex + CurrentWave - 1) % 3;
             string demonName;
             int health;
             int reward;
