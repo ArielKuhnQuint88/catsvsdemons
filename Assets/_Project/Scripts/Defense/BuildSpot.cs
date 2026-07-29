@@ -37,13 +37,17 @@ namespace CatsVsDemons.Defense
 
             isOccupied = true;
 
-            if (TowerBuildSelection.Selected == DefenseType.Bonsai)
+            switch (TowerBuildSelection.Selected)
             {
-                CreateBonsai();
-            }
-            else
-            {
-                CreateLantern();
+                case DefenseType.Bonsai:
+                    CreateBonsai();
+                    break;
+                case DefenseType.Portal:
+                    CreatePortal();
+                    break;
+                default:
+                    CreateLantern();
+                    break;
             }
 
             Debug.Log(
@@ -62,25 +66,19 @@ namespace CatsVsDemons.Defense
             GameObject tower = CreateRoot("LanternTower_Prototype");
 
             CreatePart(
-                "Base",
-                PrimitiveType.Cylinder,
-                tower.transform,
+                "Base", PrimitiveType.Cylinder, tower.transform,
                 new Vector3(0f, 0.35f, 0f),
                 new Vector3(0.7f, 0.35f, 0.7f),
                 new Color(0.18f, 0.12f, 0.1f)
             );
             CreatePart(
-                "Pillar",
-                PrimitiveType.Cube,
-                tower.transform,
+                "Pillar", PrimitiveType.Cube, tower.transform,
                 new Vector3(0f, 1.05f, 0f),
                 new Vector3(0.22f, 1.1f, 0.22f),
                 new Color(0.3f, 0.18f, 0.12f)
             );
             CreatePart(
-                "Lantern",
-                PrimitiveType.Cube,
-                tower.transform,
+                "Lantern", PrimitiveType.Cube, tower.transform,
                 new Vector3(0f, 1.75f, 0f),
                 new Vector3(0.75f, 0.75f, 0.75f),
                 new Color(1f, 0.35f, 0.05f)
@@ -94,31 +92,60 @@ namespace CatsVsDemons.Defense
             GameObject bonsai = CreateRoot("Bonsai_Prototype");
 
             CreatePart(
-                "Pot",
-                PrimitiveType.Cylinder,
-                bonsai.transform,
+                "Pot", PrimitiveType.Cylinder, bonsai.transform,
                 new Vector3(0f, 0.3f, 0f),
                 new Vector3(0.85f, 0.3f, 0.85f),
                 new Color(0.45f, 0.18f, 0.08f)
             );
             CreatePart(
-                "Trunk",
-                PrimitiveType.Cylinder,
-                bonsai.transform,
+                "Trunk", PrimitiveType.Cylinder, bonsai.transform,
                 new Vector3(0f, 1f, 0f),
                 new Vector3(0.25f, 0.75f, 0.25f),
                 new Color(0.3f, 0.14f, 0.05f)
             );
             CreatePart(
-                "Leaves",
-                PrimitiveType.Sphere,
-                bonsai.transform,
+                "Leaves", PrimitiveType.Sphere, bonsai.transform,
                 new Vector3(0f, 1.75f, 0f),
                 new Vector3(1.5f, 0.9f, 1.2f),
                 new Color(0.1f, 0.65f, 0.18f)
             );
 
             bonsai.AddComponent<BonsaiHealing>();
+        }
+
+        private void CreatePortal()
+        {
+            GameObject portal = CreateRoot("Portal_Prototype");
+
+            Color stone = new Color(0.18f, 0.32f, 0.38f);
+            Color glow = new Color(0.05f, 0.85f, 1f);
+
+            CreatePart(
+                "LeftPillar", PrimitiveType.Cube, portal.transform,
+                new Vector3(-0.75f, 1.15f, 0f),
+                new Vector3(0.3f, 2.3f, 0.45f),
+                stone
+            );
+            CreatePart(
+                "RightPillar", PrimitiveType.Cube, portal.transform,
+                new Vector3(0.75f, 1.15f, 0f),
+                new Vector3(0.3f, 2.3f, 0.45f),
+                stone
+            );
+            CreatePart(
+                "TopBeam", PrimitiveType.Cube, portal.transform,
+                new Vector3(0f, 2.35f, 0f),
+                new Vector3(2.2f, 0.3f, 0.55f),
+                stone
+            );
+            CreatePart(
+                "PortalGlow", PrimitiveType.Cube, portal.transform,
+                new Vector3(0f, 1.2f, 0.08f),
+                new Vector3(1.15f, 1.8f, 0.08f),
+                glow
+            );
+
+            portal.AddComponent<PortalTransport>();
         }
 
         private GameObject CreateRoot(string objectName)
