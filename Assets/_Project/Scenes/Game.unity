@@ -790,6 +790,7 @@ GameObject:
   - component: {fileID: 95819404}
   - component: {fileID: 95819403}
   - component: {fileID: 95819402}
+  - component: {fileID: 95819406}
   m_Layer: 0
   m_Name: Kin_Prototype
   m_TagString: Untagged
@@ -912,6 +913,22 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 95819400}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &95819406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 95819400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 272ceeab1d119d947ae805cc87cee80d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Player.KinPrototypeAttack
+  damage: 10
+  attackRange: 2.5
+  attackAngle: 120
+  cooldown: 0.4
 --- !u!1 &111007465
 GameObject:
   m_ObjectHideFlags: 0
@@ -5661,6 +5678,7 @@ GameObject:
   - component: {fileID: 1093740121}
   - component: {fileID: 1093740120}
   - component: {fileID: 1093740119}
+  - component: {fileID: 1093740123}
   m_Layer: 0
   m_Name: Demon_Prototype
   m_TagString: Untagged
@@ -5782,6 +5800,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1093740117}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1093740123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1093740117}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 403a4b2f3c0b9124fabd4a3ad9b11b2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Enemies.EnemyHealth
+  maxHealth: 30
+  coinReward: 5
 --- !u!1 &1104752762
 GameObject:
   m_ObjectHideFlags: 0
@@ -8404,6 +8436,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1654278096}
+  - component: {fileID: 1654278097}
   m_Layer: 0
   m_Name: Systems
   m_TagString: Untagged
@@ -8428,6 +8461,19 @@ Transform:
   - {fileID: 1239958205}
   m_Father: {fileID: 551170421}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1654278097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1654278095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d6e5fe38a1a0974abf06bef57a8edea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Economy.Wallet
+  startingCoins: 0
 --- !u!1 &1663418496
 GameObject:
   m_ObjectHideFlags: 0
