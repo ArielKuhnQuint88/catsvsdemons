@@ -84,7 +84,7 @@ namespace CatsVsDemons.Editor
             string name,
             float x)
         {
-            GameObject horn = GameObject.CreatePrimitive(PrimitiveType.Cone);
+            GameObject horn = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             horn.name = name;
             horn.transform.SetParent(parent);
             horn.transform.localPosition = new Vector3(x, 1.05f, 0f);
