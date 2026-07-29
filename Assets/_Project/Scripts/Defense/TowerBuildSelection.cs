@@ -24,7 +24,7 @@ namespace CatsVsDemons.Defense
                 case DefenseType.Bonsai:
                     return 15;
                 case DefenseType.Portal:
-                    return 20;
+                    return 10;
                 default:
                     return 10;
             }
