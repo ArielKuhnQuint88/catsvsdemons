@@ -356,6 +356,7 @@ GameObject:
   - component: {fileID: 42677442}
   - component: {fileID: 42677444}
   - component: {fileID: 42677443}
+  - component: {fileID: 42677445}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -372,7 +373,7 @@ Transform:
   m_GameObject: {fileID: 42677441}
   serializedVersion: 2
   m_LocalRotation: {x: 0.3904484, y: -0.34682903, z: 0.16172904, w: 0.8373192}
-  m_LocalPosition: {x: 20, y: 26, z: -20}
+  m_LocalPosition: {x: 18.89, y: 24.13, z: -18.89}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -437,6 +438,50 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &42677445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 42677441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &66407117
 GameObject:
   m_ObjectHideFlags: 0
@@ -675,6 +720,7 @@ GameObject:
   - component: {fileID: 73348706}
   - component: {fileID: 73348705}
   - component: {fileID: 73348704}
+  - component: {fileID: 73348707}
   m_Layer: 0
   m_Name: BuildSpot_10
   m_TagString: Untagged
@@ -777,6 +823,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 73348702}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &73348707
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 73348702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &95819400
 GameObject:
   m_ObjectHideFlags: 0
@@ -1369,6 +1429,7 @@ GameObject:
   - component: {fileID: 159620545}
   - component: {fileID: 159620544}
   - component: {fileID: 159620543}
+  - component: {fileID: 159620546}
   m_Layer: 0
   m_Name: BuildSpot_03
   m_TagString: Untagged
@@ -1471,6 +1532,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 159620541}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &159620546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 159620541}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &170081655
 GameObject:
   m_ObjectHideFlags: 0
@@ -4500,6 +4575,7 @@ GameObject:
   - component: {fileID: 875645388}
   - component: {fileID: 875645387}
   - component: {fileID: 875645386}
+  - component: {fileID: 875645389}
   m_Layer: 0
   m_Name: BuildSpot_07
   m_TagString: Untagged
@@ -4602,6 +4678,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 875645384}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &875645389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 875645384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &890161633
 GameObject:
   m_ObjectHideFlags: 0
@@ -4840,6 +4930,7 @@ GameObject:
   - component: {fileID: 897787064}
   - component: {fileID: 897787063}
   - component: {fileID: 897787062}
+  - component: {fileID: 897787065}
   m_Layer: 0
   m_Name: BuildSpot_09
   m_TagString: Untagged
@@ -4942,6 +5033,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 897787060}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &897787065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 897787060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &935525764
 GameObject:
   m_ObjectHideFlags: 0
@@ -4954,6 +5059,7 @@ GameObject:
   - component: {fileID: 935525768}
   - component: {fileID: 935525767}
   - component: {fileID: 935525766}
+  - component: {fileID: 935525769}
   m_Layer: 0
   m_Name: BuildSpot_04
   m_TagString: Untagged
@@ -5056,6 +5162,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 935525764}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &935525769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 935525764}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &949658985
 GameObject:
   m_ObjectHideFlags: 0
@@ -6084,6 +6204,7 @@ GameObject:
   - component: {fileID: 1163949624}
   - component: {fileID: 1163949623}
   - component: {fileID: 1163949622}
+  - component: {fileID: 1163949625}
   m_Layer: 0
   m_Name: BuildSpot_12
   m_TagString: Untagged
@@ -6186,6 +6307,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1163949620}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1163949625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1163949620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1174060912
 GameObject:
   m_ObjectHideFlags: 0
@@ -6514,6 +6649,7 @@ GameObject:
   - component: {fileID: 1235317978}
   - component: {fileID: 1235317977}
   - component: {fileID: 1235317976}
+  - component: {fileID: 1235317979}
   m_Layer: 0
   m_Name: BuildSpot_06
   m_TagString: Untagged
@@ -6616,6 +6752,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1235317974}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1235317979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235317974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1239958204
 GameObject:
   m_ObjectHideFlags: 0
@@ -6794,6 +6944,7 @@ GameObject:
   - component: {fileID: 1262899107}
   - component: {fileID: 1262899106}
   - component: {fileID: 1262899105}
+  - component: {fileID: 1262899108}
   m_Layer: 0
   m_Name: BuildSpot_02
   m_TagString: Untagged
@@ -6896,6 +7047,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1262899103}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1262899108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1262899103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1272979769
 GameObject:
   m_ObjectHideFlags: 0
@@ -8432,6 +8597,7 @@ GameObject:
   - component: {fileID: 1617227984}
   - component: {fileID: 1617227983}
   - component: {fileID: 1617227982}
+  - component: {fileID: 1617227985}
   m_Layer: 0
   m_Name: BuildSpot_11
   m_TagString: Untagged
@@ -8534,6 +8700,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1617227980}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1617227985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1617227980}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1626294871
 GameObject:
   m_ObjectHideFlags: 0
@@ -8577,6 +8757,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1654278096}
   - component: {fileID: 1654278097}
+  - component: {fileID: 1654278098}
   m_Layer: 0
   m_Name: Systems
   m_TagString: Untagged
@@ -8613,7 +8794,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d6e5fe38a1a0974abf06bef57a8edea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Economy.Wallet
-  startingCoins: 0
+  startingCoins: 20
+--- !u!114 &1654278098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1654278095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e3878773f15f47408711ca1df0d239f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.UI.CoinHud
 --- !u!1 &1663418496
 GameObject:
   m_ObjectHideFlags: 0
@@ -8942,6 +9135,7 @@ GameObject:
   - component: {fileID: 1697337302}
   - component: {fileID: 1697337301}
   - component: {fileID: 1697337300}
+  - component: {fileID: 1697337303}
   m_Layer: 0
   m_Name: BuildSpot_05
   m_TagString: Untagged
@@ -9044,6 +9238,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1697337298}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1697337303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1697337298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1704180680
 GameObject:
   m_ObjectHideFlags: 0
@@ -10327,6 +10535,7 @@ GameObject:
   - component: {fileID: 1939088874}
   - component: {fileID: 1939088873}
   - component: {fileID: 1939088872}
+  - component: {fileID: 1939088875}
   m_Layer: 0
   m_Name: BuildSpot_08
   m_TagString: Untagged
@@ -10429,6 +10638,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1939088870}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1939088875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1939088870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1948319539
 GameObject:
   m_ObjectHideFlags: 0
@@ -10643,6 +10866,7 @@ GameObject:
   - component: {fileID: 1957481726}
   - component: {fileID: 1957481725}
   - component: {fileID: 1957481724}
+  - component: {fileID: 1957481727}
   m_Layer: 0
   m_Name: BuildSpot_01
   m_TagString: Untagged
@@ -10745,6 +10969,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1957481722}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1957481727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957481722}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854abbaa9a545b6429fd51ec442c0f38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Defense.BuildSpot
+  towerCost: 10
+  isOccupied: 0
 --- !u!1 &1978797966
 GameObject:
   m_ObjectHideFlags: 0
