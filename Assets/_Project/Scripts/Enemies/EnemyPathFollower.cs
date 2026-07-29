@@ -16,6 +16,8 @@ namespace CatsVsDemons.Enemies
         private readonly List<Transform> waypoints = new();
         private int currentWaypoint;
         private bool reachedDestination;
+        private float speedMultiplier = 1f;
+        private float slowTimer;
 
         public void Configure(string newPathName)
         {
@@ -25,6 +27,15 @@ namespace CatsVsDemons.Enemies
         public void SetHouseDamage(int damage)
         {
             houseDamage = Mathf.Max(0, damage);
+        }
+
+        public void ApplySlow(float multiplier, float duration)
+        {
+            speedMultiplier = Mathf.Min(
+                speedMultiplier,
+                Mathf.Clamp(multiplier, 0.1f, 1f)
+            );
+            slowTimer = Mathf.Max(slowTimer, duration);
         }
 
         private void Start()
@@ -43,6 +54,8 @@ namespace CatsVsDemons.Enemies
 
         private void Update()
         {
+            UpdateSlow();
+
             if (reachedDestination || currentWaypoint >= waypoints.Count)
             {
                 return;
@@ -65,13 +78,25 @@ namespace CatsVsDemons.Enemies
             }
 
             Vector3 direction = offset.normalized;
-            transform.position += direction * moveSpeed * Time.deltaTime;
+            transform.position +=
+                direction * moveSpeed * speedMultiplier * Time.deltaTime;
 
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
                 Quaternion.LookRotation(direction, Vector3.up),
                 rotationSpeed * Time.deltaTime
             );
+        }
+
+        private void UpdateSlow()
+        {
+            if (slowTimer <= 0f)
+            {
+                speedMultiplier = 1f;
+                return;
+            }
+
+            slowTimer -= Time.deltaTime;
         }
 
         private void ReachHouse()
