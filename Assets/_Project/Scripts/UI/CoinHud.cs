@@ -32,14 +32,10 @@ namespace CatsVsDemons.UI
             waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
 
             coinStyle = CreateStyle(
-                28,
-                new Color(1f, 0.82f, 0.16f),
-                FontStyle.Bold
+                28, new Color(1f, 0.82f, 0.16f), FontStyle.Bold
             );
             healthStyle = CreateStyle(
-                22,
-                new Color(0.35f, 1f, 0.45f),
-                FontStyle.Bold
+                22, new Color(0.35f, 1f, 0.45f), FontStyle.Bold
             );
             helpStyle = CreateStyle(17, Color.white, FontStyle.Normal);
             resultStyle = CreateStyle(52, Color.white, FontStyle.Bold);
@@ -116,50 +112,57 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 410f, 280f), GUIContent.none);
+            GUI.Box(new Rect(18f, 18f, 560f, 280f), GUIContent.none);
             GUI.Label(
-                new Rect(34f, 28f, 360f, 38f),
+                new Rect(34f, 28f, 500f, 38f),
                 $"Moedas: {coins}",
                 coinStyle
             );
             GUI.Label(
-                new Rect(34f, 64f, 360f, 31f),
+                new Rect(34f, 64f, 500f, 31f),
                 $"Casa: {houseHealth}/{houseMax}",
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 96f, 360f, 31f),
+                new Rect(34f, 96f, 500f, 31f),
                 $"Kin: {kinHealth}/{kinMax}",
                 healthStyle
             );
             GUI.Label(
-                new Rect(34f, 132f, 360f, 30f),
+                new Rect(34f, 132f, 500f, 30f),
                 $"Onda: {currentWave}/{totalWaves}",
                 helpStyle
             );
             GUI.Label(
-                new Rect(34f, 166f, 360f, 28f),
+                new Rect(34f, 166f, 500f, 28f),
                 $"Selecionado: {TowerBuildSelection.GetDisplayName()} " +
                 $"({TowerBuildSelection.GetCost()})",
                 helpStyle
             );
 
             if (GUI.Button(
-                new Rect(34f, 205f, 165f, 42f),
+                new Rect(34f, 205f, 155f, 42f),
                 "Lanterna - 10"))
             {
                 TowerBuildSelection.Select(DefenseType.Lantern);
             }
 
             if (GUI.Button(
-                new Rect(215f, 205f, 165f, 42f),
+                new Rect(205f, 205f, 155f, 42f),
                 "Bonsai - 15"))
             {
                 TowerBuildSelection.Select(DefenseType.Bonsai);
             }
 
+            if (GUI.Button(
+                new Rect(376f, 205f, 155f, 42f),
+                "Portal - 20"))
+            {
+                TowerBuildSelection.Select(DefenseType.Portal);
+            }
+
             GUI.Label(
-                new Rect(34f, 254f, 360f, 24f),
+                new Rect(34f, 254f, 500f, 24f),
                 "Escolha e clique em um ponto livre.",
                 helpStyle
             );
