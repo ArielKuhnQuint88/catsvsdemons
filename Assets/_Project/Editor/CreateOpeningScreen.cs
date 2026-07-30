@@ -14,6 +14,8 @@ namespace CatsVsDemons.Editor
             "Assets/_Project/Scenes/Game.unity";
         private const string MenuScene =
             "Assets/_Project/Scenes/MainMenu.unity";
+        private const string BackgroundPath =
+            "Assets/_Project/Art/UI/OpeningBackground.png";
 
         [MenuItem("Tools/Cats vs Demons/Create Opening Screen")]
         public static void Create()
@@ -79,7 +81,25 @@ namespace CatsVsDemons.Editor
 
             GameObject menuController =
                 new GameObject("Opening Screen");
-            menuController.AddComponent<MainMenuUI>();
+
+            MainMenuUI menuUI =
+                menuController.AddComponent<MainMenuUI>();
+
+            Texture2D background =
+                AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    BackgroundPath
+                );
+
+            if (background == null)
+            {
+                Debug.LogError(
+                    $"Opening background not found: {BackgroundPath}"
+                );
+            }
+            else
+            {
+                menuUI.SetBackground(background);
+            }
 
             EditorSceneManager.SaveScene(menu, MenuScene);
         }
