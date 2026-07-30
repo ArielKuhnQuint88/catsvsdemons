@@ -26,6 +26,12 @@ namespace CatsVsDemons.UI
 
         private void Awake()
         {
+            if (backgroundTexture == null)
+            {
+                backgroundTexture =
+                    Resources.Load<Texture2D>("UI/OpeningBackground");
+            }
+
             Time.timeScale = 1f;
 
             titleStyle = CreateStyle(
