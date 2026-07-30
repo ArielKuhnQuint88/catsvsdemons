@@ -357,6 +357,7 @@ GameObject:
   - component: {fileID: 42677444}
   - component: {fileID: 42677443}
   - component: {fileID: 42677445}
+  - component: {fileID: 42677446}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -482,6 +483,21 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &42677446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 42677441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 587ff7a6905dc434eb6f320c753e85ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.CameraSystem.CameraModeController
+  eyeHeight: 1.45
+  forwardOffset: 0.3
+  followSpeed: 14
 --- !u!1 &66407117
 GameObject:
   m_ObjectHideFlags: 0
