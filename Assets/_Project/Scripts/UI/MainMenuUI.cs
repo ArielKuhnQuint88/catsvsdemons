@@ -5,6 +5,7 @@ namespace CatsVsDemons.UI
 {
     public sealed class MainMenuUI : MonoBehaviour
     {
+        [SerializeField] private Texture2D backgroundTexture;
         private enum Panel
         {
             None,
@@ -17,6 +18,11 @@ namespace CatsVsDemons.UI
         private GUIStyle titleStyle;
         private GUIStyle panelTitleStyle;
         private GUIStyle bodyStyle;
+
+        public void SetBackground(Texture2D texture)
+        {
+            backgroundTexture = texture;
+        }
 
         private void Awake()
         {
@@ -61,12 +67,26 @@ namespace CatsVsDemons.UI
 
         private void DrawBackground()
         {
+            Rect screen = new Rect(
+                0f,
+                0f,
+                Screen.width,
+                Screen.height
+            );
+
+            if (backgroundTexture != null)
+            {
+                GUI.DrawTexture(
+                    screen,
+                    backgroundTexture,
+                    ScaleMode.ScaleAndCrop
+                );
+                return;
+            }
+
             Color previous = GUI.backgroundColor;
             GUI.backgroundColor = new Color(0.12f, 0.08f, 0.18f);
-            GUI.Box(
-                new Rect(0f, 0f, Screen.width, Screen.height),
-                GUIContent.none
-            );
+            GUI.Box(screen, GUIContent.none);
             GUI.backgroundColor = previous;
         }
 
