@@ -15,7 +15,7 @@ namespace CatsVsDemons.Editor
         private const string MenuScene =
             "Assets/_Project/Scenes/MainMenu.unity";
         private const string BackgroundPath =
-            "Assets/_Project/Art/UI/OpeningBackground.png";
+            "Assets/_Project/Resources/UI/OpeningBackground.png";
 
         [MenuItem("Tools/Cats vs Demons/Create Opening Screen")]
         public static void Create()
