@@ -372,8 +372,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 42677441}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.3904484, y: -0.34682903, z: 0.16172904, w: 0.8373192}
-  m_LocalPosition: {x: 13.5, y: 26.5, z: -27}
+  m_LocalRotation: {x: 0.34305406, y: -0, z: -0, w: 0.9393157}
+  m_LocalPosition: {x: 0, y: 30, z: -34}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -397,7 +397,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.06, g: 0.08, b: 0.12, a: 1}
+  m_BackGroundColor: {r: 0.16, g: 0.17, b: 0.19, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -419,10 +419,10 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 200
+  far clip plane: 150
   field of view: 60
   orthographic: 1
-  orthographic size: 25
+  orthographic size: 18
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -7049,6 +7049,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CatsVsDemons.Waves.EnemyWaveSpawner
   enemyTemplate: {fileID: 1093740117}
+  totalPhases: 3
   totalWaves: 3
   firstWaveEnemies: 5
   enemiesAddedPerWave: 2
