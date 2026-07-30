@@ -85,6 +85,12 @@ namespace CatsVsDemons.Editor
             MainMenuUI menuUI =
                 menuController.AddComponent<MainMenuUI>();
 
+            AssetDatabase.ImportAsset(
+                BackgroundPath,
+                ImportAssetOptions.ForceSynchronousImport |
+                ImportAssetOptions.ForceUpdate
+            );
+
             Texture2D background =
                 AssetDatabase.LoadAssetAtPath<Texture2D>(
                     BackgroundPath
@@ -92,6 +98,29 @@ namespace CatsVsDemons.Editor
 
             if (background == null)
             {
+                string[] matches =
+                    AssetDatabase.FindAssets(
+                        "OpeningBackground t:Texture2D"
+                    );
+
+                if (matches.Length > 0)
+                {
+                    string foundPath =
+                        AssetDatabase.GUIDToAssetPath(matches[0]);
+                    background =
+                        AssetDatabase.LoadAssetAtPath<Texture2D>(
+                            foundPath
+                        );
+                }
+            }
+
+            if (background == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Imagem não encontrada",
+                    "A Unity não conseguiu importar OpeningBackground.png.",
+                    "OK"
+                );
                 Debug.LogError(
                     $"Opening background not found: {BackgroundPath}"
                 );
@@ -99,9 +128,16 @@ namespace CatsVsDemons.Editor
             else
             {
                 menuUI.SetBackground(background);
+                EditorUtility.SetDirty(menuUI);
+                Debug.Log(
+                    $"Opening background applied: " +
+                    AssetDatabase.GetAssetPath(background)
+                );
             }
 
+            EditorSceneManager.MarkSceneDirty(menu);
             EditorSceneManager.SaveScene(menu, MenuScene);
+            AssetDatabase.SaveAssets();
         }
 
         private static void ConfigureBuildSettings()
