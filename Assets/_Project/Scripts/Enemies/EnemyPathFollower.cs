@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using CatsVsDemons.House;
 using CatsVsDemons.Visuals;
@@ -134,6 +135,19 @@ namespace CatsVsDemons.Enemies
         private void ReachHouse()
         {
             reachedDestination = true;
+            StartCoroutine(AttackHouse());
+        }
+
+        private IEnumerator AttackHouse()
+        {
+            ProceduralModelAnimator modelAnimator =
+                GetComponentInChildren<ProceduralModelAnimator>();
+            if (modelAnimator != null)
+            {
+                modelAnimator.TriggerAttack();
+            }
+
+            yield return new WaitForSeconds(0.28f);
 
             HouseHealth house =
                 UnityEngine.Object.FindFirstObjectByType<HouseHealth>();
