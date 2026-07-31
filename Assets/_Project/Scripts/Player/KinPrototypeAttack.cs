@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatsVsDemons.Enemies;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -34,6 +35,13 @@ namespace CatsVsDemons.Player
         private void Attack()
         {
             nextAttackTime = Time.time + cooldown;
+
+            ProceduralModelAnimator modelAnimator =
+                GetComponentInChildren<ProceduralModelAnimator>();
+            if (modelAnimator != null)
+            {
+                modelAnimator.TriggerAttack();
+            }
 
             Collider[] hits = Physics.OverlapSphere(
                 transform.position,
