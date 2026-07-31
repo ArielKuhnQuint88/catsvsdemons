@@ -1,4 +1,5 @@
 using CatsVsDemons.Economy;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 
 namespace CatsVsDemons.Defense
@@ -86,24 +87,24 @@ namespace CatsVsDemons.Defense
         {
             GameObject tower = CreateRoot("LanternTower_Prototype");
 
-            CreatePart(
-                "Base", PrimitiveType.Cylinder, tower.transform,
-                new Vector3(0f, 0.35f, 0f),
-                new Vector3(0.7f, 0.35f, 0.7f),
-                new Color(0.18f, 0.12f, 0.1f)
+            bool loaded = RuntimeModelVisuals.Attach(
+                tower.transform,
+                "Models/StoneLantern",
+                2.4f,
+                0f,
+                new Color(0.36f, 0.42f, 0.46f),
+                false
             );
-            CreatePart(
-                "Pillar", PrimitiveType.Cube, tower.transform,
-                new Vector3(0f, 1.05f, 0f),
-                new Vector3(0.22f, 1.1f, 0.22f),
-                new Color(0.3f, 0.18f, 0.12f)
-            );
-            CreatePart(
-                "Lantern", PrimitiveType.Cube, tower.transform,
-                new Vector3(0f, 1.75f, 0f),
-                new Vector3(0.75f, 0.75f, 0.75f),
-                new Color(1f, 0.35f, 0.05f)
-            );
+
+            if (!loaded)
+            {
+                CreatePart(
+                    "Lantern", PrimitiveType.Cube, tower.transform,
+                    new Vector3(0f, 1.2f, 0f),
+                    new Vector3(0.75f, 2.4f, 0.75f),
+                    new Color(1f, 0.35f, 0.05f)
+                );
+            }
 
             tower.AddComponent<TowerAttack>();
         }
@@ -112,24 +113,24 @@ namespace CatsVsDemons.Defense
         {
             GameObject bonsai = CreateRoot("Bonsai_Prototype");
 
-            CreatePart(
-                "Pot", PrimitiveType.Cylinder, bonsai.transform,
-                new Vector3(0f, 0.3f, 0f),
-                new Vector3(0.85f, 0.3f, 0.85f),
-                new Color(0.45f, 0.18f, 0.08f)
+            bool loaded = RuntimeModelVisuals.Attach(
+                bonsai.transform,
+                "Models/Bonsai",
+                2.2f,
+                0f,
+                new Color(0.18f, 0.68f, 0.22f),
+                false
             );
-            CreatePart(
-                "Trunk", PrimitiveType.Cylinder, bonsai.transform,
-                new Vector3(0f, 1f, 0f),
-                new Vector3(0.25f, 0.75f, 0.25f),
-                new Color(0.3f, 0.14f, 0.05f)
-            );
-            CreatePart(
-                "Leaves", PrimitiveType.Sphere, bonsai.transform,
-                new Vector3(0f, 1.75f, 0f),
-                new Vector3(1.5f, 0.9f, 1.2f),
-                new Color(0.1f, 0.65f, 0.18f)
-            );
+
+            if (!loaded)
+            {
+                CreatePart(
+                    "Leaves", PrimitiveType.Sphere, bonsai.transform,
+                    new Vector3(0f, 1.1f, 0f),
+                    new Vector3(1.5f, 2.2f, 1.2f),
+                    new Color(0.1f, 0.65f, 0.18f)
+                );
+            }
 
             bonsai.AddComponent<BonsaiHealing>();
         }
