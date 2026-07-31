@@ -62,6 +62,7 @@ namespace CatsVsDemons.Visuals
                 renderer.sharedMaterial = material;
             }
 
+            visual.AddComponent<ProceduralModelAnimator>();
             return true;
         }
 
