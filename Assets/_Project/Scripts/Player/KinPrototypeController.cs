@@ -1,3 +1,4 @@
+using CatsVsDemons.Visuals;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -18,6 +19,14 @@ namespace CatsVsDemons.Player
         {
             characterController = GetComponent<CharacterController>();
             mainCamera = Camera.main;
+
+            RuntimeModelVisuals.Attach(
+                transform,
+                "Models/Kin",
+                2.2f,
+                -1f,
+                new Color(0.95f, 0.92f, 0.88f)
+            );
         }
 
         private void Update()
