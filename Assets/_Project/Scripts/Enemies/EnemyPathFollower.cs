@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CatsVsDemons.House;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 
 namespace CatsVsDemons.Enemies
@@ -18,6 +19,31 @@ namespace CatsVsDemons.Enemies
         private bool reachedDestination;
         private float speedMultiplier = 1f;
         private float slowTimer;
+
+        private void Awake()
+        {
+            string[] models =
+            {
+                "Models/DemonPoerix",
+                "Models/DemonSono",
+                "Models/DemonFlamurk"
+            };
+            Color[] colors =
+            {
+                new Color(0.82f, 0.68f, 0.42f),
+                new Color(0.42f, 0.2f, 0.75f),
+                new Color(1f, 0.28f, 0.06f)
+            };
+
+            int variant = UnityEngine.Random.Range(0, models.Length);
+            RuntimeModelVisuals.Attach(
+                transform,
+                models[variant],
+                1.9f,
+                -1f,
+                colors[variant]
+            );
+        }
 
         public void Configure(string newPathName)
         {
