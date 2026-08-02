@@ -29,6 +29,13 @@ namespace CatsVsDemons.Visuals
         public void TriggerAttack()
         {
             attackTimer = attackDuration;
+
+            ProceduralBoneAnimator boneAnimator =
+                GetComponent<ProceduralBoneAnimator>();
+            if (boneAnimator != null)
+            {
+                boneAnimator.TriggerAttack();
+            }
         }
 
         private void LateUpdate()
