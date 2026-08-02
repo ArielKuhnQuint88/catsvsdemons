@@ -66,12 +66,6 @@ namespace CatsVsDemons.Visuals
                 renderer.sharedMaterial = material;
             }
 
-            if (resourcePath == "Models/Kin" ||
-                resourcePath.StartsWith("Models/Demon"))
-            {
-                visual.AddComponent<AutomaticCharacterRig>();
-            }
-
             visual.AddComponent<ProceduralModelAnimator>();
             return true;
         }
