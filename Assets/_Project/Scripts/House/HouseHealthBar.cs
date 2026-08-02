@@ -7,6 +7,9 @@ namespace CatsVsDemons.House
         [SerializeField] private HouseHealth houseHealth;
         [SerializeField] private Transform fill;
         [SerializeField] private float fullWidth = 4f;
+        [SerializeField] private float minimumWorldHeight = 7.2f;
+
+        private Camera mainCamera;
 
         private void OnEnable()
         {
@@ -18,12 +21,34 @@ namespace CatsVsDemons.House
 
         private void Start()
         {
+            mainCamera = Camera.main;
+
             if (houseHealth != null)
             {
                 UpdateBar(
                     houseHealth.CurrentHealth,
                     houseHealth.MaxHealth
                 );
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (mainCamera == null)
+            {
+                mainCamera = Camera.main;
+            }
+
+            if (mainCamera != null)
+            {
+                transform.rotation = mainCamera.transform.rotation;
+            }
+
+            Vector3 position = transform.position;
+            if (position.y < minimumWorldHeight)
+            {
+                position.y = minimumWorldHeight;
+                transform.position = position;
             }
         }
 
