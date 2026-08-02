@@ -24,9 +24,13 @@ namespace CatsVsDemons.Visuals
 
             if (hideExisting)
             {
-                foreach (Renderer renderer in parent.GetComponentsInChildren<Renderer>(true))
+                foreach (Renderer renderer in
+                    parent.GetComponentsInChildren<Renderer>(true))
                 {
-                    renderer.enabled = false;
+                    if (IsPrototypeRenderer(parent, renderer.transform))
+                    {
+                        renderer.enabled = false;
+                    }
                 }
             }
 
@@ -64,6 +68,22 @@ namespace CatsVsDemons.Visuals
 
             visual.AddComponent<ProceduralModelAnimator>();
             return true;
+        }
+
+        private static bool IsPrototypeRenderer(
+            Transform root,
+            Transform candidate)
+        {
+            if (candidate == root)
+            {
+                return true;
+            }
+
+            string objectName = candidate.name;
+            return objectName == "Horn_Left" ||
+                objectName == "Horn_Right" ||
+                objectName == "Golden_Sword" ||
+                objectName == "Red_Belt";
         }
 
         private static Bounds CalculateBounds(GameObject root)
