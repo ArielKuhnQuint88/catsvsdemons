@@ -49,7 +49,9 @@ namespace CatsVsDemons.Editor
             BuildMeditationArea(root.transform, new Vector3(14f, 0f, -10f), -20f);
             BuildVegetation(root.transform);
             BuildGardenDetails(root.transform);
+            BuildWorldExtension(root.transform);
             ConfigureLighting();
+            ConfigureSky();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, GameScene);
@@ -57,7 +59,7 @@ namespace CatsVsDemons.Editor
 
             EditorUtility.DisplayDialog(
                 "Cats vs Demons",
-                "Jardim japonês 3D criado. Aperte Play para explorar.",
+                "Jardim, horizonte e céu imersivo criados. Aperte Play para explorar.",
                 "OK"
             );
         }
@@ -339,6 +341,107 @@ namespace CatsVsDemons.Editor
             }
         }
 
+        private static void BuildWorldExtension(Transform parent)
+        {
+            GameObject world = new GameObject("WorldExtension");
+            world.transform.SetParent(parent);
+
+            CreatePart("OuterWater", PrimitiveType.Cube, world.transform,
+                new Vector3(0f, -0.78f, 0f), new Vector3(112f, 0.28f, 88f),
+                new Color(0.035f, 0.2f, 0.28f));
+            CreatePart("OuterIsland", PrimitiveType.Cube, world.transform,
+                new Vector3(0f, -0.48f, 0f), new Vector3(76f, 0.38f, 57f),
+                new Color(0.10f, 0.30f, 0.16f));
+
+            Vector3[] mountainPositions =
+            {
+                new Vector3(-39f, 3.8f, 18f),
+                new Vector3(-31f, 5.2f, 27f),
+                new Vector3(-15f, 4.1f, 31f),
+                new Vector3(5f, 6.2f, 34f),
+                new Vector3(24f, 4.8f, 30f),
+                new Vector3(39f, 4.3f, 18f),
+                new Vector3(42f, 3.4f, -7f),
+                new Vector3(-42f, 3.6f, -10f)
+            };
+            for (int index = 0; index < mountainPositions.Length; index++)
+            {
+                float height = 7f + (index % 3) * 2.3f;
+                CreateMountain(
+                    world.transform,
+                    mountainPositions[index],
+                    new Vector3(10f + (index % 2) * 3f, height, 8f)
+                );
+            }
+
+            Vector3[] distantTrees =
+            {
+                new Vector3(-29f, 0f, 19f),
+                new Vector3(-23f, 0f, 23f),
+                new Vector3(27f, 0f, 21f),
+                new Vector3(32f, 0f, 14f),
+                new Vector3(-31f, 0f, -18f),
+                new Vector3(30f, 0f, -18f),
+                new Vector3(-12f, 0f, -24f),
+                new Vector3(13f, 0f, -25f)
+            };
+            foreach (Vector3 position in distantTrees)
+            {
+                CreateCherryTree(world.transform, position);
+            }
+
+            CreateTorii(world.transform, new Vector3(0f, 0f, 24f), 180f);
+            CreateTorii(world.transform, new Vector3(-31f, 0f, -3f), 90f);
+
+            for (int index = -5; index <= 5; index++)
+            {
+                CreatePart("ShoreRock", PrimitiveType.Sphere, world.transform,
+                    new Vector3(index * 6.5f, -0.08f, -27f + Mathf.Abs(index) * 0.45f),
+                    new Vector3(2.2f, 0.9f, 1.55f),
+                    new Color(0.20f, 0.25f, 0.23f),
+                    new Vector3(0f, index * 13f, 0f));
+            }
+        }
+
+        private static void CreateMountain(
+            Transform parent,
+            Vector3 position,
+            Vector3 scale)
+        {
+            GameObject mountain = new GameObject("DistantMountain");
+            mountain.transform.SetParent(parent);
+            mountain.transform.localPosition = position;
+
+            CreatePart("MountainBody", PrimitiveType.Sphere, mountain.transform,
+                Vector3.zero, scale,
+                new Color(0.13f, 0.23f, 0.19f),
+                new Vector3(0f, position.x * 1.7f, -8f));
+            CreatePart("MountainForest", PrimitiveType.Sphere, mountain.transform,
+                new Vector3(0f, scale.y * 0.12f, -0.2f),
+                new Vector3(scale.x * 0.82f, scale.y * 0.82f, scale.z * 0.84f),
+                new Color(0.09f, 0.32f, 0.17f));
+        }
+
+        private static void CreateTorii(Transform parent, Vector3 position, float yaw)
+        {
+            GameObject torii = new GameObject("DistantTorii");
+            torii.transform.SetParent(parent);
+            torii.transform.localPosition = position;
+            torii.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            Color red = new Color(0.58f, 0.045f, 0.025f);
+            Color dark = new Color(0.12f, 0.07f, 0.05f);
+
+            CreatePart("ToriiPost", PrimitiveType.Cylinder, torii.transform,
+                new Vector3(-2.1f, 2.2f, 0f), new Vector3(0.28f, 2.2f, 0.28f), red);
+            CreatePart("ToriiPost", PrimitiveType.Cylinder, torii.transform,
+                new Vector3(2.1f, 2.2f, 0f), new Vector3(0.28f, 2.2f, 0.28f), red);
+            CreatePart("ToriiBeam", PrimitiveType.Cube, torii.transform,
+                new Vector3(0f, 4.05f, 0f), new Vector3(5.7f, 0.34f, 0.45f), red);
+            CreatePart("ToriiTop", PrimitiveType.Cube, torii.transform,
+                new Vector3(0f, 4.62f, 0f), new Vector3(6.7f, 0.28f, 0.55f), dark,
+                new Vector3(0f, 0f, -2f));
+        }
+
         private static void CreateLantern(Transform parent, Vector3 position)
         {
             GameObject lantern = new GameObject("GardenLantern");
@@ -426,6 +529,40 @@ namespace CatsVsDemons.Editor
                 sun.intensity = 1.25f;
                 sun.transform.rotation = Quaternion.Euler(48f, -32f, 0f);
             }
+        }
+
+        private static void ConfigureSky()
+        {
+            Shader skyShader = Shader.Find("Skybox/Procedural");
+            if (skyShader != null)
+            {
+                string skyPath = $"{MaterialFolder}/JapaneseTwilightSky.mat";
+                Material sky = AssetDatabase.LoadAssetAtPath<Material>(skyPath);
+                if (sky == null)
+                {
+                    sky = new Material(skyShader)
+                    {
+                        name = "JapaneseTwilightSky"
+                    };
+                    AssetDatabase.CreateAsset(sky, skyPath);
+                }
+
+                sky.SetColor("_SkyTint", new Color(0.32f, 0.46f, 0.67f));
+                sky.SetColor("_GroundColor", new Color(0.13f, 0.19f, 0.20f));
+                sky.SetFloat("_AtmosphereThickness", 0.72f);
+                sky.SetFloat("_SunSize", 0.045f);
+                sky.SetFloat("_SunSizeConvergence", 4.5f);
+                sky.SetFloat("_Exposure", 1.08f);
+                RenderSettings.skybox = sky;
+                EditorUtility.SetDirty(sky);
+            }
+
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = new Color(0.26f, 0.36f, 0.43f);
+            RenderSettings.fogDensity = 0.0075f;
+            RenderSettings.reflectionIntensity = 0.65f;
+            RenderSettings.haloStrength = 0.3f;
         }
 
         private static void EnsureFolders()
