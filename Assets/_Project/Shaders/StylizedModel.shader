@@ -3,6 +3,8 @@ Shader "CatsVsDemons/StylizedModel"
     Properties
     {
         _BaseColor ("Base Color", Color) = (0.3, 0.5, 0.7, 1)
+        [MainTexture] _BaseMap ("Albedo Texture", 2D) = "white" {}
+        _UseBaseMap ("Use Albedo Texture", Range(0, 1)) = 0
         _SecondaryColor ("Secondary Color", Color) = (0.9, 0.9, 0.9, 1)
         _AccentColor ("Accent Color", Color) = (0.8, 0.1, 0.1, 1)
         _RimColor ("Rim Color", Color) = (1, 0.8, 0.45, 1)
@@ -39,8 +41,12 @@ Shader "CatsVsDemons/StylizedModel"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            TEXTURE2D(_BaseMap);
+            SAMPLER(sampler_BaseMap);
+
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
+                float4 _BaseMap_ST;
                 half4 _SecondaryColor;
                 half4 _AccentColor;
                 half4 _RimColor;
@@ -51,12 +57,14 @@ Shader "CatsVsDemons/StylizedModel"
                 float _AccentCenter;
                 float _AccentWidth;
                 float _RimStrength;
+                float _UseBaseMap;
             CBUFFER_END
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
             };
 
             struct Varyings
@@ -66,6 +74,7 @@ Shader "CatsVsDemons/StylizedModel"
                 float3 viewDirectionWS : TEXCOORD1;
                 float4 shadowCoord : TEXCOORD2;
                 float heightOS : TEXCOORD3;
+                float2 uv : TEXCOORD4;
             };
 
             Varyings Vert(Attributes input)
@@ -82,6 +91,7 @@ Shader "CatsVsDemons/StylizedModel"
                 output.shadowCoord =
                     GetShadowCoord(positions);
                 output.heightOS = input.positionOS.z;
+                output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
 
@@ -117,6 +127,13 @@ Shader "CatsVsDemons/StylizedModel"
                     _AccentColor.rgb,
                     accentMask * 0.92
                 );
+
+                half3 albedo = SAMPLE_TEXTURE2D(
+                    _BaseMap,
+                    sampler_BaseMap,
+                    input.uv
+                ).rgb;
+                color = lerp(color, albedo, _UseBaseMap);
 
                 Light mainLight = GetMainLight(input.shadowCoord);
                 half3 normal = normalize(input.normalWS);

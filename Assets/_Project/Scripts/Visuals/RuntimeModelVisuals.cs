@@ -239,6 +239,16 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_SecondaryColor", secondaryColor);
             material.SetColor("_AccentColor", accentColor);
             material.SetColor("_RimColor", rimColor);
+            Texture2D albedo = LoadAlbedo(key);
+            if (albedo != null)
+            {
+                material.SetTexture("_BaseMap", albedo);
+                material.SetFloat("_UseBaseMap", 1f);
+            }
+            else
+            {
+                material.SetFloat("_UseBaseMap", 0f);
+            }
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", topStart);
@@ -249,6 +259,26 @@ namespace CatsVsDemons.Visuals
 
             Materials.Add(key, material);
             return material;
+        }
+
+        private static Texture2D LoadAlbedo(string modelKey)
+        {
+            string texturePath = modelKey switch
+            {
+                "Models/Kin" =>
+                    "Textures/Characters/Kin_Albedo",
+                "Models/DemonSono" =>
+                    "Textures/Characters/Sono_Albedo",
+                "Models/DemonFlamurk" =>
+                    "Textures/Characters/Flamurk_Albedo",
+                "Models/DemonPoerix" =>
+                    "Textures/Characters/Poerix_Albedo",
+                _ => null
+            };
+
+            return string.IsNullOrEmpty(texturePath)
+                ? null
+                : Resources.Load<Texture2D>(texturePath);
         }
     }
 }
