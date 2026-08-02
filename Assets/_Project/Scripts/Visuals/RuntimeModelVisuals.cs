@@ -68,7 +68,39 @@ namespace CatsVsDemons.Visuals
             foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = true;
-                renderer.sharedMaterial = material;
+                if (UsesPartPalette(resourcePath) &&
+                    renderer.sharedMaterials.Length > 1)
+                {
+                    Material[] sourceMaterials = renderer.sharedMaterials;
+                    Material[] palette = new Material[sourceMaterials.Length];
+                    for (int index = 0; index < sourceMaterials.Length; index++)
+                    {
+                        Material source = sourceMaterials[index];
+                        Color partColor = color;
+                        if (source != null)
+                        {
+                            if (source.HasProperty("_BaseColor"))
+                            {
+                                partColor = source.GetColor("_BaseColor");
+                            }
+                            else if (source.HasProperty("_Color"))
+                            {
+                                partColor = source.color;
+                            }
+                        }
+                        palette[index] = GetPartMaterial(
+                            resourcePath,
+                            source != null ? source.name : index.ToString(),
+                            partColor,
+                            modelBounds
+                        );
+                    }
+                    renderer.sharedMaterials = palette;
+                }
+                else
+                {
+                    renderer.sharedMaterial = material;
+                }
             }
 
             visual.AddComponent<ProceduralModelAnimator>();
@@ -239,16 +271,7 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_SecondaryColor", secondaryColor);
             material.SetColor("_AccentColor", accentColor);
             material.SetColor("_RimColor", rimColor);
-            Texture2D albedo = LoadAlbedo(key);
-            if (albedo != null)
-            {
-                material.SetTexture("_BaseMap", albedo);
-                material.SetFloat("_UseBaseMap", 1f);
-            }
-            else
-            {
-                material.SetFloat("_UseBaseMap", 0f);
-            }
+            material.SetFloat("_UseBaseMap", 0f);
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", topStart);
@@ -261,24 +284,52 @@ namespace CatsVsDemons.Visuals
             return material;
         }
 
-        private static Texture2D LoadAlbedo(string modelKey)
+        private static bool UsesPartPalette(string modelKey)
         {
-            string texturePath = modelKey switch
-            {
-                "Models/Kin" =>
-                    "Textures/Characters/Kin_Albedo",
-                "Models/DemonSono" =>
-                    "Textures/Characters/Sono_Albedo",
-                "Models/DemonFlamurk" =>
-                    "Textures/Characters/Flamurk_Albedo",
-                "Models/DemonPoerix" =>
-                    "Textures/Characters/Poerix_Albedo",
-                _ => null
-            };
+            return modelKey == "Models/Kin" ||
+                modelKey == "Models/DemonSono" ||
+                modelKey == "Models/DemonFlamurk" ||
+                modelKey == "Models/DemonPoerix";
+        }
 
-            return string.IsNullOrEmpty(texturePath)
-                ? null
-                : Resources.Load<Texture2D>(texturePath);
+        private static Material GetPartMaterial(
+            string modelKey,
+            string partName,
+            Color partColor,
+            Bounds bounds)
+        {
+            string cacheKey = $"{modelKey}:{partName}";
+            if (Materials.TryGetValue(cacheKey, out Material cached))
+            {
+                return cached;
+            }
+
+            Shader shader = Shader.Find("CatsVsDemons/StylizedModel");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            Material material = new Material(shader)
+            {
+                name = $"Runtime_{partName}",
+                color = partColor
+            };
+            material.SetColor("_BaseColor", partColor);
+            material.SetColor("_SecondaryColor", partColor);
+            material.SetColor("_AccentColor", partColor);
+            material.SetColor("_RimColor", Color.Lerp(partColor, Color.white, 0.45f));
+            material.SetFloat("_UseBaseMap", 0f);
+            material.SetFloat("_MinHeight", bounds.min.z);
+            material.SetFloat("_MaxHeight", bounds.max.z);
+            material.SetFloat("_TopStart", 1f);
+            material.SetFloat("_TopEnd", 1f);
+            material.SetFloat("_AccentCenter", 0f);
+            material.SetFloat("_AccentWidth", 0.01f);
+            material.SetFloat("_RimStrength", 0.18f);
+
+            Materials.Add(cacheKey, material);
+            return material;
         }
     }
 }

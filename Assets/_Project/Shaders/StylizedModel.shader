@@ -2,7 +2,7 @@ Shader "CatsVsDemons/StylizedModel"
 {
     Properties
     {
-        _BaseColor ("Base Color", Color) = (0.3, 0.5, 0.7, 1)
+        [MainColor] _BaseColor ("Base Color", Color) = (0.3, 0.5, 0.7, 1)
         [MainTexture] _BaseMap ("Albedo Texture", 2D) = "white" {}
         _UseBaseMap ("Use Albedo Texture", Range(0, 1)) = 0
         _SecondaryColor ("Secondary Color", Color) = (0.9, 0.9, 0.9, 1)
