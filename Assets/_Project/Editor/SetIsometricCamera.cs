@@ -41,10 +41,10 @@ namespace CatsVsDemons.Editor
             }
 
             Transform cameraTransform = gameCamera.transform;
-            Vector3 target = new Vector3(0f, 0.5f, 1f);
+            Vector3 target = new Vector3(0f, 2f, 2f);
 
             cameraTransform.position =
-                new Vector3(0f, 30f, -34f);
+                new Vector3(0f, 20f, -38f);
             cameraTransform.rotation =
                 Quaternion.LookRotation(
                     target - cameraTransform.position,
