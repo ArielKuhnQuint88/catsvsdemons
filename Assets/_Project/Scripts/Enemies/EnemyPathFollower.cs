@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using CatsVsDemons.Defense;
 using CatsVsDemons.House;
+using CatsVsDemons.Player;
 using CatsVsDemons.Visuals;
 using UnityEngine;
 
@@ -14,12 +16,21 @@ namespace CatsVsDemons.Enemies
         [SerializeField] private float rotationSpeed = 10f;
         [SerializeField] private float waypointDistance = 0.15f;
         [SerializeField] private int houseDamage = 10;
+        [SerializeField] private float aggroRange = 4.5f;
+        [SerializeField] private float attackDistance = 1.35f;
+        [SerializeField] private float attackInterval = 1f;
+        [SerializeField] private int targetDamage = 8;
 
         private readonly List<Transform> waypoints = new();
         private int currentWaypoint;
         private bool reachedDestination;
         private float speedMultiplier = 1f;
         private float slowTimer;
+        private Transform combatTarget;
+        private DefenseHealth defenseTarget;
+        private KinHealth kinTarget;
+        private float attackTimer;
+        private float nextTargetSearch;
 
         private void Awake()
         {
@@ -88,6 +99,12 @@ namespace CatsVsDemons.Enemies
         private void Update()
         {
             UpdateSlow();
+            attackTimer -= Time.deltaTime;
+
+            if (UpdateCombatTarget())
+            {
+                return;
+            }
 
             if (reachedDestination || currentWaypoint >= waypoints.Count)
             {
@@ -110,10 +127,140 @@ namespace CatsVsDemons.Enemies
                 return;
             }
 
-            Vector3 direction = offset.normalized;
+            MoveTowards(offset.normalized);
+        }
+
+        private bool UpdateCombatTarget()
+        {
+            if (!IsCurrentTargetValid())
+            {
+                ClearCombatTarget();
+            }
+
+            if (combatTarget == null && Time.time >= nextTargetSearch)
+            {
+                nextTargetSearch = Time.time + 0.25f;
+                FindCombatTarget();
+            }
+
+            if (combatTarget == null)
+            {
+                return false;
+            }
+
+            Vector3 offset = combatTarget.position - transform.position;
+            offset.y = 0f;
+            float distance = offset.magnitude;
+            if (distance > aggroRange * 1.6f)
+            {
+                ClearCombatTarget();
+                return false;
+            }
+
+            if (distance > attackDistance)
+            {
+                MoveTowards(offset.normalized);
+                return true;
+            }
+
+            if (attackTimer <= 0f)
+            {
+                AttackCombatTarget();
+                attackTimer = attackInterval;
+            }
+            return true;
+        }
+
+        private void FindCombatTarget()
+        {
+            float nearestDistance = aggroRange;
+            KinHealth kin = UnityEngine.Object.FindFirstObjectByType<KinHealth>();
+            if (kin != null && !kin.IsDown)
+            {
+                float distance = Vector3.Distance(
+                    transform.position,
+                    kin.transform.position
+                );
+                if (distance <= nearestDistance)
+                {
+                    nearestDistance = distance;
+                    combatTarget = kin.transform;
+                    kinTarget = kin;
+                    defenseTarget = null;
+                }
+            }
+
+            DefenseHealth[] defenses =
+                UnityEngine.Object.FindObjectsByType<DefenseHealth>(
+                    FindObjectsSortMode.None
+                );
+            foreach (DefenseHealth defense in defenses)
+            {
+                if (defense == null || defense.IsDestroyed)
+                {
+                    continue;
+                }
+
+                float distance = Vector3.Distance(
+                    transform.position,
+                    defense.transform.position
+                );
+                if (distance <= nearestDistance)
+                {
+                    nearestDistance = distance;
+                    combatTarget = defense.transform;
+                    defenseTarget = defense;
+                    kinTarget = null;
+                }
+            }
+        }
+
+        private bool IsCurrentTargetValid()
+        {
+            if (combatTarget == null)
+            {
+                return false;
+            }
+            return defenseTarget != null
+                ? !defenseTarget.IsDestroyed
+                : kinTarget != null && !kinTarget.IsDown;
+        }
+
+        private void AttackCombatTarget()
+        {
+            ProceduralModelAnimator animator =
+                GetComponentInChildren<ProceduralModelAnimator>();
+            if (animator != null)
+            {
+                animator.TriggerAttack();
+            }
+
+            if (defenseTarget != null)
+            {
+                defenseTarget.TakeDamage(targetDamage);
+            }
+            else if (kinTarget != null)
+            {
+                kinTarget.TakeDamage(targetDamage);
+            }
+        }
+
+        private void ClearCombatTarget()
+        {
+            combatTarget = null;
+            defenseTarget = null;
+            kinTarget = null;
+        }
+
+        private void MoveTowards(Vector3 direction)
+        {
+            if (direction.sqrMagnitude < 0.001f)
+            {
+                return;
+            }
+
             transform.position +=
                 direction * moveSpeed * speedMultiplier * Time.deltaTime;
-
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
                 Quaternion.LookRotation(direction, Vector3.up),
