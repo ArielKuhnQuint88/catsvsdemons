@@ -259,7 +259,7 @@ namespace CatsVsDemons.UI
                 new Color(0.92f, 0.35f, 1f)
             );
 
-            Vector2 anchor = GetKinAnchor(scale);
+            Vector2 anchor = GetHouseAnchor(scale);
             float radius = 39f * scale;
             DrawDefenseButton(
                 anchor + new Vector2(-82f * scale, 4f),
@@ -355,20 +355,20 @@ namespace CatsVsDemons.UI
             }
         }
 
-        private Vector2 GetKinAnchor(float scale)
+        private Vector2 GetHouseAnchor(float scale)
         {
             Vector2 fallback = new Vector2(
                 Screen.width * 0.5f,
-                Screen.height * 0.61f
+                Screen.height * 0.55f
             );
             Camera camera = Camera.main;
-            if (kin == null || camera == null)
+            if (house == null || camera == null)
             {
                 return fallback;
             }
 
             Vector3 point = camera.WorldToScreenPoint(
-                kin.transform.position + Vector3.up * 0.4f
+                house.transform.position + Vector3.up * 0.5f
             );
             if (point.z <= 0f)
             {
@@ -377,8 +377,8 @@ namespace CatsVsDemons.UI
 
             return new Vector2(
                 Mathf.Clamp(point.x, 150f * scale, Screen.width - 150f * scale),
-                Mathf.Clamp(Screen.height - point.y + 90f * scale,
-                    Screen.height * 0.48f,
+                Mathf.Clamp(Screen.height - point.y + 120f * scale,
+                    Screen.height * 0.42f,
                     Screen.height - 145f * scale)
             );
         }
