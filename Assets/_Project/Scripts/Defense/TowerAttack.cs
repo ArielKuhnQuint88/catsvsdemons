@@ -6,7 +6,6 @@ namespace CatsVsDemons.Defense
     public sealed class TowerAttack : MonoBehaviour
     {
         [SerializeField] private float range = 7f;
-        [SerializeField] private float kinActivationRange = 5f;
         [SerializeField] private float attackInterval = 1f;
         [SerializeField] private int damage = 5;
         [SerializeField] private float slowMultiplier = 0.45f;
@@ -14,22 +13,15 @@ namespace CatsVsDemons.Defense
         private float attackTimer;
         private float beamTimer;
         private LineRenderer beam;
-        private Transform kin;
 
         private void Awake()
         {
-            FindKin();
             CreateBeam();
         }
 
         private void Update()
         {
             UpdateBeam();
-
-            if (!IsKinNearby())
-            {
-                return;
-            }
 
             ApplyLanternSlow();
 
@@ -48,44 +40,6 @@ namespace CatsVsDemons.Defense
             attackTimer = attackInterval;
             target.TakeDamage(damage);
             ShowBeam(target.transform);
-        }
-
-        private bool IsKinNearby()
-        {
-            if (kin == null)
-            {
-                FindKin();
-            }
-
-            return kin != null &&
-                Vector3.Distance(transform.position, kin.position)
-                    <= kinActivationRange;
-        }
-
-        private void FindKin()
-        {
-            GameObject player = GameObject.FindWithTag("Player");
-
-            if (player != null)
-            {
-                kin = player.transform;
-                return;
-            }
-
-            GameObject playerGroup = GameObject.Find("Game/Player");
-            if (playerGroup != null && playerGroup.transform.childCount > 0)
-            {
-                kin = playerGroup.transform.GetChild(0);
-                return;
-            }
-
-            GameObject kinObject = GameObject.Find("Kin_Prototype");
-            if (kinObject == null)
-            {
-                kinObject = GameObject.Find("Kin");
-            }
-
-            kin = kinObject != null ? kinObject.transform : null;
         }
 
         private void ApplyLanternSlow()
@@ -192,8 +146,6 @@ namespace CatsVsDemons.Defense
             Gizmos.color = new Color(1f, 0.45f, 0.05f);
             Gizmos.DrawWireSphere(transform.position, range);
 
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(transform.position, kinActivationRange);
         }
     }
 }
