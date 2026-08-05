@@ -1,5 +1,6 @@
 using CatsVsDemons.Defense;
 using CatsVsDemons.Economy;
+using CatsVsDemons.Enemies;
 using CatsVsDemons.House;
 using CatsVsDemons.Player;
 using CatsVsDemons.Waves;
@@ -20,6 +21,13 @@ namespace CatsVsDemons.UI
         private GUIStyle resultStyle;
         private GUIStyle messageStyle;
         private GUIStyle countdownStyle;
+        private GUIStyle compactStyle;
+        private GUIStyle compactCenterStyle;
+        private GUIStyle radialStyle;
+        private GUIStyle costStyle;
+        private Texture2D circleTexture;
+        private int activeEnemies;
+        private float nextEnemyRefresh;
         private int currentPhase;
         private int totalPhases;
         private int currentWave;
@@ -55,6 +63,31 @@ namespace CatsVsDemons.UI
                 FontStyle.Bold
             );
             countdownStyle.alignment = TextAnchor.MiddleCenter;
+            compactStyle = CreateStyle(17, Color.white, FontStyle.Bold);
+            compactCenterStyle = CreateStyle(16, Color.white, FontStyle.Bold);
+            compactCenterStyle.alignment = TextAnchor.MiddleCenter;
+            radialStyle = CreateStyle(15, Color.white, FontStyle.Bold);
+            radialStyle.alignment = TextAnchor.MiddleCenter;
+            costStyle = CreateStyle(
+                14,
+                new Color(1f, 0.82f, 0.16f),
+                FontStyle.Bold
+            );
+            costStyle.alignment = TextAnchor.MiddleCenter;
+            circleTexture = CreateCircleTexture(128);
+        }
+
+        private void Update()
+        {
+            if (Time.unscaledTime < nextEnemyRefresh)
+            {
+                return;
+            }
+
+            nextEnemyRefresh = Time.unscaledTime + 0.35f;
+            activeEnemies = Object.FindObjectsByType<EnemyHealth>(
+                FindObjectsSortMode.None
+            ).Length;
         }
 
         private void Start()
@@ -105,6 +138,10 @@ namespace CatsVsDemons.UI
             }
 
             Time.timeScale = 1f;
+            if (circleTexture != null)
+            {
+                Destroy(circleTexture);
+            }
         }
 
         private void OnGUI()
@@ -147,86 +184,274 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            GUI.Box(new Rect(18f, 18f, 680f, 320f), GUIContent.none);
-            GUI.Label(
-                new Rect(34f, 28f, 500f, 38f),
-                $"Moedas: {coins}",
-                coinStyle
-            );
-            GUI.Label(
-                new Rect(34f, 64f, 500f, 31f),
-                $"Casa: {houseHealth}/{houseMax}",
-                healthStyle
-            );
-            GUI.Label(
-                new Rect(34f, 96f, 500f, 31f),
-                $"Kin: {kinHealth}/{kinMax}",
-                healthStyle
-            );
-            GUI.Label(
-                new Rect(34f, 132f, 500f, 30f),
-                GetWaveText(),
-                helpStyle
-            );
-            GUI.Label(
-                new Rect(34f, 166f, 500f, 28f),
-                $"Selecionado: {TowerBuildSelection.GetDisplayName()} " +
-                $"({TowerBuildSelection.GetCost()})",
-                helpStyle
+            float scale = Mathf.Clamp(Screen.height / 1080f, 0.72f, 1.2f);
+            float width = 460f * scale;
+            float height = 116f * scale;
+            Rect panel = new Rect(
+                (Screen.width - width) * 0.5f,
+                16f * scale,
+                width,
+                height
             );
 
-            int previousButtonSize = GUI.skin.button.fontSize;
-            FontStyle previousButtonStyle = GUI.skin.button.fontStyle;
-            GUI.skin.button.fontSize = 20;
-            GUI.skin.button.fontStyle = FontStyle.Bold;
+            DrawTexture(panel, new Color(0.025f, 0.055f, 0.09f, 0.94f));
+            DrawTexture(
+                new Rect(panel.x, panel.y, panel.width, 4f * scale),
+                new Color(0.88f, 0.47f, 0.12f, 1f)
+            );
 
-            DrawDefenseButton(
-                new Rect(34f, 205f, 200f, 70f),
-                "LANTERNA\n10 moedas",
-                DefenseType.Lantern,
-                new Color(1f, 0.42f, 0.06f)
+            GUI.Label(
+                new Rect(panel.x + 14f, panel.y + 10f, 105f, 24f),
+                "♥  CASA",
+                compactStyle
             );
-            DrawDefenseButton(
-                new Rect(250f, 205f, 200f, 70f),
-                "BONSAI\n15 moedas",
-                DefenseType.Bonsai,
-                new Color(0.15f, 0.72f, 0.22f)
+            Rect houseBar = new Rect(
+                panel.x + 112f,
+                panel.y + 12f,
+                panel.width - 126f,
+                20f * scale
             );
+            DrawBar(
+                houseBar,
+                houseMax > 0 ? (float)houseHealth / houseMax : 0f,
+                new Color(0.92f, 0.18f, 0.12f),
+                $"{houseHealth}/{houseMax}"
+            );
+
+            Rect kinBar = new Rect(
+                panel.x + 112f,
+                panel.y + 39f * scale,
+                panel.width - 126f,
+                12f * scale
+            );
+            GUI.Label(
+                new Rect(panel.x + 14f, panel.y + 34f * scale, 92f, 24f),
+                "KIN",
+                compactStyle
+            );
+            DrawBar(
+                kinBar,
+                kinMax > 0 ? (float)kinHealth / kinMax : 0f,
+                HealthColor(kinHealth, kinMax),
+                string.Empty
+            );
+
+            float rowY = panel.y + 66f * scale;
+            float cellWidth = panel.width / 4f;
+            DrawStatusCell(
+                new Rect(panel.x, rowY, cellWidth, 34f * scale),
+                $"●  {coins}",
+                new Color(1f, 0.78f, 0.12f)
+            );
+            DrawStatusCell(
+                new Rect(panel.x + cellWidth, rowY, cellWidth, 34f * scale),
+                $"FASE {currentPhase}/{totalPhases}",
+                new Color(0.56f, 0.82f, 1f)
+            );
+            DrawStatusCell(
+                new Rect(panel.x + cellWidth * 2f, rowY, cellWidth, 34f * scale),
+                $"ONDA {currentWave}/{totalWaves}",
+                new Color(0.82f, 0.68f, 1f)
+            );
+            DrawStatusCell(
+                new Rect(panel.x + cellWidth * 3f, rowY, cellWidth, 34f * scale),
+                $"☠  {activeEnemies}",
+                new Color(0.92f, 0.35f, 1f)
+            );
+
+            Vector2 anchor = GetKinAnchor(scale);
+            float radius = 39f * scale;
             DrawDefenseButton(
-                new Rect(466f, 205f, 200f, 70f),
-                "PORTAL\n10 moedas",
+                anchor + new Vector2(-82f * scale, 4f),
+                radius,
+                "PORTAL",
+                10,
                 DefenseType.Portal,
-                new Color(0.08f, 0.55f, 1f)
+                new Color(0.04f, 0.48f, 0.95f)
             );
-
-            GUI.skin.button.fontSize = previousButtonSize;
-            GUI.skin.button.fontStyle = previousButtonStyle;
-
-            GUI.Label(
-                new Rect(34f, 290f, 620f, 24f),
-                "Escolha e clique em um ponto livre.",
-                helpStyle
+            DrawDefenseButton(
+                anchor + new Vector2(82f * scale, 4f),
+                radius,
+                "BONSAI",
+                15,
+                DefenseType.Bonsai,
+                new Color(0.1f, 0.62f, 0.24f)
+            );
+            DrawDefenseButton(
+                anchor + new Vector2(0f, 80f * scale),
+                radius,
+                "LANTERNA",
+                10,
+                DefenseType.Lantern,
+                new Color(0.68f, 0.45f, 0.82f)
             );
         }
 
         private void DrawDefenseButton(
-            Rect area,
+            Vector2 center,
+            float radius,
             string label,
+            int cost,
             DefenseType type,
             Color color)
         {
-            Color previousColor = GUI.backgroundColor;
-            GUI.backgroundColor =
-                TowerBuildSelection.Selected == type
-                    ? Color.Lerp(color, Color.white, 0.25f)
-                    : color;
+            bool selected = TowerBuildSelection.Selected == type;
+            bool hovered = Vector2.Distance(Event.current.mousePosition, center) <= radius;
+            float outerRadius = selected ? radius + 6f : radius + 3f;
+            DrawCircle(
+                center,
+                outerRadius,
+                selected
+                    ? new Color(1f, 0.73f, 0.18f, 0.98f)
+                    : new Color(0.02f, 0.05f, 0.08f, 0.92f)
+            );
+            DrawCircle(
+                center,
+                radius,
+                hovered ? Color.Lerp(color, Color.white, 0.2f) : color
+            );
+            DrawCircle(center, radius * 0.78f, new Color(0.025f, 0.07f, 0.1f, 0.9f));
 
-            if (GUI.Button(area, label))
+            GUI.Label(
+                new Rect(center.x - radius, center.y - 23f, radius * 2f, 25f),
+                label,
+                radialStyle
+            );
+            GUI.Label(
+                new Rect(center.x - radius, center.y + 2f, radius * 2f, 22f),
+                $"● {cost}",
+                costStyle
+            );
+
+            if (hovered && Event.current.type == EventType.MouseUp &&
+                Event.current.button == 0)
             {
                 TowerBuildSelection.Select(type);
+                Event.current.Use();
+            }
+        }
+
+        private void DrawStatusCell(Rect area, string text, Color color)
+        {
+            Color previous = compactCenterStyle.normal.textColor;
+            compactCenterStyle.normal.textColor = color;
+            GUI.Label(area, text, compactCenterStyle);
+            compactCenterStyle.normal.textColor = previous;
+        }
+
+        private void DrawBar(Rect area, float amount, Color color, string text)
+        {
+            DrawTexture(area, new Color(0.015f, 0.025f, 0.04f, 1f));
+            Rect fill = area;
+            fill.width = Mathf.Max(0f, area.width * Mathf.Clamp01(amount));
+            fill.x += 2f;
+            fill.y += 2f;
+            fill.height = Mathf.Max(1f, fill.height - 4f);
+            fill.width = Mathf.Max(0f, fill.width - 4f);
+            DrawTexture(fill, color);
+            if (!string.IsNullOrEmpty(text))
+            {
+                GUI.Label(area, text, compactCenterStyle);
+            }
+        }
+
+        private Vector2 GetKinAnchor(float scale)
+        {
+            Vector2 fallback = new Vector2(
+                Screen.width * 0.5f,
+                Screen.height * 0.61f
+            );
+            Camera camera = Camera.main;
+            if (kin == null || camera == null)
+            {
+                return fallback;
             }
 
-            GUI.backgroundColor = previousColor;
+            Vector3 point = camera.WorldToScreenPoint(
+                kin.transform.position + Vector3.up * 0.4f
+            );
+            if (point.z <= 0f)
+            {
+                return fallback;
+            }
+
+            return new Vector2(
+                Mathf.Clamp(point.x, 150f * scale, Screen.width - 150f * scale),
+                Mathf.Clamp(Screen.height - point.y + 90f * scale,
+                    Screen.height * 0.48f,
+                    Screen.height - 145f * scale)
+            );
+        }
+
+        private void DrawCircle(Vector2 center, float radius, Color color)
+        {
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(
+                new Rect(
+                    center.x - radius,
+                    center.y - radius,
+                    radius * 2f,
+                    radius * 2f
+                ),
+                circleTexture,
+                ScaleMode.StretchToFill,
+                true
+            );
+            GUI.color = previous;
+        }
+
+        private static void DrawTexture(Rect area, Color color)
+        {
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(area, Texture2D.whiteTexture);
+            GUI.color = previous;
+        }
+
+        private static Color HealthColor(int current, int maximum)
+        {
+            float amount = maximum > 0 ? (float)current / maximum : 0f;
+            if (amount > 0.6f)
+            {
+                return new Color(0.16f, 0.8f, 0.3f);
+            }
+            return amount > 0.3f
+                ? new Color(1f, 0.72f, 0.08f)
+                : new Color(0.92f, 0.12f, 0.08f);
+        }
+
+        private static Texture2D CreateCircleTexture(int size)
+        {
+            Texture2D texture = new Texture2D(
+                size,
+                size,
+                TextureFormat.RGBA32,
+                false
+            )
+            {
+                name = "RuntimeHudCircle",
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            Color32 clear = new Color32(255, 255, 255, 0);
+            Color32 solid = new Color32(255, 255, 255, 255);
+            float center = (size - 1) * 0.5f;
+            float radius = center - 1f;
+            Color32[] pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(
+                        new Vector2(x, y),
+                        new Vector2(center, center)
+                    );
+                    pixels[y * size + x] = distance <= radius ? solid : clear;
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return texture;
         }
 
         private void DrawCountdown()
