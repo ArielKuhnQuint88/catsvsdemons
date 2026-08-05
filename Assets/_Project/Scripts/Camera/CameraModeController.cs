@@ -121,16 +121,21 @@ namespace CatsVsDemons.CameraSystem
                         continue;
                     }
 
-                    if (source.shader != null && source.shader.isSupported)
+                    bool gardenMaterial = source.name.StartsWith("Garden_");
+                    bool unsupported =
+                        source.shader == null || !source.shader.isSupported;
+                    if (!gardenMaterial && !unsupported)
                     {
                         continue;
                     }
 
                     if (!repaired.TryGetValue(source, out Material replacement))
                     {
-                        Color color = source.HasProperty("_Color")
-                            ? source.color
-                            : Color.white;
+                        Color color = source.HasProperty("_BaseColor")
+                            ? source.GetColor("_BaseColor")
+                            : source.HasProperty("_Color")
+                                ? source.color
+                                : Color.white;
                         replacement = new Material(fallback)
                         {
                             name = $"{source.name}_URP_Repair",
