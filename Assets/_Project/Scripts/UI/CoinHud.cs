@@ -368,7 +368,7 @@ namespace CatsVsDemons.UI
             }
 
             Vector3 point = camera.WorldToScreenPoint(
-                house.transform.position + Vector3.up * 0.5f
+                house.transform.position + Vector3.up * 4.5f
             );
             if (point.z <= 0f)
             {
@@ -377,8 +377,8 @@ namespace CatsVsDemons.UI
 
             return new Vector2(
                 Mathf.Clamp(point.x, 150f * scale, Screen.width - 150f * scale),
-                Mathf.Clamp(Screen.height - point.y + 120f * scale,
-                    Screen.height * 0.42f,
+                Mathf.Clamp(Screen.height - point.y + 10f * scale,
+                    Screen.height * 0.24f,
                     Screen.height - 145f * scale)
             );
         }
