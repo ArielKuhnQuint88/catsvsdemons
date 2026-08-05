@@ -13,16 +13,18 @@ namespace CatsVsDemons.CameraSystem
         private Camera gameCamera;
         private Transform kin;
         private bool firstPerson;
-        private Material runtimeSky;
+        private GameObject horizonGround;
+        private Material horizonMaterial;
 
         private void Start()
         {
             gameCamera = GetComponent<Camera>();
-            ConfigureEnvironment();
             firstPerson = PlayerPrefs.GetInt("CameraMode", 0) == 1;
+            ConfigureEnvironment();
 
             if (!firstPerson)
             {
+                ConfigureIsometricCamera();
                 return;
             }
 
@@ -49,32 +51,50 @@ namespace CatsVsDemons.CameraSystem
 
         private void ConfigureEnvironment()
         {
-            gameCamera.clearFlags = CameraClearFlags.Skybox;
+            gameCamera.clearFlags = CameraClearFlags.SolidColor;
+            gameCamera.backgroundColor = new Color(0.28f, 0.48f, 0.68f);
+            RenderSettings.skybox = null;
 
-            Shader skyShader = Shader.Find("Skybox/Procedural");
-            if (skyShader != null && skyShader.isSupported)
+            Shader groundShader = Shader.Find("Universal Render Pipeline/Lit");
+            if (groundShader != null)
             {
-                runtimeSky = new Material(skyShader)
+                horizonGround = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                horizonGround.name = "Runtime Horizon Ground";
+                horizonGround.transform.position = new Vector3(0f, -0.22f, 20f);
+                horizonGround.transform.localScale = new Vector3(18f, 1f, 18f);
+
+                Collider groundCollider = horizonGround.GetComponent<Collider>();
+                if (groundCollider != null)
                 {
-                    name = "Runtime Japanese Twilight Sky",
+                    Destroy(groundCollider);
+                }
+
+                horizonMaterial = new Material(groundShader)
+                {
+                    name = "Runtime Garden Horizon",
+                    color = new Color(0.12f, 0.28f, 0.16f),
                     hideFlags = HideFlags.HideAndDontSave
                 };
-                runtimeSky.SetColor(
-                    "_SkyTint",
-                    new Color(0.32f, 0.46f, 0.67f)
-                );
-                runtimeSky.SetColor(
-                    "_GroundColor",
-                    new Color(0.13f, 0.19f, 0.2f)
-                );
-                runtimeSky.SetFloat("_AtmosphereThickness", 0.72f);
-                runtimeSky.SetFloat("_SunSize", 0.045f);
-                runtimeSky.SetFloat("_SunSizeConvergence", 4.5f);
-                runtimeSky.SetFloat("_Exposure", 1.08f);
-                RenderSettings.skybox = runtimeSky;
+                horizonGround.GetComponent<Renderer>().sharedMaterial =
+                    horizonMaterial;
             }
 
             RepairUnsupportedMaterials();
+        }
+
+        private void ConfigureIsometricCamera()
+        {
+            gameCamera.orthographic = false;
+            gameCamera.fieldOfView = 42f;
+            gameCamera.nearClipPlane = 0.3f;
+            gameCamera.farClipPlane = 300f;
+
+            Vector3 target = new Vector3(0f, 1.5f, 3f);
+            transform.position = new Vector3(0f, 22f, -38f);
+            transform.rotation = Quaternion.LookRotation(
+                target - transform.position,
+                Vector3.up
+            );
         }
 
         private static void RepairUnsupportedMaterials()
@@ -133,9 +153,14 @@ namespace CatsVsDemons.CameraSystem
 
         private void OnDestroy()
         {
-            if (runtimeSky != null)
+            if (horizonGround != null)
             {
-                Destroy(runtimeSky);
+                Destroy(horizonGround);
+            }
+
+            if (horizonMaterial != null)
+            {
+                Destroy(horizonMaterial);
             }
         }
 
