@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using CatsVsDemons.Enemies;
 using CatsVsDemons.Visuals;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace CatsVsDemons.Player
 {
@@ -10,29 +8,37 @@ namespace CatsVsDemons.Player
     {
         [SerializeField] private int damage = 10;
         [SerializeField] private float attackRange = 2.5f;
-        [SerializeField] private float attackAngle = 120f;
         [SerializeField] private float cooldown = 0.4f;
+        [SerializeField] private float rotationSpeed = 14f;
 
         private float nextAttackTime;
 
         private void Update()
         {
-            bool mouseAttack =
-                Mouse.current != null &&
-                Mouse.current.leftButton.wasPressedThisFrame;
-
-            bool keyboardAttack =
-                Keyboard.current != null &&
-                Keyboard.current.spaceKey.wasPressedThisFrame;
-
-            if ((mouseAttack || keyboardAttack) &&
-                Time.time >= nextAttackTime)
+            EnemyHealth target = FindNearestTarget();
+            if (target == null)
             {
-                Attack();
+                return;
+            }
+
+            Vector3 direction = target.transform.position - transform.position;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    Quaternion.LookRotation(direction),
+                    rotationSpeed * Time.deltaTime
+                );
+            }
+
+            if (Time.time >= nextAttackTime)
+            {
+                Attack(target);
             }
         }
 
-        private void Attack()
+        private void Attack(EnemyHealth target)
         {
             nextAttackTime = Time.time + cooldown;
 
@@ -43,55 +49,37 @@ namespace CatsVsDemons.Player
                 modelAnimator.TriggerAttack();
             }
 
-            Collider[] hits = Physics.OverlapSphere(
-                transform.position,
-                attackRange
-            );
-
-            HashSet<EnemyHealth> damagedEnemies = new();
-            float minimumDot =
-                Mathf.Cos(attackAngle * 0.5f * Mathf.Deg2Rad);
-
-            foreach (Collider hit in hits)
+            if (target != null && !target.IsDead)
             {
-                EnemyHealth enemy =
-                    hit.GetComponentInParent<EnemyHealth>();
-
-                if (enemy == null ||
-                    enemy.IsDead ||
-                    damagedEnemies.Contains(enemy))
-                {
-                    continue;
-                }
-
-                Vector3 direction =
-                    enemy.transform.position - transform.position;
-                direction.y = 0f;
-
-                if (direction.sqrMagnitude < 0.01f)
-                {
-                    continue;
-                }
-
-                float dot = Vector3.Dot(
-                    transform.forward,
-                    direction.normalized
-                );
-
-                if (dot < minimumDot)
-                {
-                    continue;
-                }
-
-                damagedEnemies.Add(enemy);
-                enemy.TakeDamage(damage);
+                target.TakeDamage(damage);
             }
+        }
 
-            Debug.Log(
-                damagedEnemies.Count > 0
-                    ? $"Kin hit {damagedEnemies.Count} demon(s)."
-                    : "Kin attacked but hit nothing."
+        private EnemyHealth FindNearestTarget()
+        {
+            EnemyHealth[] enemies = Object.FindObjectsByType<EnemyHealth>(
+                FindObjectsSortMode.None
             );
+            EnemyHealth nearest = null;
+            float nearestDistance = attackRange;
+            foreach (EnemyHealth enemy in enemies)
+            {
+                if (enemy == null || enemy.IsDead)
+                {
+                    continue;
+                }
+
+                float distance = Vector3.Distance(
+                    transform.position,
+                    enemy.transform.position
+                );
+                if (distance <= nearestDistance)
+                {
+                    nearest = enemy;
+                    nearestDistance = distance;
+                }
+            }
+            return nearest;
         }
 
         private void OnDrawGizmosSelected()
