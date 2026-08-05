@@ -14,6 +14,11 @@ namespace CatsVsDemons.Enemies
 
         private void Awake()
         {
+            if (GetComponent<EnemyPathFollower>() != null)
+            {
+                enabled = false;
+                return;
+            }
             kin = Object.FindFirstObjectByType<KinHealth>();
         }
 
