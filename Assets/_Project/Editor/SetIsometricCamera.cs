@@ -41,20 +41,20 @@ namespace CatsVsDemons.Editor
             }
 
             Transform cameraTransform = gameCamera.transform;
-            Vector3 target = new Vector3(0f, 2f, 2f);
+            Vector3 target = new Vector3(0f, 1.5f, 3f);
 
             cameraTransform.position =
-                new Vector3(0f, 20f, -38f);
+                new Vector3(0f, 22f, -38f);
             cameraTransform.rotation =
                 Quaternion.LookRotation(
                     target - cameraTransform.position,
                     Vector3.up
                 );
 
-            gameCamera.orthographic = true;
-            gameCamera.orthographicSize = 18f;
+            gameCamera.orthographic = false;
+            gameCamera.fieldOfView = 42f;
             gameCamera.nearClipPlane = 0.3f;
-            gameCamera.farClipPlane = 150f;
+            gameCamera.farClipPlane = 300f;
             gameCamera.clearFlags = CameraClearFlags.SolidColor;
             gameCamera.backgroundColor =
                 new Color(0.16f, 0.17f, 0.19f);
