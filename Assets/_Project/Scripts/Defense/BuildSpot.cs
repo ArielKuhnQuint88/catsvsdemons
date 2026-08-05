@@ -83,6 +83,21 @@ namespace CatsVsDemons.Defense
             }
         }
 
+        public void NotifyDefenseDestroyed(GameObject defense)
+        {
+            if (defense != null)
+            {
+                Destroy(defense);
+            }
+
+            isOccupied = false;
+            Renderer spotRenderer = GetComponent<Renderer>();
+            if (spotRenderer != null)
+            {
+                spotRenderer.enabled = true;
+            }
+        }
+
         private void CreateLantern()
         {
             GameObject tower = CreateRoot("LanternTower_Prototype");
@@ -107,6 +122,7 @@ namespace CatsVsDemons.Defense
             }
 
             tower.AddComponent<TowerAttack>();
+            tower.AddComponent<DefenseHealth>().Initialize(this, 90, 3f);
         }
 
         private void CreateBonsai()
@@ -133,6 +149,7 @@ namespace CatsVsDemons.Defense
             }
 
             bonsai.AddComponent<BonsaiHealing>();
+            bonsai.AddComponent<DefenseHealth>().Initialize(this, 65, 2.8f);
         }
 
         private void CreatePortal()
@@ -168,6 +185,7 @@ namespace CatsVsDemons.Defense
             );
 
             portal.AddComponent<PortalTransport>();
+            portal.AddComponent<DefenseHealth>().Initialize(this, 110, 3.2f);
         }
 
         private GameObject CreateRoot(string objectName)
