@@ -139,14 +139,14 @@ namespace CatsVsDemons.UI
 
         private void DrawModeButtons()
         {
-            float width = Mathf.Min(520f, Screen.width * 0.55f);
-            float height = 92f;
+            float width = Mathf.Min(420f, Screen.width * 0.45f);
+            float height = 72f;
             float left = (Screen.width - width) * 0.5f;
             float top = Screen.height * 0.31f;
 
             int oldSize = GUI.skin.button.fontSize;
             FontStyle oldStyle = GUI.skin.button.fontStyle;
-            GUI.skin.button.fontSize = 28;
+            GUI.skin.button.fontSize = 24;
             GUI.skin.button.fontStyle = FontStyle.Bold;
 
             Color previous = GUI.backgroundColor;
@@ -161,7 +161,7 @@ namespace CatsVsDemons.UI
 
             GUI.backgroundColor = new Color(0.16f, 0.55f, 0.95f);
             if (GUI.Button(
-                new Rect(left, top + 112f, width, height),
+                new Rect(left, top + 88f, width, height),
                 "PRIMEIRA PESSOA"))
             {
                 BeginIntro(1);
@@ -269,8 +269,8 @@ namespace CatsVsDemons.UI
                 "Sair"
             };
 
-            float buttonWidth = 165f;
-            float gap = 16f;
+            float buttonWidth = 140f;
+            float gap = 12f;
             float totalWidth =
                 (buttonWidth * labels.Length) +
                 (gap * (labels.Length - 1));
@@ -287,7 +287,7 @@ namespace CatsVsDemons.UI
                         left + index * (buttonWidth + gap),
                         top,
                         buttonWidth,
-                        48f
+                        42f
                     ),
                     labels[index]))
                 {

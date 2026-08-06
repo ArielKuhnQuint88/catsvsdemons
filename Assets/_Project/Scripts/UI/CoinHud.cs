@@ -28,6 +28,9 @@ namespace CatsVsDemons.UI
         private Texture2D circleTexture;
         private Texture2D victoryTexture;
         private Texture2D defeatTexture;
+        private Texture2D portalIcon;
+        private Texture2D bonsaiIcon;
+        private Texture2D lanternIcon;
         private int activeEnemies;
         private float nextEnemyRefresh;
         private int currentPhase;
@@ -79,6 +82,9 @@ namespace CatsVsDemons.UI
             circleTexture = CreateCircleTexture(128);
             victoryTexture = LoadEndingTexture("EndingVictory");
             defeatTexture = LoadEndingTexture("EndingDefeat");
+            portalIcon = Resources.Load<Texture2D>("UI/TowerPortal");
+            bonsaiIcon = Resources.Load<Texture2D>("UI/TowerBonsai");
+            lanternIcon = Resources.Load<Texture2D>("UI/TowerLantern");
         }
 
         private void Update()
@@ -275,31 +281,37 @@ namespace CatsVsDemons.UI
                 new Color(0.92f, 0.35f, 1f)
             );
 
-            Vector2 anchor = GetHouseAnchor(scale);
-            float radius = 39f * scale;
+            Vector2 anchor = new Vector2(
+                Screen.width * 0.5f,
+                panel.yMax + 46f * scale
+            );
+            float radius = 34f * scale;
             DrawDefenseButton(
-                anchor + new Vector2(-82f * scale, 4f),
+                anchor + new Vector2(-88f * scale, 0f),
                 radius,
                 "PORTAL",
                 10,
                 DefenseType.Portal,
-                new Color(0.04f, 0.48f, 0.95f)
+                new Color(0.04f, 0.48f, 0.95f),
+                portalIcon
             );
             DrawDefenseButton(
-                anchor + new Vector2(82f * scale, 4f),
+                anchor,
                 radius,
                 "BONSAI",
                 15,
                 DefenseType.Bonsai,
-                new Color(0.1f, 0.62f, 0.24f)
+                new Color(0.1f, 0.62f, 0.24f),
+                bonsaiIcon
             );
             DrawDefenseButton(
-                anchor + new Vector2(0f, 80f * scale),
+                anchor + new Vector2(88f * scale, 0f),
                 radius,
                 "LANTERNA",
                 10,
                 DefenseType.Lantern,
-                new Color(0.68f, 0.45f, 0.82f)
+                new Color(0.68f, 0.45f, 0.82f),
+                lanternIcon
             );
         }
 
@@ -309,7 +321,8 @@ namespace CatsVsDemons.UI
             string label,
             int cost,
             DefenseType type,
-            Color color)
+            Color color,
+            Texture2D icon)
         {
             bool selected = TowerBuildSelection.Selected == type;
             bool hovered = Vector2.Distance(Event.current.mousePosition, center) <= radius;
@@ -326,15 +339,32 @@ namespace CatsVsDemons.UI
                 radius,
                 hovered ? Color.Lerp(color, Color.white, 0.2f) : color
             );
-            DrawCircle(center, radius * 0.78f, new Color(0.025f, 0.07f, 0.1f, 0.9f));
+            DrawCircle(center, radius * 0.82f, new Color(0.025f, 0.07f, 0.1f, 0.9f));
+
+            if (icon != null)
+            {
+                float iconSize = radius * 1.35f;
+                GUI.DrawTexture(
+                    new Rect(
+                        center.x - iconSize * 0.5f,
+                        center.y - iconSize * 0.56f,
+                        iconSize,
+                        iconSize
+                    ),
+                    icon,
+                    ScaleMode.ScaleAndCrop
+                );
+            }
 
             GUI.Label(
-                new Rect(center.x - radius, center.y - 23f, radius * 2f, 25f),
+                new Rect(center.x - radius, center.y + radius - 5f,
+                    radius * 2f, 20f),
                 label,
                 radialStyle
             );
             GUI.Label(
-                new Rect(center.x - radius, center.y + 2f, radius * 2f, 22f),
+                new Rect(center.x - radius, center.y + radius + 13f,
+                    radius * 2f, 20f),
                 $"● {cost}",
                 costStyle
             );
