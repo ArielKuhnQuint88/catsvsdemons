@@ -26,6 +26,9 @@ namespace CatsVsDemons.UI
         private GUIStyle radialStyle;
         private GUIStyle costStyle;
         private Texture2D circleTexture;
+        private Texture2D paperTexture;
+        private Font orientalFont;
+        private bool ownsOrientalFont;
         private Texture2D victoryTexture;
         private Texture2D defeatTexture;
         private Texture2D portalIcon;
@@ -50,6 +53,19 @@ namespace CatsVsDemons.UI
             house = Object.FindFirstObjectByType<HouseHealth>();
             kin = Object.FindFirstObjectByType<KinHealth>();
             waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
+            orientalFont = Resources.Load<Font>("UI/KinOriental");
+            if (orientalFont == null)
+            {
+                orientalFont = Font.CreateDynamicFontFromOSFont(
+                    new[]
+                    {
+                        "Yu Mincho Demibold", "Yu Mincho", "MS Mincho",
+                        "Noto Serif CJK JP", "Georgia"
+                    },
+                    24
+                );
+                ownsOrientalFont = orientalFont != null;
+            }
 
             coinStyle = CreateStyle(
                 28, new Color(1f, 0.82f, 0.16f), FontStyle.Bold
@@ -79,7 +95,9 @@ namespace CatsVsDemons.UI
                 FontStyle.Bold
             );
             costStyle.alignment = TextAnchor.MiddleCenter;
+            ApplyOrientalFont();
             circleTexture = CreateCircleTexture(128);
+            paperTexture = CreatePaperTexture(256);
             victoryTexture = LoadEndingTexture("EndingVictory");
             defeatTexture = LoadEndingTexture("EndingDefeat");
             portalIcon = LoadEndingTexture("TowerPortal");
@@ -152,10 +170,23 @@ namespace CatsVsDemons.UI
             {
                 Destroy(circleTexture);
             }
+            if (paperTexture != null)
+            {
+                Destroy(paperTexture);
+            }
+            if (ownsOrientalFont && orientalFont != null)
+            {
+                Destroy(orientalFont);
+            }
         }
 
         private void OnGUI()
         {
+            if (orientalFont != null)
+            {
+                GUI.skin.button.font = orientalFont;
+            }
+
             DrawStatusPanel();
 
             if (preparing && !paused && !gameOver && !kinDown && !victory)
@@ -216,7 +247,30 @@ namespace CatsVsDemons.UI
                 height
             );
 
-            DrawTexture(panel, new Color(0.025f, 0.055f, 0.09f, 0.94f));
+            Rect interfaceBase = new Rect(
+                panel.x - 18f * scale,
+                panel.y - 8f * scale,
+                panel.width + 36f * scale,
+                230f * scale
+            );
+            DrawTexture(interfaceBase, new Color(0.18f, 0.09f, 0.035f, 0.97f));
+            Rect paper = new Rect(
+                interfaceBase.x + 5f * scale,
+                interfaceBase.y + 5f * scale,
+                interfaceBase.width - 10f * scale,
+                interfaceBase.height - 10f * scale
+            );
+            DrawPaper(paper);
+            DrawTexture(
+                new Rect(paper.x, paper.y, paper.width, 3f * scale),
+                new Color(0.42f, 0.18f, 0.055f, 0.9f)
+            );
+            DrawTexture(
+                new Rect(paper.x, paper.yMax - 3f * scale, paper.width, 3f * scale),
+                new Color(0.42f, 0.18f, 0.055f, 0.9f)
+            );
+
+            DrawTexture(panel, new Color(0.24f, 0.12f, 0.045f, 0.10f));
             DrawTexture(
                 new Rect(panel.x, panel.y, panel.width, 4f * scale),
                 new Color(0.88f, 0.47f, 0.12f, 1f)
@@ -343,7 +397,8 @@ namespace CatsVsDemons.UI
 
             if (icon != null)
             {
-                float iconSize = radius * 1.92f;
+                float iconSize = radius *
+                    (type == DefenseType.Lantern ? 2.32f : 1.92f);
                 GUI.DrawTexture(
                     new Rect(
                         center.x - iconSize * 0.5f,
@@ -453,6 +508,79 @@ namespace CatsVsDemons.UI
             GUI.color = color;
             GUI.DrawTexture(area, Texture2D.whiteTexture);
             GUI.color = previous;
+        }
+
+        private void DrawPaper(Rect area)
+        {
+            if (paperTexture == null)
+            {
+                DrawTexture(area, new Color(0.89f, 0.79f, 0.59f, 0.98f));
+                return;
+            }
+
+            Color previous = GUI.color;
+            GUI.color = new Color(1f, 0.94f, 0.78f, 0.98f);
+            GUI.DrawTextureWithTexCoords(
+                area,
+                paperTexture,
+                new Rect(0f, 0f, area.width / 128f, area.height / 128f),
+                true
+            );
+            GUI.color = previous;
+        }
+
+        private void ApplyOrientalFont()
+        {
+            if (orientalFont == null)
+            {
+                return;
+            }
+
+            GUIStyle[] styles =
+            {
+                coinStyle, healthStyle, helpStyle, resultStyle, messageStyle,
+                countdownStyle, compactStyle, compactCenterStyle, radialStyle,
+                costStyle
+            };
+            foreach (GUIStyle style in styles)
+            {
+                style.font = orientalFont;
+            }
+
+            Color ink = new Color(0.18f, 0.075f, 0.025f, 1f);
+            compactStyle.normal.textColor = ink;
+            compactCenterStyle.normal.textColor = ink;
+            radialStyle.normal.textColor = ink;
+            costStyle.normal.textColor = new Color(0.55f, 0.25f, 0.025f, 1f);
+        }
+
+        private static Texture2D CreatePaperTexture(int size)
+        {
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "HudPaperTexture",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Repeat
+            };
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float grain = Mathf.PerlinNoise(x * 0.075f, y * 0.075f);
+                    float fiber = Mathf.Sin(y * 0.31f + x * 0.025f) * 0.018f;
+                    float shade = Mathf.Lerp(-0.065f, 0.055f, grain) + fiber;
+                    pixels[y * size + x] = new Color(
+                        0.86f + shade,
+                        0.73f + shade,
+                        0.49f + shade * 0.65f,
+                        1f
+                    );
+                }
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+            return texture;
         }
 
         private static Color HealthColor(int current, int maximum)
