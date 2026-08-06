@@ -6,6 +6,7 @@ namespace CatsVsDemons.UI
     public sealed class MainMenuUI : MonoBehaviour
     {
         [SerializeField] private Texture2D backgroundTexture;
+        [SerializeField] private Texture2D comicTexture;
         private enum Panel
         {
             None,
@@ -18,6 +19,20 @@ namespace CatsVsDemons.UI
         private GUIStyle titleStyle;
         private GUIStyle panelTitleStyle;
         private GUIStyle bodyStyle;
+        private GUIStyle comicCaptionStyle;
+        private bool showingIntro;
+        private int comicPanel;
+        private int pendingCameraMode;
+
+        private static readonly string[] ComicCaptions =
+        {
+            "Durante o dia, Kin dorme. E dorme muito.",
+            "Seu dono suspira: \"Esse gato é um preguiçoso...\"",
+            "Mas, quando o sol se põe, o verdadeiro trabalho de Kin começa.",
+            "Os demônios despertam e avançam em direção à casa.",
+            "Sem que seu dono saiba, Kin se torna o guardião da noite!",
+            "Ao amanhecer, a casa está segura. E Kin? Dormindo outra vez."
+        };
 
         public void SetBackground(Texture2D texture)
         {
@@ -30,6 +45,11 @@ namespace CatsVsDemons.UI
             {
                 backgroundTexture =
                     Resources.Load<Texture2D>("UI/OpeningBackground");
+            }
+
+            if (comicTexture == null)
+            {
+                comicTexture = Resources.Load<Texture2D>("UI/IntroComic");
             }
 
             Time.timeScale = 1f;
@@ -53,10 +73,23 @@ namespace CatsVsDemons.UI
                 TextAnchor.UpperCenter
             );
             bodyStyle.wordWrap = true;
+            comicCaptionStyle = CreateStyle(
+                30,
+                Color.white,
+                FontStyle.Bold,
+                TextAnchor.MiddleCenter
+            );
+            comicCaptionStyle.wordWrap = true;
         }
 
         private void OnGUI()
         {
+            if (showingIntro)
+            {
+                DrawComicIntro();
+                return;
+            }
+
             DrawBackground();
             DrawTitle();
 
@@ -124,7 +157,7 @@ namespace CatsVsDemons.UI
                 new Rect(left, top, width, height),
                 "ISOMÉTRICO"))
             {
-                StartGame(0);
+                BeginIntro(0);
             }
 
             GUI.backgroundColor = new Color(0.16f, 0.55f, 0.95f);
@@ -132,12 +165,99 @@ namespace CatsVsDemons.UI
                 new Rect(left, top + 112f, width, height),
                 "PRIMEIRA PESSOA"))
             {
-                StartGame(1);
+                BeginIntro(1);
             }
 
             GUI.backgroundColor = previous;
             GUI.skin.button.fontSize = oldSize;
             GUI.skin.button.fontStyle = oldStyle;
+        }
+
+        private void BeginIntro(int cameraMode)
+        {
+            pendingCameraMode = cameraMode;
+            comicPanel = 0;
+            showingIntro = comicTexture != null;
+
+            if (!showingIntro)
+            {
+                StartGame(cameraMode);
+            }
+        }
+
+        private void DrawComicIntro()
+        {
+            GUI.DrawTexture(
+                new Rect(0f, 0f, Screen.width, Screen.height),
+                Texture2D.blackTexture,
+                ScaleMode.StretchToFill
+            );
+
+            int column = comicPanel % 3;
+            int row = comicPanel / 3;
+            Rect textureCoordinates = new Rect(
+                column / 3f,
+                row == 0 ? 0.5f : 0f,
+                1f / 3f,
+                0.5f
+            );
+
+            float imageAspect = 32f / 27f;
+            float availableHeight = Screen.height * 0.78f;
+            float imageWidth = Mathf.Min(
+                Screen.width,
+                availableHeight * imageAspect
+            );
+            float imageHeight = imageWidth / imageAspect;
+            Rect imageArea = new Rect(
+                (Screen.width - imageWidth) * 0.5f,
+                0f,
+                imageWidth,
+                imageHeight
+            );
+            GUI.DrawTextureWithTexCoords(
+                imageArea,
+                comicTexture,
+                textureCoordinates,
+                true
+            );
+
+            Rect captionArea = new Rect(
+                Screen.width * 0.08f,
+                Screen.height * 0.76f,
+                Screen.width * 0.84f,
+                Screen.height * 0.12f
+            );
+            Color previous = GUI.color;
+            GUI.color = new Color(0.02f, 0.03f, 0.06f, 0.94f);
+            GUI.DrawTexture(captionArea, Texture2D.whiteTexture);
+            GUI.color = previous;
+            GUI.Label(captionArea, ComicCaptions[comicPanel], comicCaptionStyle);
+
+            float buttonY = Screen.height - 72f;
+            if (GUI.Button(
+                new Rect(24f, buttonY, 150f, 48f),
+                "PULAR"))
+            {
+                StartGame(pendingCameraMode);
+            }
+
+            string nextLabel = comicPanel < ComicCaptions.Length - 1
+                ? "PRÓXIMO"
+                : "DEFENDER A CASA!";
+            if (GUI.Button(
+                new Rect(Screen.width - 254f, buttonY, 230f, 48f),
+                nextLabel))
+            {
+                if (comicPanel < ComicCaptions.Length - 1)
+                {
+                    comicPanel++;
+                }
+                else
+                {
+                    StartGame(pendingCameraMode);
+                }
+            }
         }
 
         private void DrawBottomButtons()
