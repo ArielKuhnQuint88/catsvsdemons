@@ -77,8 +77,8 @@ namespace CatsVsDemons.UI
             );
             costStyle.alignment = TextAnchor.MiddleCenter;
             circleTexture = CreateCircleTexture(128);
-            victoryTexture = Resources.Load<Texture2D>("UI/EndingVictory");
-            defeatTexture = Resources.Load<Texture2D>("UI/EndingDefeat");
+            victoryTexture = LoadEndingTexture("EndingVictory");
+            defeatTexture = LoadEndingTexture("EndingDefeat");
         }
 
         private void Update()
@@ -435,6 +435,35 @@ namespace CatsVsDemons.UI
             return amount > 0.3f
                 ? new Color(1f, 0.72f, 0.08f)
                 : new Color(0.92f, 0.12f, 0.08f);
+        }
+
+        private static Texture2D LoadEndingTexture(string name)
+        {
+            Texture2D imported = Resources.Load<Texture2D>($"UI/{name}");
+            if (imported != null)
+            {
+                return imported;
+            }
+
+            TextAsset encoded = Resources.Load<TextAsset>($"UI/{name}Data");
+            if (encoded == null)
+            {
+                Debug.LogError($"Ending artwork was not found: {name}");
+                return null;
+            }
+
+            Texture2D decoded = new Texture2D(2, 2, TextureFormat.RGB24, false)
+            {
+                name = $"{name}_Runtime"
+            };
+            if (ImageConversion.LoadImage(decoded, encoded.bytes, true))
+            {
+                return decoded;
+            }
+
+            Object.Destroy(decoded);
+            Debug.LogError($"Ending artwork could not be decoded: {name}");
+            return null;
         }
 
         private static Texture2D CreateCircleTexture(int size)
