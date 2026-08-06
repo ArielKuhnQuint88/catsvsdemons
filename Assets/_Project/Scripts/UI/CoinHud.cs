@@ -236,7 +236,7 @@ namespace CatsVsDemons.UI
                 panel.x - 18f * scale,
                 panel.y - 8f * scale,
                 panel.width + 36f * scale,
-                230f * scale
+                270f * scale
             );
             DrawTexture(interfaceBase, new Color(0.18f, 0.09f, 0.035f, 0.97f));
             Rect paper = new Rect(
