@@ -469,30 +469,33 @@ namespace CatsVsDemons.UI
 
         private static Texture2D LoadEndingTexture(string name)
         {
+            TextAsset encoded = Resources.Load<TextAsset>($"UI/{name}Data");
+            if (encoded != null)
+            {
+                Texture2D decoded = new Texture2D(
+                    2,
+                    2,
+                    TextureFormat.RGBA32,
+                    false
+                )
+                {
+                    name = $"{name}_Runtime"
+                };
+                if (ImageConversion.LoadImage(decoded, encoded.bytes, true))
+                {
+                    return decoded;
+                }
+
+                Object.Destroy(decoded);
+            }
+
             Texture2D imported = Resources.Load<Texture2D>($"UI/{name}");
             if (imported != null)
             {
                 return imported;
             }
 
-            TextAsset encoded = Resources.Load<TextAsset>($"UI/{name}Data");
-            if (encoded == null)
-            {
-                Debug.LogError($"Ending artwork was not found: {name}");
-                return null;
-            }
-
-            Texture2D decoded = new Texture2D(2, 2, TextureFormat.RGB24, false)
-            {
-                name = $"{name}_Runtime"
-            };
-            if (ImageConversion.LoadImage(decoded, encoded.bytes, true))
-            {
-                return decoded;
-            }
-
-            Object.Destroy(decoded);
-            Debug.LogError($"Ending artwork could not be decoded: {name}");
+            Debug.LogError($"Artwork was not found or decoded: {name}");
             return null;
         }
 
