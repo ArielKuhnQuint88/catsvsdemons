@@ -30,8 +30,7 @@ namespace CatsVsDemons.UI
             "Seu dono suspira: \"Esse gato é um preguiçoso...\"",
             "Mas, quando o sol se põe, o verdadeiro trabalho de Kin começa.",
             "Os demônios despertam e avançam em direção à casa.",
-            "Sem que seu dono saiba, Kin se torna o guardião da noite!",
-            "Ao amanhecer, a casa está segura. E Kin? Dormindo outra vez."
+            "Sem que seu dono saiba, Kin se torna o guardião da noite!"
         };
 
         public void SetBackground(Texture2D texture)

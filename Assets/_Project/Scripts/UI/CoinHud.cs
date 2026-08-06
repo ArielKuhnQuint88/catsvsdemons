@@ -26,6 +26,8 @@ namespace CatsVsDemons.UI
         private GUIStyle radialStyle;
         private GUIStyle costStyle;
         private Texture2D circleTexture;
+        private Texture2D victoryTexture;
+        private Texture2D defeatTexture;
         private int activeEnemies;
         private float nextEnemyRefresh;
         private int currentPhase;
@@ -75,6 +77,8 @@ namespace CatsVsDemons.UI
             );
             costStyle.alignment = TextAnchor.MiddleCenter;
             circleTexture = CreateCircleTexture(128);
+            victoryTexture = Resources.Load<Texture2D>("UI/EndingVictory");
+            defeatTexture = Resources.Load<Texture2D>("UI/EndingDefeat");
         }
 
         private void Update()
@@ -160,15 +164,27 @@ namespace CatsVsDemons.UI
 
             if (gameOver)
             {
-                DrawResult("A CASA CAIU!");
+                DrawResult(
+                    "A CASA CAIU!",
+                    "Mesmo ferido, Kin fez tudo o que pôde.",
+                    defeatTexture
+                );
             }
             else if (kinDown)
             {
-                DrawResult("KIN CAIU!");
+                DrawResult(
+                    "KIN FOI DERROTADO!",
+                    "Seu dono nunca saberá como Kin tentou protegê-lo.",
+                    defeatTexture
+                );
             }
             else if (victory)
             {
-                DrawResult("VITÓRIA!");
+                DrawResult(
+                    "A CASA ESTÁ SEGURA!",
+                    "Sem conhecer a batalha, seu dono recompensa o melhor gato do mundo.",
+                    victoryTexture
+                );
             }
             else if (paused)
             {
@@ -468,27 +484,54 @@ namespace CatsVsDemons.UI
             );
         }
 
-        private void DrawResult(string title)
+        private void DrawResult(
+            string title,
+            string message,
+            Texture2D background)
         {
-            GUI.Box(
-                new Rect(0f, 0f, Screen.width, Screen.height),
-                GUIContent.none
+            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            if (background != null)
+            {
+                GUI.DrawTexture(
+                    screen,
+                    background,
+                    ScaleMode.ScaleAndCrop
+                );
+            }
+            else
+            {
+                GUI.Box(screen, GUIContent.none);
+            }
+
+            DrawTexture(
+                new Rect(0f, 0f, Screen.width, Screen.height * 0.25f),
+                new Color(0.01f, 0.02f, 0.04f, 0.78f)
+            );
+            DrawTexture(
+                new Rect(0f, Screen.height * 0.73f,
+                    Screen.width, Screen.height * 0.27f),
+                new Color(0.01f, 0.02f, 0.04f, 0.84f)
             );
             GUI.Label(
-                new Rect(0f, Screen.height * 0.36f, Screen.width, 90f),
+                new Rect(0f, Screen.height * 0.04f, Screen.width, 90f),
                 title,
                 resultStyle
             );
             GUI.Label(
-                new Rect(0f, Screen.height * 0.5f, Screen.width, 60f),
-                "A floresta ainda precisa de Kin.",
+                new Rect(
+                    Screen.width * 0.1f,
+                    Screen.height * 0.76f,
+                    Screen.width * 0.8f,
+                    60f
+                ),
+                message,
                 messageStyle
             );
 
             if (GUI.Button(
                 new Rect(
                     (Screen.width - 220f) * 0.5f,
-                    Screen.height * 0.6f,
+                    Screen.height * 0.88f,
                     220f,
                     52f
                 ),
