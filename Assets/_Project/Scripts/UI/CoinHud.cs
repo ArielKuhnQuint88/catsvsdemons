@@ -82,9 +82,9 @@ namespace CatsVsDemons.UI
             circleTexture = CreateCircleTexture(128);
             victoryTexture = LoadEndingTexture("EndingVictory");
             defeatTexture = LoadEndingTexture("EndingDefeat");
-            portalIcon = Resources.Load<Texture2D>("UI/TowerPortal");
-            bonsaiIcon = Resources.Load<Texture2D>("UI/TowerBonsai");
-            lanternIcon = Resources.Load<Texture2D>("UI/TowerLantern");
+            portalIcon = LoadEndingTexture("TowerPortal");
+            bonsaiIcon = LoadEndingTexture("TowerBonsai");
+            lanternIcon = LoadEndingTexture("TowerLantern");
         }
 
         private void Update()

@@ -6,7 +6,7 @@ namespace CatsVsDemons.UI
     public sealed class MainMenuUI : MonoBehaviour
     {
         [SerializeField] private Texture2D backgroundTexture;
-        [SerializeField] private Texture2D comicTexture;
+        private readonly Texture2D[] comicScenes = new Texture2D[5];
         private enum Panel
         {
             None,
@@ -46,9 +46,9 @@ namespace CatsVsDemons.UI
                     Resources.Load<Texture2D>("UI/OpeningBackground");
             }
 
-            if (comicTexture == null)
+            for (int index = 0; index < comicScenes.Length; index++)
             {
-                comicTexture = Resources.Load<Texture2D>("UI/IntroComic");
+                comicScenes[index] = LoadStoryTexture(index + 1);
             }
 
             Time.timeScale = 1f;
@@ -176,7 +176,7 @@ namespace CatsVsDemons.UI
         {
             pendingCameraMode = cameraMode;
             comicPanel = 0;
-            showingIntro = comicTexture != null;
+            showingIntro = comicScenes[0] != null;
 
             if (!showingIntro)
             {
@@ -188,37 +188,8 @@ namespace CatsVsDemons.UI
         {
             GUI.DrawTexture(
                 new Rect(0f, 0f, Screen.width, Screen.height),
-                Texture2D.blackTexture,
-                ScaleMode.StretchToFill
-            );
-
-            int column = comicPanel % 3;
-            int row = comicPanel / 3;
-            Rect textureCoordinates = new Rect(
-                column / 3f,
-                row == 0 ? 0.5f : 0f,
-                1f / 3f,
-                0.5f
-            );
-
-            float imageAspect = 32f / 27f;
-            float availableHeight = Screen.height * 0.78f;
-            float imageWidth = Mathf.Min(
-                Screen.width,
-                availableHeight * imageAspect
-            );
-            float imageHeight = imageWidth / imageAspect;
-            Rect imageArea = new Rect(
-                (Screen.width - imageWidth) * 0.5f,
-                0f,
-                imageWidth,
-                imageHeight
-            );
-            GUI.DrawTextureWithTexCoords(
-                imageArea,
-                comicTexture,
-                textureCoordinates,
-                true
+                comicScenes[comicPanel],
+                ScaleMode.ScaleAndCrop
             );
 
             Rect captionArea = new Rect(
@@ -257,6 +228,35 @@ namespace CatsVsDemons.UI
                     StartGame(pendingCameraMode);
                 }
             }
+        }
+
+        private static Texture2D LoadStoryTexture(int sceneNumber)
+        {
+            TextAsset image = Resources.Load<TextAsset>(
+                $"UI/IntroScene{sceneNumber}Data"
+            );
+            if (image == null)
+            {
+                Debug.LogError($"Intro scene {sceneNumber} was not found.");
+                return null;
+            }
+
+            Texture2D texture = new Texture2D(
+                2,
+                2,
+                TextureFormat.RGB24,
+                false
+            )
+            {
+                name = $"IntroScene{sceneNumber}_Runtime"
+            };
+            if (ImageConversion.LoadImage(texture, image.bytes, true))
+            {
+                return texture;
+            }
+
+            Object.Destroy(texture);
+            return null;
         }
 
         private void DrawBottomButtons()
