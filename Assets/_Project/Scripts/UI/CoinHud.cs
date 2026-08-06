@@ -71,7 +71,7 @@ namespace CatsVsDemons.UI
             compactStyle = CreateStyle(17, Color.white, FontStyle.Bold);
             compactCenterStyle = CreateStyle(16, Color.white, FontStyle.Bold);
             compactCenterStyle.alignment = TextAnchor.MiddleCenter;
-            radialStyle = CreateStyle(15, Color.white, FontStyle.Bold);
+            radialStyle = CreateStyle(11, Color.white, FontStyle.Bold);
             radialStyle.alignment = TextAnchor.MiddleCenter;
             costStyle = CreateStyle(
                 14,
@@ -343,11 +343,11 @@ namespace CatsVsDemons.UI
 
             if (icon != null)
             {
-                float iconSize = radius * 1.35f;
+                float iconSize = radius * 1.92f;
                 GUI.DrawTexture(
                     new Rect(
                         center.x - iconSize * 0.5f,
-                        center.y - iconSize * 0.56f,
+                        center.y - iconSize * 0.5f,
                         iconSize,
                         iconSize
                     ),
@@ -357,13 +357,13 @@ namespace CatsVsDemons.UI
             }
 
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius - 5f,
-                    radius * 2f, 20f),
+                new Rect(center.x - radius, center.y + radius + 1f,
+                    radius * 2f, 17f),
                 label,
                 radialStyle
             );
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius + 13f,
+                new Rect(center.x - radius, center.y + radius + 16f,
                     radius * 2f, 20f),
                 $"● {cost}",
                 costStyle
