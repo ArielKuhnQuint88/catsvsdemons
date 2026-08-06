@@ -28,7 +28,6 @@ namespace CatsVsDemons.UI
         private Texture2D circleTexture;
         private Texture2D paperTexture;
         private Font orientalFont;
-        private bool ownsOrientalFont;
         private Texture2D victoryTexture;
         private Texture2D defeatTexture;
         private Texture2D portalIcon;
@@ -53,19 +52,9 @@ namespace CatsVsDemons.UI
             house = Object.FindFirstObjectByType<HouseHealth>();
             kin = Object.FindFirstObjectByType<KinHealth>();
             waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
-            orientalFont = Resources.Load<Font>("UI/KinOriental");
-            if (orientalFont == null)
-            {
-                orientalFont = Font.CreateDynamicFontFromOSFont(
-                    new[]
-                    {
-                        "Yu Mincho Demibold", "Yu Mincho", "MS Mincho",
-                        "Noto Serif CJK JP", "Georgia"
-                    },
-                    24
-                );
-                ownsOrientalFont = orientalFont != null;
-            }
+            orientalFont = Resources.GetBuiltinResource<Font>(
+                "LegacyRuntime.ttf"
+            );
 
             coinStyle = CreateStyle(
                 28, new Color(1f, 0.82f, 0.16f), FontStyle.Bold
@@ -173,10 +162,6 @@ namespace CatsVsDemons.UI
             if (paperTexture != null)
             {
                 Destroy(paperTexture);
-            }
-            if (ownsOrientalFont && orientalFont != null)
-            {
-                Destroy(orientalFont);
             }
         }
 
@@ -412,13 +397,13 @@ namespace CatsVsDemons.UI
             }
 
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius + 1f,
+                new Rect(center.x - radius, center.y + radius - 7f,
                     radius * 2f, 17f),
                 label,
                 radialStyle
             );
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius + 16f,
+                new Rect(center.x - radius, center.y + radius + 8f,
                     radius * 2f, 20f),
                 $"● {cost}",
                 costStyle
@@ -435,7 +420,7 @@ namespace CatsVsDemons.UI
         private void DrawStatusCell(Rect area, string text, Color color)
         {
             Color previous = compactCenterStyle.normal.textColor;
-            compactCenterStyle.normal.textColor = color;
+            compactCenterStyle.normal.textColor = Color.black;
             GUI.Label(area, text, compactCenterStyle);
             compactCenterStyle.normal.textColor = previous;
         }
@@ -547,11 +532,11 @@ namespace CatsVsDemons.UI
                 style.font = orientalFont;
             }
 
-            Color ink = new Color(0.18f, 0.075f, 0.025f, 1f);
+            Color ink = Color.black;
             compactStyle.normal.textColor = ink;
             compactCenterStyle.normal.textColor = ink;
             radialStyle.normal.textColor = ink;
-            costStyle.normal.textColor = new Color(0.55f, 0.25f, 0.025f, 1f);
+            costStyle.normal.textColor = ink;
         }
 
         private static Texture2D CreatePaperTexture(int size)
