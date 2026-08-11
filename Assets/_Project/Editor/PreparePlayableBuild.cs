@@ -16,6 +16,10 @@ namespace CatsVsDemons.Editor
         private const string BuildFolder = "Builds/CatsVsDemons-Windows";
         private const string ExecutablePath =
             BuildFolder + "/CatsVsDemons.exe";
+        private const string AndroidBuildFolder =
+            "Builds/CatsVsDemons-Android";
+        private const string ApkPath =
+            AndroidBuildFolder + "/CatsVsDemons.apk";
 
         [MenuItem("Tools/Cats vs Demons/Prepare Playable Build")]
         public static void Prepare()
@@ -87,6 +91,63 @@ namespace CatsVsDemons.Editor
             );
         }
 
+        [MenuItem("Tools/Cats vs Demons/Exportar Jogo Leve (Android APK)")]
+        public static void ExportLightweightAndroid()
+        {
+            if (!BuildPipeline.IsBuildTargetSupported(
+                BuildTargetGroup.Android,
+                BuildTarget.Android))
+            {
+                EditorUtility.DisplayDialog(
+                    "Android não instalado",
+                    "No Unity Hub, adicione Android Build Support, " +
+                    "Android SDK & NDK Tools e OpenJDK.",
+                    "OK"
+                );
+                return;
+            }
+
+            ConfigureScenes();
+            ConfigureLightweightAndroidPlayer();
+            OptimizeImportedAssets();
+            OptimizeAndroidTextures();
+
+            string absoluteFolder = Path.GetFullPath(AndroidBuildFolder);
+            Directory.CreateDirectory(absoluteFolder);
+            string absoluteApk = Path.GetFullPath(ApkPath);
+            if (File.Exists(absoluteApk))
+            {
+                File.Delete(absoluteApk);
+            }
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { MenuScenePath, ScenePath },
+                locationPathName = ApkPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                EditorUtility.DisplayDialog(
+                    "Exportação Android falhou",
+                    "Veja os erros no Console da Unity.",
+                    "OK"
+                );
+                return;
+            }
+
+            EditorUtility.RevealInFinder(absoluteApk);
+            EditorUtility.DisplayDialog(
+                "APK exportado!",
+                $"Arquivo pronto para instalar:\n{absoluteApk}\n\n" +
+                $"Tamanho: {report.summary.totalSize / 1048576f:0.0} MB",
+                "OK"
+            );
+        }
+
         private static void ConfigureScenes()
         {
             EditorBuildSettings.scenes = new[]
@@ -110,6 +171,35 @@ namespace CatsVsDemons.Editor
                 NamedBuildTarget.Standalone,
                 ManagedStrippingLevel.Medium
             );
+        }
+
+        private static void ConfigureLightweightAndroidPlayer()
+        {
+            PlayerSettings.productName = "Cats vs Demons";
+            PlayerSettings.SetApplicationIdentifier(
+                NamedBuildTarget.Android,
+                "com.qipgames.catsvsdemons"
+            );
+            PlayerSettings.defaultInterfaceOrientation =
+                UIOrientation.LandscapeLeft;
+            PlayerSettings.runInBackground = false;
+            PlayerSettings.usePlayerLog = false;
+            PlayerSettings.stripEngineCode = true;
+            PlayerSettings.SetManagedStrippingLevel(
+                NamedBuildTarget.Android,
+                ManagedStrippingLevel.Medium
+            );
+            PlayerSettings.SetScriptingBackend(
+                NamedBuildTarget.Android,
+                ScriptingImplementation.IL2CPP
+            );
+            PlayerSettings.Android.targetArchitectures =
+                AndroidArchitecture.ARM64;
+            PlayerSettings.Android.minSdkVersion =
+                AndroidSdkVersions.AndroidApiLevel23;
+            PlayerSettings.Android.targetSdkVersion =
+                AndroidSdkVersions.AndroidApiLevelAuto;
+            EditorUserBuildSettings.buildAppBundle = false;
         }
 
         private static void OptimizeImportedAssets()
@@ -175,6 +265,36 @@ namespace CatsVsDemons.Editor
                     importer.isReadable = false;
                     importer.SaveAndReimport();
                 }
+            }
+
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void OptimizeAndroidTextures()
+        {
+            string[] textureGuids = AssetDatabase.FindAssets(
+                "t:Texture2D",
+                new[] { "Assets/_Project" }
+            );
+            foreach (string guid in textureGuids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                TextureImporter importer = AssetImporter.GetAtPath(path)
+                    as TextureImporter;
+                if (importer == null)
+                {
+                    continue;
+                }
+
+                TextureImporterPlatformSettings android =
+                    importer.GetPlatformTextureSettings("Android");
+                android.name = "Android";
+                android.overridden = true;
+                android.maxTextureSize = path.Contains("/UI/") ? 2048 : 1024;
+                android.format = TextureImporterFormat.ASTC_6x6;
+                android.compressionQuality = 60;
+                importer.SetPlatformTextureSettings(android);
+                importer.SaveAndReimport();
             }
 
             AssetDatabase.SaveAssets();
