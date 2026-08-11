@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace CatsVsDemons.Editor
 {
@@ -199,6 +200,14 @@ namespace CatsVsDemons.Editor
                 AndroidSdkVersions.AndroidApiLevel23;
             PlayerSettings.Android.targetSdkVersion =
                 AndroidSdkVersions.AndroidApiLevelAuto;
+            PlayerSettings.SetUseDefaultGraphicsAPIs(
+                BuildTarget.Android,
+                false
+            );
+            PlayerSettings.SetGraphicsAPIs(
+                BuildTarget.Android,
+                new[] { GraphicsDeviceType.OpenGLES3 }
+            );
             EditorUserBuildSettings.buildAppBundle = false;
         }
 
