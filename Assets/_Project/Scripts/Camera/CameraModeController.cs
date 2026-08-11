@@ -19,7 +19,13 @@ namespace CatsVsDemons.CameraSystem
         private void Start()
         {
             gameCamera = GetComponent<Camera>();
-            firstPerson = PlayerPrefs.GetInt("CameraMode", 0) == 1;
+            firstPerson = !Application.isMobilePlatform &&
+                PlayerPrefs.GetInt("CameraMode", 0) == 1;
+            gameCamera.enabled = true;
+            gameCamera.cullingMask = ~0;
+            gameCamera.rect = new Rect(0f, 0f, 1f, 1f);
+            gameCamera.targetTexture = null;
+            gameCamera.ResetProjectionMatrix();
             ConfigureEnvironment();
 
             if (!firstPerson)
@@ -84,13 +90,21 @@ namespace CatsVsDemons.CameraSystem
 
         private void ConfigureIsometricCamera()
         {
+            if (Application.isMobilePlatform)
+            {
+                QualitySettings.SetQualityLevel(0, true);
+            }
+
             gameCamera.orthographic = false;
-            gameCamera.fieldOfView = 42f;
+            gameCamera.fieldOfView = Application.isMobilePlatform ? 48f : 42f;
             gameCamera.nearClipPlane = 0.3f;
             gameCamera.farClipPlane = 300f;
 
             Vector3 target = new Vector3(0f, 1.5f, 3f);
-            transform.position = new Vector3(0f, 22f, -38f);
+            transform.SetParent(null, true);
+            transform.position = Application.isMobilePlatform
+                ? new Vector3(0f, 24f, -40f)
+                : new Vector3(0f, 22f, -38f);
             transform.rotation = Quaternion.LookRotation(
                 target - transform.position,
                 Vector3.up
