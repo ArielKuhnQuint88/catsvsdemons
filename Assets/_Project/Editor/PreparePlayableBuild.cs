@@ -74,7 +74,7 @@ namespace CatsVsDemons.Editor
             ZipFile.CreateFromDirectory(
                 absoluteBuildFolder,
                 zipPath,
-                CompressionLevel.Optimal,
+                System.IO.Compression.CompressionLevel.Optimal,
                 false
             );
 
