@@ -14,6 +14,9 @@ namespace CatsVsDemons.Player
 
         private CharacterController characterController;
         private Camera mainCamera;
+        private bool mobileDragActive;
+        private Vector2 mobileDragOrigin;
+        private Vector2 mobileInput;
 
         private void Awake()
         {
@@ -31,22 +34,21 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
+            ReadMobileInput();
             Keyboard keyboard = Keyboard.current;
-            if (keyboard == null)
+            Vector2 input = mobileInput;
+
+            if (keyboard != null)
             {
-                return;
+                if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)
+                    input.y += 1f;
+                if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)
+                    input.y -= 1f;
+                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
+                    input.x += 1f;
+                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
+                    input.x -= 1f;
             }
-
-            Vector2 input = Vector2.zero;
-
-            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)
-                input.y += 1f;
-            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)
-                input.y -= 1f;
-            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed)
-                input.x += 1f;
-            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)
-                input.x -= 1f;
 
             input = Vector2.ClampMagnitude(input, 1f);
 
@@ -81,6 +83,68 @@ namespace CatsVsDemons.Player
             position.x = Mathf.Clamp(position.x, horizontalBounds.x, horizontalBounds.y);
             position.z = Mathf.Clamp(position.z, verticalBounds.x, verticalBounds.y);
             transform.position = position;
+        }
+
+        private void ReadMobileInput()
+        {
+            mobileInput = Vector2.zero;
+            Touchscreen touchscreen = Touchscreen.current;
+            if (touchscreen == null)
+            {
+                mobileDragActive = false;
+                return;
+            }
+
+            Vector2 position = touchscreen.primaryTouch.position.ReadValue();
+            if (touchscreen.primaryTouch.press.wasPressedThisFrame &&
+                position.x < Screen.width * 0.42f &&
+                position.y < Screen.height * 0.55f)
+            {
+                mobileDragActive = true;
+                mobileDragOrigin = position;
+            }
+
+            if (touchscreen.primaryTouch.press.wasReleasedThisFrame)
+            {
+                mobileDragActive = false;
+            }
+
+            if (mobileDragActive && touchscreen.primaryTouch.press.isPressed)
+            {
+                float range = Mathf.Max(50f, Screen.height * 0.12f);
+                mobileInput = Vector2.ClampMagnitude(
+                    (position - mobileDragOrigin) / range,
+                    1f
+                );
+            }
+        }
+
+        private void OnGUI()
+        {
+            if (!Application.isMobilePlatform)
+            {
+                return;
+            }
+
+            Rect hint = new Rect(
+                22f,
+                Screen.height - 118f,
+                150f,
+                88f
+            );
+            Color previous = GUI.color;
+            GUI.color = new Color(0f, 0f, 0f, 0.45f);
+            GUI.DrawTexture(hint, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUIStyle style = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 18,
+                fontStyle = FontStyle.Bold
+            };
+            style.normal.textColor = Color.white;
+            GUI.Label(hint, "ARRASTE AQUI\nPARA MOVER", style);
+            GUI.color = previous;
         }
     }
 }
