@@ -16,12 +16,15 @@ namespace CatsVsDemons.Player
         private Camera mainCamera;
         private bool mobileDragActive;
         private Vector2 mobileDragOrigin;
+        private Vector2 mobileDragPosition;
         private Vector2 mobileInput;
+        private Texture2D joystickCircle;
 
         private void Awake()
         {
             characterController = GetComponent<CharacterController>();
             mainCamera = Camera.main;
+            joystickCircle = CreateCircleTexture(128);
 
             RuntimeModelVisuals.Attach(
                 transform,
@@ -95,6 +98,15 @@ namespace CatsVsDemons.Player
                 return;
             }
 
+            bool secondFingerPressed =
+                touchscreen.touches.Count > 1 &&
+                touchscreen.touches[1].press.isPressed;
+            if (secondFingerPressed)
+            {
+                mobileDragActive = false;
+                return;
+            }
+
             Vector2 position = touchscreen.primaryTouch.position.ReadValue();
             if (touchscreen.primaryTouch.press.wasPressedThisFrame &&
                 position.x < Screen.width * 0.42f &&
@@ -102,6 +114,7 @@ namespace CatsVsDemons.Player
             {
                 mobileDragActive = true;
                 mobileDragOrigin = position;
+                mobileDragPosition = position;
             }
 
             if (touchscreen.primaryTouch.press.wasReleasedThisFrame)
@@ -111,6 +124,7 @@ namespace CatsVsDemons.Player
 
             if (mobileDragActive && touchscreen.primaryTouch.press.isPressed)
             {
+                mobileDragPosition = position;
                 float range = Mathf.Max(50f, Screen.height * 0.12f);
                 mobileInput = Vector2.ClampMagnitude(
                     (position - mobileDragOrigin) / range,
@@ -121,30 +135,80 @@ namespace CatsVsDemons.Player
 
         private void OnGUI()
         {
-            if (!Application.isMobilePlatform)
+            if (!Application.isMobilePlatform || !mobileDragActive ||
+                joystickCircle == null)
             {
                 return;
             }
 
-            Rect hint = new Rect(
-                22f,
-                Screen.height - 118f,
-                150f,
-                88f
+            float outerRadius = Mathf.Max(54f, Screen.height * 0.085f);
+            float knobRadius = outerRadius * 0.38f;
+            Vector2 guiOrigin = new Vector2(
+                mobileDragOrigin.x,
+                Screen.height - mobileDragOrigin.y
+            );
+            Vector2 guiPosition = new Vector2(
+                mobileDragPosition.x,
+                Screen.height - mobileDragPosition.y
+            );
+            Vector2 offset = Vector2.ClampMagnitude(
+                guiPosition - guiOrigin,
+                outerRadius
             );
             Color previous = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, 0.45f);
-            GUI.DrawTexture(hint, Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUIStyle style = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 18,
-                fontStyle = FontStyle.Bold
-            };
-            style.normal.textColor = Color.white;
-            GUI.Label(hint, "ARRASTE AQUI\nPARA MOVER", style);
+            GUI.color = new Color(0.05f, 0.08f, 0.1f, 0.42f);
+            DrawJoystickCircle(guiOrigin, outerRadius);
+            GUI.color = new Color(1f, 0.78f, 0.18f, 0.82f);
+            DrawJoystickCircle(guiOrigin + offset, knobRadius);
             GUI.color = previous;
+        }
+
+        private void DrawJoystickCircle(Vector2 center, float radius)
+        {
+            GUI.DrawTexture(
+                new Rect(center.x - radius, center.y - radius,
+                    radius * 2f, radius * 2f),
+                joystickCircle,
+                ScaleMode.StretchToFill,
+                true
+            );
+        }
+
+        private static Texture2D CreateCircleTexture(int size)
+        {
+            Texture2D texture = new Texture2D(
+                size, size, TextureFormat.RGBA32, false
+            )
+            {
+                name = "MobileJoystickCircle",
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            Color32[] pixels = new Color32[size * size];
+            float center = (size - 1) * 0.5f;
+            float radius = center - 1f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    byte alpha = dx * dx + dy * dy <= radius * radius
+                        ? (byte)255
+                        : (byte)0;
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        private void OnDestroy()
+        {
+            if (joystickCircle != null)
+            {
+                Destroy(joystickCircle);
+            }
         }
     }
 }
