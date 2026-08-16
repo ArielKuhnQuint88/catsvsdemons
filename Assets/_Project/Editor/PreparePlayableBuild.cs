@@ -21,6 +21,8 @@ namespace CatsVsDemons.Editor
             "Builds/CatsVsDemons-Android";
         private const string ApkPath =
             AndroidBuildFolder + "/CatsVsDemons.apk";
+        private const string PlayStoreBuildFolder =
+            "Builds/CatsVsDemons-PlayStore";
 
         [MenuItem("Tools/Cats vs Demons/Prepare Playable Build")]
         public static void Prepare()
@@ -149,6 +151,89 @@ namespace CatsVsDemons.Editor
             );
         }
 
+        [MenuItem("Tools/Cats vs Demons/Exportar para Play Store (AAB)")]
+        public static void ExportPlayStoreBundle()
+        {
+            if (!BuildPipeline.IsBuildTargetSupported(
+                BuildTargetGroup.Android,
+                BuildTarget.Android))
+            {
+                EditorUtility.DisplayDialog(
+                    "Android não instalado",
+                    "Adicione Android Build Support, SDK & NDK Tools e " +
+                    "OpenJDK pelo Unity Hub.",
+                    "OK"
+                );
+                return;
+            }
+
+            if (!HasReleaseSigningKey())
+            {
+                bool openSettings = EditorUtility.DisplayDialog(
+                    "Assinatura obrigatória",
+                    "A Play Store não aceita a chave de teste. Configure " +
+                    "um Custom Keystore e informe as senhas em Player > " +
+                    "Android > Publishing Settings. Guarde o arquivo e " +
+                    "as senhas fora do GitHub.",
+                    "Abrir Player Settings",
+                    "Cancelar"
+                );
+                if (openSettings)
+                {
+                    SettingsService.OpenProjectSettings("Project/Player");
+                }
+                return;
+            }
+
+            ConfigureScenes();
+            ConfigurePlayStorePlayer();
+            OptimizeImportedAssets();
+            OptimizeAndroidTextures();
+
+            string absoluteFolder = Path.GetFullPath(PlayStoreBuildFolder);
+            Directory.CreateDirectory(absoluteFolder);
+            string safeVersion = PlayerSettings.bundleVersion.Replace('.', '-');
+            string relativeBundlePath =
+                $"{PlayStoreBuildFolder}/CatsVsDemons-v{safeVersion}-" +
+                $"{PlayerSettings.Android.bundleVersionCode}.aab";
+            string absoluteBundlePath = Path.GetFullPath(relativeBundlePath);
+            if (File.Exists(absoluteBundlePath))
+            {
+                File.Delete(absoluteBundlePath);
+            }
+
+            EditorUserBuildSettings.buildAppBundle = true;
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { MenuScenePath, ScenePath },
+                locationPathName = relativeBundlePath,
+                target = BuildTarget.Android,
+                options = BuildOptions.None
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            if (report.summary.result != BuildResult.Succeeded)
+            {
+                EditorUtility.DisplayDialog(
+                    "Exportação para Play Store falhou",
+                    "Veja o primeiro erro vermelho no Console da Unity.",
+                    "OK"
+                );
+                return;
+            }
+
+            EditorUtility.RevealInFinder(absoluteBundlePath);
+            EditorUtility.DisplayDialog(
+                "App Bundle pronto!",
+                $"Envie este arquivo ao Play Console:\n" +
+                $"{absoluteBundlePath}\n\n" +
+                $"Versão: {PlayerSettings.bundleVersion}  |  Código: " +
+                $"{PlayerSettings.Android.bundleVersionCode}\n" +
+                $"Tamanho: {report.summary.totalSize / 1048576f:0.0} MB",
+                "OK"
+            );
+        }
+
         private static void ConfigureScenes()
         {
             EditorBuildSettings.scenes = new[]
@@ -209,6 +294,38 @@ namespace CatsVsDemons.Editor
                 new[] { GraphicsDeviceType.OpenGLES3 }
             );
             EditorUserBuildSettings.buildAppBundle = false;
+        }
+
+        private static void ConfigurePlayStorePlayer()
+        {
+            ConfigureLightweightAndroidPlayer();
+            if (string.IsNullOrWhiteSpace(PlayerSettings.bundleVersion) ||
+                PlayerSettings.bundleVersion == "0.1.0")
+            {
+                PlayerSettings.bundleVersion = "1.0.0";
+            }
+            if (PlayerSettings.Android.bundleVersionCode < 1)
+            {
+                PlayerSettings.Android.bundleVersionCode = 1;
+            }
+
+            PlayerSettings.Android.targetSdkVersion =
+                (AndroidSdkVersions)36;
+            EditorUserBuildSettings.buildAppBundle = true;
+            AssetDatabase.SaveAssets();
+        }
+
+        private static bool HasReleaseSigningKey()
+        {
+            return PlayerSettings.Android.useCustomKeystore &&
+                !string.IsNullOrWhiteSpace(
+                    PlayerSettings.Android.keystoreName
+                ) &&
+                !string.IsNullOrWhiteSpace(
+                    PlayerSettings.Android.keyaliasName
+                ) &&
+                !string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) &&
+                !string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass);
         }
 
         private static void OptimizeImportedAssets()
