@@ -48,6 +48,7 @@ namespace CatsVsDemons.Editor
             BuildMeditationArea(root.transform, new Vector3(-14f, 0f, 10f), 20f);
             BuildMeditationArea(root.transform, new Vector3(14f, 0f, -10f), -20f);
             BuildVegetation(root.transform);
+            BuildFlowerGardens(root.transform);
             BuildGardenDetails(root.transform);
             BuildWorldExtension(root.transform);
             ConfigureLighting();
@@ -178,50 +179,112 @@ namespace CatsVsDemons.Editor
             pond.transform.position = position;
             pond.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
 
-            CreatePart("Water", PrimitiveType.Cylinder, pond.transform,
-                new Vector3(0f, 0.02f, 0f), new Vector3(4.2f, 0.08f, 2.7f),
-                new Color(0.05f, 0.42f, 0.58f));
+            Color shore = new Color(0.46f, 0.38f, 0.27f);
+            Color deepWater = new Color(0.025f, 0.23f, 0.32f);
+            Color clearWater = new Color(0.06f, 0.52f, 0.62f);
 
-            for (int index = 0; index < 14; index++)
+            CreatePart("PondBed", PrimitiveType.Cylinder, pond.transform,
+                new Vector3(0f, -0.05f, 0f), new Vector3(4.75f, 0.12f, 3.15f),
+                shore);
+            CreatePart("DeepWater", PrimitiveType.Cylinder, pond.transform,
+                new Vector3(0f, 0.015f, 0f), new Vector3(4.35f, 0.08f, 2.75f),
+                deepWater);
+            CreatePart("WaterHighlight", PrimitiveType.Cylinder, pond.transform,
+                new Vector3(-0.18f, 0.095f, 0.12f), new Vector3(4.02f, 0.018f, 2.48f),
+                clearWater);
+
+            Color[] rockColors =
             {
-                float angle = index * Mathf.PI * 2f / 14f;
+                new Color(0.25f, 0.29f, 0.27f),
+                new Color(0.36f, 0.37f, 0.32f),
+                new Color(0.23f, 0.33f, 0.28f)
+            };
+            for (int index = 0; index < 22; index++)
+            {
+                float angle = index * Mathf.PI * 2f / 22f;
+                float wobble = 1f + Mathf.Sin(index * 2.17f) * 0.06f;
                 Vector3 rockPosition = new Vector3(
-                    Mathf.Cos(angle) * 4.1f,
+                    Mathf.Cos(angle) * 4.48f * wobble,
                     0.18f,
-                    Mathf.Sin(angle) * 2.65f
+                    Mathf.Sin(angle) * 2.9f * wobble
                 );
+                float size = 0.56f + (index % 4) * 0.08f;
                 CreatePart("PondRock", PrimitiveType.Sphere, pond.transform,
                     rockPosition,
-                    new Vector3(0.75f, 0.42f, 0.65f),
-                    new Color(0.29f, 0.31f, 0.29f));
+                    new Vector3(size, 0.30f + (index % 3) * 0.06f, size * 0.82f),
+                    rockColors[index % rockColors.Length],
+                    new Vector3(0f, index * 29f, 0f));
             }
 
             Color[] koiColors =
             {
-                new Color(1f, 0.3f, 0.04f),
-                new Color(1f, 0.86f, 0.58f),
+                new Color(1f, 0.22f, 0.025f),
+                new Color(1f, 0.82f, 0.42f),
+                new Color(0.96f, 0.96f, 0.90f),
                 new Color(0.12f, 0.12f, 0.1f)
             };
             Vector3[] koiPositions =
             {
-                new Vector3(-1.5f, 0.18f, -0.3f),
-                new Vector3(0.4f, 0.18f, 0.65f),
-                new Vector3(1.6f, 0.18f, -0.5f),
-                new Vector3(-0.25f, 0.18f, -0.8f)
+                new Vector3(-1.55f, 0.16f, -0.32f),
+                new Vector3(0.45f, 0.16f, 0.72f),
+                new Vector3(1.55f, 0.16f, -0.52f),
+                new Vector3(-0.2f, 0.16f, -0.9f),
+                new Vector3(1.0f, 0.16f, 0.08f)
             };
 
             for (int index = 0; index < koiPositions.Length; index++)
             {
-                CreatePart("Koi", PrimitiveType.Capsule, pond.transform,
-                    koiPositions[index], new Vector3(0.18f, 0.48f, 0.13f),
-                    koiColors[index % koiColors.Length],
-                    new Vector3(90f, index * 37f, 0f));
+                GameObject koi = new GameObject("Koi");
+                koi.transform.SetParent(pond.transform);
+                koi.transform.localPosition = koiPositions[index];
+                koi.transform.localRotation = Quaternion.Euler(0f, index * 47f, 0f);
+                CreatePart("Body", PrimitiveType.Capsule, koi.transform,
+                    Vector3.zero, new Vector3(0.16f, 0.42f, 0.12f),
+                    koiColors[index % koiColors.Length], new Vector3(90f, 0f, 0f));
+                CreatePart("Tail", PrimitiveType.Sphere, koi.transform,
+                    new Vector3(0f, 0f, -0.43f), new Vector3(0.20f, 0.04f, 0.22f),
+                    koiColors[(index + 1) % koiColors.Length],
+                    new Vector3(0f, 0f, 45f));
             }
 
-            CreatePart("Bridge", PrimitiveType.Cube, pond.transform,
-                new Vector3(0f, 0.55f, 0f), new Vector3(1.2f, 0.18f, 5.2f),
-                new Color(0.58f, 0.06f, 0.035f),
-                new Vector3(0f, 0f, 5f));
+            Color lily = new Color(0.18f, 0.48f, 0.20f);
+            Vector3[] lilyPositions =
+            {
+                new Vector3(-2.5f, 0.15f, 0.8f),
+                new Vector3(2.35f, 0.15f, 0.72f),
+                new Vector3(-2.1f, 0.15f, -1.15f),
+                new Vector3(2.65f, 0.15f, -0.75f)
+            };
+            foreach (Vector3 lilyPosition in lilyPositions)
+            {
+                CreatePart("LilyPad", PrimitiveType.Cylinder, pond.transform,
+                    lilyPosition, new Vector3(0.42f, 0.025f, 0.34f), lily);
+            }
+            CreateFlower(pond.transform, new Vector3(-2.5f, 0.23f, 0.8f),
+                new Color(1f, 0.56f, 0.76f), 0.42f);
+
+            Color bridgeRed = new Color(0.58f, 0.055f, 0.03f);
+            Color bridgeDark = new Color(0.18f, 0.055f, 0.035f);
+            for (int plank = -4; plank <= 4; plank++)
+            {
+                float arch = 0.48f + (1f - Mathf.Abs(plank) / 5f) * 0.35f;
+                CreatePart("BridgePlank", PrimitiveType.Cube, pond.transform,
+                    new Vector3(0f, arch, plank * 0.57f),
+                    new Vector3(1.35f, 0.14f, 0.5f), bridgeRed,
+                    new Vector3(plank * -1.4f, 0f, 0f));
+            }
+            foreach (float side in new[] { -0.82f, 0.82f })
+            {
+                CreatePart("BridgeRail", PrimitiveType.Cube, pond.transform,
+                    new Vector3(side, 1.25f, 0f), new Vector3(0.09f, 0.09f, 5.2f),
+                    bridgeDark, new Vector3(0f, 0f, side * -5f));
+                for (int post = -2; post <= 2; post++)
+                {
+                    CreatePart("BridgePost", PrimitiveType.Cylinder, pond.transform,
+                        new Vector3(side, 0.92f, post * 1.15f),
+                        new Vector3(0.10f, 0.55f, 0.10f), bridgeDark);
+                }
+            }
         }
 
         private static void BuildMeditationArea(
@@ -263,24 +326,41 @@ namespace CatsVsDemons.Editor
                 new Vector3(19f, 0f, -12f),
                 new Vector3(-18f, 0f, -13f),
                 new Vector3(18f, 0f, 13f),
-                new Vector3(-8f, 0f, 14f),
-                new Vector3(9f, 0f, -14f)
+                new Vector3(-8f, 0f, 14f)
             };
             foreach (Vector3 position in cherryPositions)
             {
                 CreateCherryTree(parent, position);
             }
 
+            Vector3[] maplePositions =
+            {
+                new Vector3(-13f, 0f, 14f),
+                new Vector3(14f, 0f, 13f),
+                new Vector3(-19f, 0f, -4f),
+                new Vector3(19f, 0f, 3f)
+            };
+            for (int index = 0; index < maplePositions.Length; index++)
+            {
+                CreateMapleTree(parent, maplePositions[index], index % 2 == 0);
+            }
+
+            Vector3[] pinePositions =
+            {
+                new Vector3(-10f, 0f, -14f),
+                new Vector3(10f, 0f, 14f),
+                new Vector3(-20f, 0f, 5f),
+                new Vector3(20f, 0f, -5f)
+            };
+            foreach (Vector3 position in pinePositions)
+            {
+                CreatePineTree(parent, position);
+            }
+
             for (int index = 0; index < 7; index++)
             {
-                CreateBambooCluster(
-                    parent,
-                    new Vector3(-20f + index * 1.05f, 0f, 15f)
-                );
-                CreateBambooCluster(
-                    parent,
-                    new Vector3(20f - index * 1.05f, 0f, -15f)
-                );
+                CreateBambooCluster(parent, new Vector3(-20f + index * 1.05f, 0f, 15f));
+                CreateBambooCluster(parent, new Vector3(20f - index * 1.05f, 0f, -15f));
             }
         }
 
@@ -290,16 +370,82 @@ namespace CatsVsDemons.Editor
             tree.transform.SetParent(parent);
             tree.transform.position = position;
 
+            Color trunk = new Color(0.22f, 0.075f, 0.045f);
+            Color pink = new Color(1f, 0.45f, 0.68f);
+            Color palePink = new Color(1f, 0.69f, 0.80f);
             CreatePart("Trunk", PrimitiveType.Cylinder, tree.transform,
-                new Vector3(0f, 1.7f, 0f), new Vector3(0.42f, 1.7f, 0.42f),
-                new Color(0.25f, 0.09f, 0.06f));
-            Color blossom = new Color(1f, 0.48f, 0.68f);
-            CreatePart("Blossoms", PrimitiveType.Sphere, tree.transform,
-                new Vector3(0f, 3.8f, 0f), new Vector3(2.4f, 1.55f, 2.2f), blossom);
-            CreatePart("Blossoms", PrimitiveType.Sphere, tree.transform,
-                new Vector3(-1.15f, 3.3f, 0.25f), new Vector3(1.5f, 1.15f, 1.4f), blossom);
-            CreatePart("Blossoms", PrimitiveType.Sphere, tree.transform,
-                new Vector3(1.05f, 3.45f, -0.2f), new Vector3(1.6f, 1.2f, 1.5f), blossom);
+                new Vector3(0f, 1.7f, 0f), new Vector3(0.38f, 1.7f, 0.38f), trunk);
+            CreatePart("Branch", PrimitiveType.Cylinder, tree.transform,
+                new Vector3(-0.55f, 2.75f, 0f), new Vector3(0.16f, 1.0f, 0.16f),
+                trunk, new Vector3(0f, 0f, -35f));
+            CreatePart("Branch", PrimitiveType.Cylinder, tree.transform,
+                new Vector3(0.65f, 2.8f, 0.1f), new Vector3(0.14f, 0.95f, 0.14f),
+                trunk, new Vector3(0f, 0f, 38f));
+
+            Vector3[] crowns =
+            {
+                new Vector3(0f, 3.85f, 0f),
+                new Vector3(-1.05f, 3.42f, 0.28f),
+                new Vector3(1.0f, 3.52f, -0.18f),
+                new Vector3(-0.45f, 4.35f, -0.35f)
+            };
+            for (int index = 0; index < crowns.Length; index++)
+            {
+                CreatePart("Blossoms", PrimitiveType.Sphere, tree.transform,
+                    crowns[index], new Vector3(1.45f, 0.9f, 1.3f),
+                    index % 2 == 0 ? pink : palePink);
+            }
+        }
+
+        private static void CreateMapleTree(Transform parent, Vector3 position, bool red)
+        {
+            GameObject tree = new GameObject("JapaneseMaple");
+            tree.transform.SetParent(parent);
+            tree.transform.position = position;
+            Color trunk = new Color(0.25f, 0.10f, 0.05f);
+            Color leafA = red
+                ? new Color(0.72f, 0.08f, 0.035f)
+                : new Color(0.93f, 0.32f, 0.045f);
+            Color leafB = red
+                ? new Color(0.95f, 0.19f, 0.06f)
+                : new Color(0.96f, 0.56f, 0.06f);
+
+            CreatePart("Trunk", PrimitiveType.Cylinder, tree.transform,
+                new Vector3(0f, 1.45f, 0f), new Vector3(0.34f, 1.45f, 0.34f), trunk);
+            for (int index = 0; index < 5; index++)
+            {
+                float angle = index * Mathf.PI * 2f / 5f;
+                CreatePart("MapleCrown", PrimitiveType.Sphere, tree.transform,
+                    new Vector3(Mathf.Cos(angle) * 1.05f, 3.1f + (index % 2) * 0.35f,
+                        Mathf.Sin(angle) * 0.9f),
+                    new Vector3(1.25f, 0.72f, 1.05f),
+                    index % 2 == 0 ? leafA : leafB);
+            }
+        }
+
+        private static void CreatePineTree(Transform parent, Vector3 position)
+        {
+            GameObject tree = new GameObject("JapanesePine");
+            tree.transform.SetParent(parent);
+            tree.transform.position = position;
+            Color trunk = new Color(0.20f, 0.09f, 0.045f);
+            Color pine = new Color(0.055f, 0.30f, 0.14f);
+            Color pineLight = new Color(0.08f, 0.40f, 0.18f);
+
+            CreatePart("Trunk", PrimitiveType.Cylinder, tree.transform,
+                new Vector3(0f, 1.75f, 0f), new Vector3(0.38f, 1.75f, 0.38f), trunk);
+            Vector3[] crowns =
+            {
+                new Vector3(-0.75f, 2.65f, 0f),
+                new Vector3(0.65f, 3.15f, 0.15f),
+                new Vector3(-0.15f, 3.75f, -0.1f)
+            };
+            for (int index = 0; index < crowns.Length; index++)
+            {
+                CreatePart("PineCrown", PrimitiveType.Sphere, tree.transform,
+                    crowns[index], new Vector3(1.55f, 0.48f, 1.2f),
+                    index % 2 == 0 ? pine : pineLight);
+            }
         }
 
         private static void CreateBambooCluster(Transform parent, Vector3 position)
@@ -307,15 +453,88 @@ namespace CatsVsDemons.Editor
             GameObject bamboo = new GameObject("Bamboo");
             bamboo.transform.SetParent(parent);
             bamboo.transform.position = position;
-            Color green = new Color(0.18f, 0.58f, 0.19f);
+            Color green = new Color(0.16f, 0.54f, 0.16f);
+            Color leaf = new Color(0.08f, 0.36f, 0.12f);
 
             for (int index = 0; index < 3; index++)
             {
                 float height = 2.8f + index * 0.55f;
+                float x = (index - 1) * 0.28f;
                 CreatePart("BambooStem", PrimitiveType.Cylinder, bamboo.transform,
-                    new Vector3((index - 1) * 0.28f, height * 0.5f, index * 0.12f),
-                    new Vector3(0.11f, height * 0.5f, 0.11f), green);
+                    new Vector3(x, height * 0.5f, index * 0.12f),
+                    new Vector3(0.095f, height * 0.5f, 0.095f), green);
+                CreatePart("BambooLeaves", PrimitiveType.Sphere, bamboo.transform,
+                    new Vector3(x + 0.15f, height - 0.25f, index * 0.12f),
+                    new Vector3(0.48f, 0.16f, 0.22f), leaf,
+                    new Vector3(0f, 0f, index % 2 == 0 ? 22f : -22f));
             }
+        }
+
+        private static void BuildFlowerGardens(Transform parent)
+        {
+            Vector3[] patches =
+            {
+                new Vector3(-10.5f, 0f, 6.8f),
+                new Vector3(10.5f, 0f, -6.8f),
+                new Vector3(-5.5f, 0f, 10.2f),
+                new Vector3(6.2f, 0f, -10.4f),
+                new Vector3(-16.5f, 0f, 4.5f),
+                new Vector3(16.2f, 0f, -3.8f)
+            };
+            Color[] colors =
+            {
+                new Color(1f, 0.38f, 0.62f),
+                new Color(0.78f, 0.38f, 0.95f),
+                new Color(1f, 0.78f, 0.14f),
+                new Color(0.95f, 0.95f, 0.88f)
+            };
+            for (int index = 0; index < patches.Length; index++)
+            {
+                CreateFlowerPatch(parent, patches[index], colors[index % colors.Length]);
+            }
+        }
+
+        private static void CreateFlowerPatch(Transform parent, Vector3 position, Color color)
+        {
+            GameObject patch = new GameObject("FlowerPatch");
+            patch.transform.SetParent(parent);
+            patch.transform.localPosition = position;
+            for (int index = 0; index < 7; index++)
+            {
+                float angle = index * 2.399f;
+                float radius = 0.25f + (index % 3) * 0.28f;
+                CreateFlower(patch.transform,
+                    new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius),
+                    index % 3 == 0 ? new Color(1f, 0.9f, 0.28f) : color,
+                    0.32f + (index % 2) * 0.08f);
+            }
+        }
+
+        private static void CreateFlower(
+            Transform parent,
+            Vector3 position,
+            Color petalColor,
+            float size)
+        {
+            GameObject flower = new GameObject("Flower");
+            flower.transform.SetParent(parent);
+            flower.transform.localPosition = position;
+            Color stem = new Color(0.10f, 0.42f, 0.12f);
+            CreatePart("Stem", PrimitiveType.Cylinder, flower.transform,
+                new Vector3(0f, size * 0.6f, 0f),
+                new Vector3(size * 0.08f, size * 0.6f, size * 0.08f), stem);
+            for (int petal = 0; petal < 5; petal++)
+            {
+                float angle = petal * Mathf.PI * 2f / 5f;
+                CreatePart("Petal", PrimitiveType.Sphere, flower.transform,
+                    new Vector3(Mathf.Cos(angle) * size * 0.32f, size * 1.25f,
+                        Mathf.Sin(angle) * size * 0.32f),
+                    new Vector3(size * 0.28f, size * 0.10f, size * 0.2f), petalColor,
+                    new Vector3(0f, -petal * 72f, 0f));
+            }
+            CreatePart("FlowerCenter", PrimitiveType.Sphere, flower.transform,
+                new Vector3(0f, size * 1.27f, 0f),
+                Vector3.one * size * 0.22f, new Color(1f, 0.72f, 0.05f));
         }
 
         private static void BuildGardenDetails(Transform parent)
