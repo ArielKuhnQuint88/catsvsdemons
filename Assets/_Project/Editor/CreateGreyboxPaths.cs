@@ -1,3 +1,4 @@
+using CatsVsDemons.Defense;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -344,6 +345,11 @@ namespace CatsVsDemons.Editor
             spot.transform.position = position + Vector3.up * 0.12f;
             spot.transform.localScale = new Vector3(1.2f, 0.12f, 1.2f);
             spot.GetComponent<Renderer>().sharedMaterial = material;
+
+            if (spot.GetComponent<BuildSpot>() == null)
+            {
+                spot.AddComponent<BuildSpot>();
+            }
         }
 
         private static void CreateSpawnPoint(
