@@ -10,7 +10,10 @@ namespace CatsVsDemons.Editor
         private const string ScenePath = ProjectRoot + "/Scenes/Game.unity";
         private const float PathWidth = 2.45f;
         private const float PathHeight = 0.12f;
-        private const int CurveSubdivisions = 2;
+        private const float BorderWidth = 2.85f;
+        private const int CurveSubdivisions = 8;
+        private const string PathMeshFolder =
+            ProjectRoot + "/Art/Meshes/Paths";
 
         [MenuItem("Tools/Cats vs Demons/Add Serpentine Paths")]
         public static void Create()
@@ -56,10 +59,16 @@ namespace CatsVsDemons.Editor
                 "Path_Greybox",
                 new Color(0.66f, 0.50f, 0.33f)
             );
+            Material borderMaterial = GetOrCreateMaterial(
+                "Path_Border",
+                new Color(0.27f, 0.20f, 0.13f)
+            );
             Material buildMaterial = GetOrCreateMaterial(
                 "BuildSpot_Greybox",
                 new Color(0.92f, 0.67f, 0.18f)
             );
+
+            EnsurePathMeshFolder();
 
             Vector3[] leftPath =
             {
@@ -83,9 +92,9 @@ namespace CatsVsDemons.Editor
                 P(2f, -6f), P(0f, -2.5f)
             };
 
-            CreatePath("Path_Left", leftPath, pathsRoot, pathMaterial);
-            CreatePath("Path_Right", rightPath, pathsRoot, pathMaterial);
-            CreatePath("Path_Bottom", bottomPath, pathsRoot, pathMaterial);
+            CreatePath("Path_Left", leftPath, pathsRoot, pathMaterial, borderMaterial);
+            CreatePath("Path_Right", rightPath, pathsRoot, pathMaterial, borderMaterial);
+            CreatePath("Path_Bottom", bottomPath, pathsRoot, pathMaterial, borderMaterial);
 
             CreateSpawnPoint("Spawn_Left", leftPath[0], spawnRoot);
             CreateSpawnPoint("Spawn_Right", rightPath[0], spawnRoot);
@@ -141,44 +150,127 @@ namespace CatsVsDemons.Editor
             string name,
             Vector3[] controlPoints,
             Transform parent,
-            Material material)
+            Material surfaceMaterial,
+            Material borderMaterial)
         {
             Transform pathRoot = new GameObject(name).transform;
             pathRoot.SetParent(parent);
 
             Vector3[] points = CreateSmoothPoints(controlPoints, CurveSubdivisions);
-            for (int i = 0; i < points.Length - 1; i++)
-            {
-                Vector3 start = points[i];
-                Vector3 end = points[i + 1];
-                Vector3 direction = end - start;
-                float length = direction.magnitude;
 
-                GameObject segment = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                segment.name = $"Segment_{i + 1:000}";
-                segment.transform.SetParent(pathRoot);
-                segment.transform.position =
-                    (start + end) * 0.5f + Vector3.up * (PathHeight * 0.5f);
-                segment.transform.rotation =
-                    Quaternion.LookRotation(direction.normalized, Vector3.up);
-                segment.transform.localScale =
-                    new Vector3(PathWidth, PathHeight, length + 0.12f);
-                segment.GetComponent<Renderer>().sharedMaterial = material;
-            }
+            CreatePathRibbon(
+                name + "_Border",
+                points,
+                BorderWidth,
+                0.025f,
+                pathRoot,
+                borderMaterial,
+                false
+            );
+            CreatePathRibbon(
+                name + "_Surface",
+                points,
+                PathWidth,
+                PathHeight,
+                pathRoot,
+                surfaceMaterial,
+                true
+            );
 
             for (int i = 0; i < points.Length; i++)
             {
-                GameObject joint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                joint.name = $"Joint_{i + 1:000}";
-                joint.transform.SetParent(pathRoot);
-                joint.transform.position =
-                    points[i] + Vector3.up * (PathHeight * 0.5f);
-                joint.transform.localScale = new Vector3(
-                    PathWidth * 0.5f,
-                    PathHeight * 0.5f,
-                    PathWidth * 0.5f
-                );
-                joint.GetComponent<Renderer>().sharedMaterial = material;
+                GameObject waypoint = new GameObject($"Joint_{i + 1:000}");
+                waypoint.transform.SetParent(pathRoot);
+                waypoint.transform.position =
+                    points[i] + Vector3.up * PathHeight;
+            }
+        }
+
+        private static void CreatePathRibbon(
+            string name,
+            Vector3[] points,
+            float width,
+            float height,
+            Transform parent,
+            Material material,
+            bool addCollider)
+        {
+            GameObject ribbon = new GameObject(name);
+            ribbon.transform.SetParent(parent);
+
+            Vector3[] vertices = new Vector3[points.Length * 2];
+            Vector2[] uv = new Vector2[vertices.Length];
+            int[] triangles = new int[(points.Length - 1) * 6];
+            float travelled = 0f;
+
+            for (int index = 0; index < points.Length; index++)
+            {
+                Vector3 previous = points[Mathf.Max(index - 1, 0)];
+                Vector3 next = points[Mathf.Min(index + 1, points.Length - 1)];
+                Vector3 tangent = next - previous;
+                tangent.y = 0f;
+                tangent.Normalize();
+
+                Vector3 side = Vector3.Cross(Vector3.up, tangent).normalized;
+                Vector3 center = points[index] + Vector3.up * height;
+                vertices[index * 2] = center - side * (width * 0.5f);
+                vertices[index * 2 + 1] = center + side * (width * 0.5f);
+
+                if (index > 0)
+                {
+                    travelled += Vector3.Distance(points[index - 1], points[index]);
+                }
+                uv[index * 2] = new Vector2(0f, travelled * 0.32f);
+                uv[index * 2 + 1] = new Vector2(1f, travelled * 0.32f);
+
+                if (index >= points.Length - 1)
+                {
+                    continue;
+                }
+
+                int triangle = index * 6;
+                int vertex = index * 2;
+                triangles[triangle] = vertex;
+                triangles[triangle + 1] = vertex + 2;
+                triangles[triangle + 2] = vertex + 1;
+                triangles[triangle + 3] = vertex + 1;
+                triangles[triangle + 4] = vertex + 2;
+                triangles[triangle + 5] = vertex + 3;
+            }
+
+            Mesh mesh = new Mesh
+            {
+                name = name + "_Mesh",
+                vertices = vertices,
+                uv = uv,
+                triangles = triangles
+            };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            string meshPath = $"{PathMeshFolder}/{name}.asset";
+            Mesh oldMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+            if (oldMesh != null)
+            {
+                EditorUtility.CopySerialized(mesh, oldMesh);
+                Object.DestroyImmediate(mesh);
+                mesh = oldMesh;
+                EditorUtility.SetDirty(mesh);
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(mesh, meshPath);
+            }
+
+            MeshFilter filter = ribbon.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            MeshRenderer renderer = ribbon.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+
+            if (addCollider)
+            {
+                MeshCollider meshCollider = ribbon.AddComponent<MeshCollider>();
+                meshCollider.sharedMesh = mesh;
             }
         }
 
@@ -222,6 +314,22 @@ namespace CatsVsDemons.Editor
 
             result[output] = controlPoints[controlPoints.Length - 1];
             return result;
+        }
+
+        private static void EnsurePathMeshFolder()
+        {
+            EnsureFolder(ProjectRoot, "Art");
+            EnsureFolder(ProjectRoot + "/Art", "Meshes");
+            EnsureFolder(ProjectRoot + "/Art/Meshes", "Paths");
+        }
+
+        private static void EnsureFolder(string parent, string name)
+        {
+            string path = parent + "/" + name;
+            if (!AssetDatabase.IsValidFolder(path))
+            {
+                AssetDatabase.CreateFolder(parent, name);
+            }
         }
 
         private static void CreateBuildSpot(
