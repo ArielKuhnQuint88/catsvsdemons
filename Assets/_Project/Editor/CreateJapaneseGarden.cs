@@ -13,6 +13,13 @@ namespace CatsVsDemons.Editor
         private const string MaterialFolder =
             "Assets/_Project/Art/Materials/Garden";
 
+        [MenuItem("Tools/Cats vs Demons/Rebuild Complete Japanese Garden")]
+        public static void RebuildComplete()
+        {
+            Create();
+            CreateGreyboxPaths.Create();
+        }
+
         [MenuItem("Tools/Cats vs Demons/Create Japanese Garden 3D")]
         public static void Create()
         {
@@ -60,7 +67,7 @@ namespace CatsVsDemons.Editor
 
             EditorUtility.DisplayDialog(
                 "Cats vs Demons",
-                "Jardim, horizonte e céu imersivo criados. Aperte Play para explorar.",
+                "Jardim japonês reconstruído com lago, árvores variadas, flores e horizonte baixo.",
                 "OK"
             );
         }
@@ -499,14 +506,17 @@ namespace CatsVsDemons.Editor
             GameObject patch = new GameObject("FlowerPatch");
             patch.transform.SetParent(parent);
             patch.transform.localPosition = position;
-            for (int index = 0; index < 7; index++)
+            CreatePart("FlowerBed", PrimitiveType.Sphere, patch.transform,
+                new Vector3(0f, 0.08f, 0f), new Vector3(1.35f, 0.16f, 0.9f),
+                new Color(0.09f, 0.30f, 0.10f));
+            for (int index = 0; index < 12; index++)
             {
                 float angle = index * 2.399f;
-                float radius = 0.25f + (index % 3) * 0.28f;
+                float radius = 0.28f + (index % 4) * 0.24f;
                 CreateFlower(patch.transform,
                     new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius),
                     index % 3 == 0 ? new Color(1f, 0.9f, 0.28f) : color,
-                    0.32f + (index % 2) * 0.08f);
+                    0.46f + (index % 2) * 0.08f);
             }
         }
 
@@ -574,22 +584,22 @@ namespace CatsVsDemons.Editor
 
             Vector3[] mountainPositions =
             {
-                new Vector3(-39f, 3.8f, 18f),
-                new Vector3(-31f, 5.2f, 27f),
-                new Vector3(-15f, 4.1f, 31f),
-                new Vector3(5f, 6.2f, 34f),
-                new Vector3(24f, 4.8f, 30f),
-                new Vector3(39f, 4.3f, 18f),
-                new Vector3(42f, 3.4f, -7f),
-                new Vector3(-42f, 3.6f, -10f)
+                new Vector3(-39f, -1.8f, 18f),
+                new Vector3(-31f, -1.5f, 27f),
+                new Vector3(-15f, -1.7f, 31f),
+                new Vector3(5f, -1.3f, 34f),
+                new Vector3(24f, -1.6f, 30f),
+                new Vector3(39f, -1.8f, 18f),
+                new Vector3(42f, -2.0f, -7f),
+                new Vector3(-42f, -2.0f, -10f)
             };
             for (int index = 0; index < mountainPositions.Length; index++)
             {
-                float height = 7f + (index % 3) * 2.3f;
+                float height = 3.2f + (index % 3) * 0.7f;
                 CreateMountain(
                     world.transform,
                     mountainPositions[index],
-                    new Vector3(10f + (index % 2) * 3f, height, 8f)
+                    new Vector3(11f + (index % 2) * 3f, height, 8f)
                 );
             }
 
@@ -627,18 +637,20 @@ namespace CatsVsDemons.Editor
             Vector3 position,
             Vector3 scale)
         {
-            GameObject mountain = new GameObject("DistantMountain");
+            GameObject mountain = new GameObject("DistantHill");
             mountain.transform.SetParent(parent);
             mountain.transform.localPosition = position;
 
-            CreatePart("MountainBody", PrimitiveType.Sphere, mountain.transform,
-                Vector3.zero, scale,
-                new Color(0.13f, 0.23f, 0.19f),
-                new Vector3(0f, position.x * 1.7f, -8f));
-            CreatePart("MountainForest", PrimitiveType.Sphere, mountain.transform,
-                new Vector3(0f, scale.y * 0.12f, -0.2f),
-                new Vector3(scale.x * 0.82f, scale.y * 0.82f, scale.z * 0.84f),
-                new Color(0.09f, 0.32f, 0.17f));
+            Color deepGreen = new Color(0.075f, 0.19f, 0.14f);
+            Color mistGreen = new Color(0.11f, 0.27f, 0.18f);
+            CreatePart("HillBack", PrimitiveType.Sphere, mountain.transform,
+                new Vector3(-scale.x * 0.22f, 0f, 0.7f),
+                new Vector3(scale.x * 0.72f, scale.y, scale.z * 0.82f),
+                deepGreen, new Vector3(0f, position.x * 0.8f, 0f));
+            CreatePart("HillFront", PrimitiveType.Sphere, mountain.transform,
+                new Vector3(scale.x * 0.22f, -scale.y * 0.18f, -0.4f),
+                new Vector3(scale.x * 0.68f, scale.y * 0.72f, scale.z * 0.75f),
+                mistGreen, new Vector3(0f, -position.x * 0.6f, 0f));
         }
 
         private static void CreateTorii(Transform parent, Vector3 position, float yaw)
