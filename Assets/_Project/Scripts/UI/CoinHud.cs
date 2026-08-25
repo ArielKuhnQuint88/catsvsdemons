@@ -222,137 +222,147 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            float scale = ResponsiveGuiTheme.IsMobile
-                ? Mathf.Clamp(Screen.height / 720f, 1.05f, 1.75f)
-                : Mathf.Clamp(Screen.height / 1080f, 0.68f, 1f);
-            float width = 460f * scale;
-            float height = 116f * scale;
-            Rect panel = new Rect(
+            bool mobile = ResponsiveGuiTheme.IsMobile;
+            float scale = mobile
+                ? Mathf.Clamp(Screen.height / 720f, 1f, 1.5f)
+                : Mathf.Clamp(Screen.height / 900f, 0.8f, 1f);
+            float width = mobile
+                ? Mathf.Min(Screen.width * 0.44f, 660f * scale)
+                : Mathf.Clamp(Screen.width * 0.46f, 430f, 560f);
+            float height = 235f * scale;
+            Rect frame = new Rect(
                 (Screen.width - width) * 0.5f,
-                16f * scale,
+                12f * scale,
                 width,
                 height
             );
 
-            Rect interfaceBase = new Rect(
-                panel.x - 18f * scale,
-                panel.y - 8f * scale,
-                panel.width + 36f * scale,
-                270f * scale
+            // Sombra, moldura de madeira e filete dourado.
+            DrawTexture(
+                new Rect(
+                    frame.x + 6f * scale,
+                    frame.y + 7f * scale,
+                    frame.width,
+                    frame.height
+                ),
+                new Color(0f, 0f, 0f, 0.42f)
             );
-            DrawTexture(interfaceBase, new Color(0.18f, 0.09f, 0.035f, 0.97f));
+            DrawTexture(frame, new Color(0.12f, 0.025f, 0.018f, 0.98f));
+            Rect goldFrame = new Rect(
+                frame.x + 5f * scale,
+                frame.y + 5f * scale,
+                frame.width - 10f * scale,
+                frame.height - 10f * scale
+            );
+            DrawTexture(goldFrame, new Color(0.72f, 0.38f, 0.08f, 1f));
             Rect paper = new Rect(
-                interfaceBase.x + 5f * scale,
-                interfaceBase.y + 5f * scale,
-                interfaceBase.width - 10f * scale,
-                interfaceBase.height - 10f * scale
+                goldFrame.x + 3f * scale,
+                goldFrame.y + 3f * scale,
+                goldFrame.width - 6f * scale,
+                goldFrame.height - 6f * scale
             );
             DrawPaper(paper);
-            DrawTexture(
-                new Rect(paper.x, paper.y, paper.width, 3f * scale),
-                new Color(0.42f, 0.18f, 0.055f, 0.9f)
-            );
-            DrawTexture(
-                new Rect(paper.x, paper.yMax - 3f * scale, paper.width, 3f * scale),
-                new Color(0.42f, 0.18f, 0.055f, 0.9f)
-            );
 
-            DrawTexture(panel, new Color(0.24f, 0.12f, 0.045f, 0.10f));
-            DrawTexture(
-                new Rect(panel.x, panel.y, panel.width, 4f * scale),
-                new Color(0.88f, 0.47f, 0.12f, 1f)
-            );
+            // Cabeçalho de vida em duas linhas bem separadas.
+            float pad = 16f * scale;
+            float labelWidth = 82f * scale;
+            float barLeft = paper.x + pad + labelWidth;
+            float barWidth = paper.xMax - pad - barLeft;
+            compactStyle.fontSize = Mathf.RoundToInt(15f * scale);
+            compactCenterStyle.fontSize = Mathf.RoundToInt(13f * scale);
 
             GUI.Label(
-                new Rect(panel.x + 14f, panel.y + 10f, 105f, 24f),
+                new Rect(paper.x + pad, paper.y + 12f * scale,
+                    labelWidth, 24f * scale),
                 "♥  CASA",
                 compactStyle
             );
-            Rect houseBar = new Rect(
-                panel.x + 112f,
-                panel.y + 12f,
-                panel.width - 126f,
-                20f * scale
-            );
             DrawBar(
-                houseBar,
+                new Rect(barLeft, paper.y + 14f * scale,
+                    barWidth, 18f * scale),
                 houseMax > 0 ? (float)houseHealth / houseMax : 0f,
-                new Color(0.92f, 0.18f, 0.12f),
+                new Color(0.9f, 0.16f, 0.1f),
                 $"{houseHealth}/{houseMax}"
             );
 
-            Rect kinBar = new Rect(
-                panel.x + 112f,
-                panel.y + 39f * scale,
-                panel.width - 126f,
-                12f * scale
-            );
             GUI.Label(
-                new Rect(panel.x + 14f, panel.y + 34f * scale, 92f, 24f),
+                new Rect(paper.x + pad, paper.y + 40f * scale,
+                    labelWidth, 24f * scale),
                 "KIN",
                 compactStyle
             );
             DrawBar(
-                kinBar,
+                new Rect(barLeft, paper.y + 43f * scale,
+                    barWidth, 13f * scale),
                 kinMax > 0 ? (float)kinHealth / kinMax : 0f,
                 HealthColor(kinHealth, kinMax),
                 string.Empty
             );
 
-            float rowY = panel.y + 66f * scale;
-            float cellWidth = panel.width / 4f;
+            // Faixa central: cada informação ocupa uma célula própria.
+            float statsY = paper.y + 70f * scale;
+            float statsHeight = 38f * scale;
+            Rect stats = new Rect(
+                paper.x + 10f * scale,
+                statsY,
+                paper.width - 20f * scale,
+                statsHeight
+            );
+            DrawTexture(stats, new Color(0.22f, 0.075f, 0.035f, 0.13f));
+            float cellWidth = stats.width / 4f;
             DrawStatusCell(
-                new Rect(panel.x, rowY, cellWidth, 34f * scale),
+                new Rect(stats.x, stats.y, cellWidth, stats.height),
                 $"●  {coins}",
-                new Color(1f, 0.78f, 0.12f)
+                new Color(0.68f, 0.32f, 0.04f)
             );
             DrawStatusCell(
-                new Rect(panel.x + cellWidth, rowY, cellWidth, 34f * scale),
-                $"FASE {currentPhase}/{totalPhases}",
-                new Color(0.56f, 0.82f, 1f)
+                new Rect(stats.x + cellWidth, stats.y, cellWidth, stats.height),
+                $"FASE  {currentPhase}/{totalPhases}",
+                Color.black
             );
             DrawStatusCell(
-                new Rect(panel.x + cellWidth * 2f, rowY, cellWidth, 34f * scale),
-                $"ONDA {currentWave}/{totalWaves}",
-                new Color(0.82f, 0.68f, 1f)
+                new Rect(stats.x + cellWidth * 2f, stats.y, cellWidth, stats.height),
+                $"ONDA  {currentWave}/{totalWaves}",
+                Color.black
             );
             DrawStatusCell(
-                new Rect(panel.x + cellWidth * 3f, rowY, cellWidth, 34f * scale),
+                new Rect(stats.x + cellWidth * 3f, stats.y, cellWidth, stats.height),
                 $"☠  {activeEnemies}",
-                new Color(0.92f, 0.35f, 1f)
+                new Color(0.32f, 0.08f, 0.38f)
             );
+            for (int index = 1; index < 4; index++)
+            {
+                DrawTexture(
+                    new Rect(
+                        stats.x + cellWidth * index,
+                        stats.y + 7f * scale,
+                        1f,
+                        stats.height - 14f * scale
+                    ),
+                    new Color(0.33f, 0.13f, 0.04f, 0.32f)
+                );
+            }
 
-            Vector2 anchor = new Vector2(
-                Screen.width * 0.5f,
-                panel.yMax + 46f * scale
-            );
-            float radius = 34f * scale;
+            // Três colunas independentes para os botões das defesas.
+            float buttonY = paper.y + 151f * scale;
+            float radius = 32f * scale;
+            Vector2[] centers =
+            {
+                new Vector2(paper.x + paper.width * 0.25f, buttonY),
+                new Vector2(paper.x + paper.width * 0.50f, buttonY),
+                new Vector2(paper.x + paper.width * 0.75f, buttonY)
+            };
             DrawDefenseButton(
-                anchor + new Vector2(-88f * scale, 0f),
-                radius,
-                "PORTAL",
-                10,
-                DefenseType.Portal,
-                new Color(0.04f, 0.48f, 0.95f),
-                portalIcon
-            );
-            DrawDefenseButton(
-                anchor,
-                radius,
-                "BONSAI",
-                15,
-                DefenseType.Bonsai,
-                new Color(0.1f, 0.62f, 0.24f),
-                bonsaiIcon
+                centers[0], radius, "PORTAL", 10, DefenseType.Portal,
+                new Color(0.03f, 0.46f, 0.92f), portalIcon
             );
             DrawDefenseButton(
-                anchor + new Vector2(88f * scale, 0f),
-                radius,
-                "LANTERNA",
-                10,
-                DefenseType.Lantern,
-                new Color(0.68f, 0.45f, 0.82f),
-                lanternIcon
+                centers[1], radius, "BONSAI", 15, DefenseType.Bonsai,
+                new Color(0.08f, 0.62f, 0.22f), bonsaiIcon
+            );
+            DrawDefenseButton(
+                centers[2], radius, "LANTERNA", 10, DefenseType.Lantern,
+                new Color(0.56f, 0.30f, 0.76f), lanternIcon
             );
         }
 
@@ -366,26 +376,35 @@ namespace CatsVsDemons.UI
             Texture2D icon)
         {
             bool selected = TowerBuildSelection.Selected == type;
-            bool hovered = Vector2.Distance(Event.current.mousePosition, center) <= radius;
+            bool hovered =
+                Vector2.Distance(Event.current.mousePosition, center) <= radius;
             float outerRadius = selected ? radius + 6f : radius + 3f;
+
+            if (selected)
+                DrawCircle(center, radius + 10f, new Color(1f, 0.66f, 0.12f, 0.22f));
+
             DrawCircle(
                 center,
                 outerRadius,
                 selected
-                    ? new Color(1f, 0.73f, 0.18f, 0.98f)
-                    : new Color(0.02f, 0.05f, 0.08f, 0.92f)
+                    ? new Color(0.96f, 0.62f, 0.12f, 1f)
+                    : new Color(0.12f, 0.045f, 0.025f, 0.96f)
             );
             DrawCircle(
                 center,
                 radius,
-                hovered ? Color.Lerp(color, Color.white, 0.2f) : color
+                hovered ? Color.Lerp(color, Color.white, 0.16f) : color
             );
-            DrawCircle(center, radius * 0.82f, new Color(0.025f, 0.07f, 0.1f, 0.9f));
+            DrawCircle(
+                center,
+                radius * 0.84f,
+                new Color(0.018f, 0.04f, 0.06f, 0.82f)
+            );
 
             if (icon != null)
             {
                 float iconSize = radius *
-                    (type == DefenseType.Lantern ? 2.32f : 1.92f);
+                    (type == DefenseType.Lantern ? 1.92f : 1.76f);
                 GUI.DrawTexture(
                     new Rect(
                         center.x - iconSize * 0.5f,
@@ -394,24 +413,40 @@ namespace CatsVsDemons.UI
                         iconSize
                     ),
                     icon,
-                    ScaleMode.ScaleAndCrop
+                    ScaleMode.ScaleToFit,
+                    true
                 );
             }
 
+            radialStyle.fontSize = Mathf.RoundToInt(
+                Mathf.Clamp(radius * 0.35f, 10f, 15f)
+            );
+            costStyle.fontSize = Mathf.RoundToInt(
+                Mathf.Clamp(radius * 0.34f, 10f, 15f)
+            );
+            radialStyle.normal.textColor = selected
+                ? new Color(0.38f, 0.08f, 0.025f)
+                : Color.black;
+            costStyle.normal.textColor = new Color(0.31f, 0.13f, 0.025f);
+
+            float labelY = center.y + radius + 5f;
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius - 7f,
-                    radius * 2f, 17f),
+                new Rect(center.x - radius * 1.35f, labelY,
+                    radius * 2.7f, 19f * ResponsiveGuiTheme.LayoutScale),
                 label,
                 radialStyle
             );
             GUI.Label(
-                new Rect(center.x - radius, center.y + radius + 8f,
-                    radius * 2f, 20f),
-                $"● {cost}",
+                new Rect(center.x - radius * 1.35f,
+                    labelY + 18f * ResponsiveGuiTheme.LayoutScale,
+                    radius * 2.7f,
+                    19f * ResponsiveGuiTheme.LayoutScale),
+                $"●  {cost}",
                 costStyle
             );
 
-            if (hovered && Event.current.type == EventType.MouseUp &&
+            if (hovered &&
+                Event.current.type == EventType.MouseUp &&
                 Event.current.button == 0)
             {
                 TowerBuildSelection.Select(type);
@@ -422,7 +457,8 @@ namespace CatsVsDemons.UI
         private void DrawStatusCell(Rect area, string text, Color color)
         {
             Color previous = compactCenterStyle.normal.textColor;
-            compactCenterStyle.normal.textColor = Color.black;
+            compactCenterStyle.normal.textColor = color;
+            compactCenterStyle.alignment = TextAnchor.MiddleCenter;
             GUI.Label(area, text, compactCenterStyle);
             compactCenterStyle.normal.textColor = previous;
         }
@@ -543,9 +579,14 @@ namespace CatsVsDemons.UI
 
         private static Texture2D CreatePaperTexture(int size)
         {
-            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            Texture2D texture = new Texture2D(
+                size,
+                size,
+                TextureFormat.RGBA32,
+                false
+            )
             {
-                name = "HudPaperTexture",
+                name = "HudWashiTexture",
                 filterMode = FilterMode.Bilinear,
                 wrapMode = TextureWrapMode.Repeat
             };
@@ -554,13 +595,14 @@ namespace CatsVsDemons.UI
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float grain = Mathf.PerlinNoise(x * 0.075f, y * 0.075f);
-                    float fiber = Mathf.Sin(y * 0.31f + x * 0.025f) * 0.018f;
-                    float shade = Mathf.Lerp(-0.065f, 0.055f, grain) + fiber;
+                    float grain = Mathf.PerlinNoise(x * 0.055f, y * 0.055f);
+                    float fiber =
+                        Mathf.Sin(y * 0.24f + x * 0.018f) * 0.009f;
+                    float shade = Mathf.Lerp(-0.028f, 0.026f, grain) + fiber;
                     pixels[y * size + x] = new Color(
-                        0.86f + shade,
-                        0.73f + shade,
-                        0.49f + shade * 0.65f,
+                        0.91f + shade,
+                        0.84f + shade,
+                        0.68f + shade * 0.72f,
                         1f
                     );
                 }
