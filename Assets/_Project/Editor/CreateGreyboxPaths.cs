@@ -8,8 +8,9 @@ namespace CatsVsDemons.Editor
     {
         private const string ProjectRoot = "Assets/_Project";
         private const string ScenePath = ProjectRoot + "/Scenes/Game.unity";
-        private const float PathWidth = 2.2f;
-        private const float PathHeight = 0.16f;
+        private const float PathWidth = 2.45f;
+        private const float PathHeight = 0.12f;
+        private const int CurveSubdivisions = 2;
 
         [MenuItem("Tools/Cats vs Demons/Add Serpentine Paths")]
         public static void Create()
@@ -53,7 +54,7 @@ namespace CatsVsDemons.Editor
 
             Material pathMaterial = GetOrCreateMaterial(
                 "Path_Greybox",
-                new Color(0.58f, 0.47f, 0.34f)
+                new Color(0.66f, 0.50f, 0.33f)
             );
             Material buildMaterial = GetOrCreateMaterial(
                 "BuildSpot_Greybox",
@@ -107,7 +108,7 @@ namespace CatsVsDemons.Editor
             AssetDatabase.SaveAssets();
 
             Selection.activeTransform = pathsRoot;
-            Debug.Log("Cats vs Demons serpentine paths and build spots created.");
+            Debug.Log("Cats vs Demons smooth garden paths and build spots created.");
         }
 
         private static void OpenGameSceneIfNeeded()
@@ -138,13 +139,14 @@ namespace CatsVsDemons.Editor
 
         private static void CreatePath(
             string name,
-            Vector3[] points,
+            Vector3[] controlPoints,
             Transform parent,
             Material material)
         {
             Transform pathRoot = new GameObject(name).transform;
             pathRoot.SetParent(parent);
 
+            Vector3[] points = CreateSmoothPoints(controlPoints, CurveSubdivisions);
             for (int i = 0; i < points.Length - 1; i++)
             {
                 Vector3 start = points[i];
@@ -153,20 +155,24 @@ namespace CatsVsDemons.Editor
                 float length = direction.magnitude;
 
                 GameObject segment = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                segment.name = $"Segment_{i + 1:00}";
+                segment.name = $"Segment_{i + 1:000}";
                 segment.transform.SetParent(pathRoot);
-                segment.transform.position = (start + end) * 0.5f + Vector3.up * (PathHeight * 0.5f);
-                segment.transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-                segment.transform.localScale = new Vector3(PathWidth, PathHeight, length);
+                segment.transform.position =
+                    (start + end) * 0.5f + Vector3.up * (PathHeight * 0.5f);
+                segment.transform.rotation =
+                    Quaternion.LookRotation(direction.normalized, Vector3.up);
+                segment.transform.localScale =
+                    new Vector3(PathWidth, PathHeight, length + 0.12f);
                 segment.GetComponent<Renderer>().sharedMaterial = material;
             }
 
             for (int i = 0; i < points.Length; i++)
             {
                 GameObject joint = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                joint.name = $"Joint_{i + 1:00}";
+                joint.name = $"Joint_{i + 1:000}";
                 joint.transform.SetParent(pathRoot);
-                joint.transform.position = points[i] + Vector3.up * (PathHeight * 0.5f);
+                joint.transform.position =
+                    points[i] + Vector3.up * (PathHeight * 0.5f);
                 joint.transform.localScale = new Vector3(
                     PathWidth * 0.5f,
                     PathHeight * 0.5f,
@@ -174,6 +180,48 @@ namespace CatsVsDemons.Editor
                 );
                 joint.GetComponent<Renderer>().sharedMaterial = material;
             }
+        }
+
+        private static Vector3[] CreateSmoothPoints(
+            Vector3[] controlPoints,
+            int subdivisions)
+        {
+            if (controlPoints == null || controlPoints.Length < 2)
+            {
+                return controlPoints;
+            }
+
+            subdivisions = Mathf.Max(1, subdivisions);
+            Vector3[] result = new Vector3[
+                (controlPoints.Length - 1) * subdivisions + 1
+            ];
+            int output = 0;
+
+            for (int segment = 0; segment < controlPoints.Length - 1; segment++)
+            {
+                Vector3 p0 = controlPoints[Mathf.Max(segment - 1, 0)];
+                Vector3 p1 = controlPoints[segment];
+                Vector3 p2 = controlPoints[segment + 1];
+                Vector3 p3 = controlPoints[
+                    Mathf.Min(segment + 2, controlPoints.Length - 1)
+                ];
+
+                for (int step = 0; step < subdivisions; step++)
+                {
+                    float t = step / (float)subdivisions;
+                    float t2 = t * t;
+                    float t3 = t2 * t;
+                    result[output++] = 0.5f * (
+                        2f * p1 +
+                        (-p0 + p2) * t +
+                        (2f * p0 - 5f * p1 + 4f * p2 - p3) * t2 +
+                        (-p0 + 3f * p1 - 3f * p2 + p3) * t3
+                    );
+                }
+            }
+
+            result[output] = controlPoints[controlPoints.Length - 1];
+            return result;
         }
 
         private static void CreateBuildSpot(
