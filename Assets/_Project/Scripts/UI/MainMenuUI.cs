@@ -139,37 +139,34 @@ namespace CatsVsDemons.UI
 
         private void DrawModeButtons()
         {
-            float width = Mathf.Min(420f, Screen.width * 0.45f);
-            float height = 72f;
+            bool mobile = ResponsiveGuiTheme.IsMobile;
+            float scale = ResponsiveGuiTheme.LayoutScale;
+            float width = mobile
+                ? Mathf.Min(Screen.width * 0.46f, 520f * scale)
+                : Mathf.Min(Screen.width * 0.30f, 380f * scale);
+            float height = (mobile ? 68f : 58f) * scale;
+            float gap = (mobile ? 18f : 14f) * scale;
             float left = (Screen.width - width) * 0.5f;
             float top = Screen.height * 0.31f;
+            int fontSize = Mathf.RoundToInt((mobile ? 23f : 20f) * scale);
 
-            int oldSize = GUI.skin.button.fontSize;
-            FontStyle oldStyle = GUI.skin.button.fontStyle;
-            GUI.skin.button.fontSize = 24;
-            GUI.skin.button.fontStyle = FontStyle.Bold;
-
-            Color previous = GUI.backgroundColor;
-
-            GUI.backgroundColor = new Color(0.85f, 0.25f, 0.12f);
-            if (GUI.Button(
+            if (ResponsiveGuiTheme.Button(
                 new Rect(left, top, width, height),
-                "ISOMÉTRICO"))
+                "ISOMÉTRICO",
+                ResponsiveGuiTheme.ButtonTone.Crimson,
+                fontSize))
             {
                 BeginIntro(0);
             }
 
-            GUI.backgroundColor = new Color(0.16f, 0.55f, 0.95f);
-            if (GUI.Button(
-                new Rect(left, top + 88f, width, height),
-                "PRIMEIRA PESSOA"))
+            if (ResponsiveGuiTheme.Button(
+                new Rect(left, top + height + gap, width, height),
+                "PRIMEIRA PESSOA",
+                ResponsiveGuiTheme.ButtonTone.Azure,
+                fontSize))
             {
                 BeginIntro(1);
             }
-
-            GUI.backgroundColor = previous;
-            GUI.skin.button.fontSize = oldSize;
-            GUI.skin.button.fontStyle = oldStyle;
         }
 
         private void BeginIntro(int cameraMode)
@@ -192,22 +189,36 @@ namespace CatsVsDemons.UI
                 ScaleMode.ScaleAndCrop
             );
 
+            bool mobile = ResponsiveGuiTheme.IsMobile;
+            float scale = ResponsiveGuiTheme.LayoutScale;
             Rect captionArea = new Rect(
-                Screen.width * 0.08f,
-                Screen.height * 0.76f,
-                Screen.width * 0.84f,
-                Screen.height * 0.12f
+                Screen.width * 0.06f,
+                Screen.height * 0.73f,
+                Screen.width * 0.88f,
+                Screen.height * 0.14f
             );
             Color previous = GUI.color;
             GUI.color = new Color(0.02f, 0.03f, 0.06f, 0.94f);
             GUI.DrawTexture(captionArea, Texture2D.whiteTexture);
             GUI.color = previous;
+
+            comicCaptionStyle.fontSize = Mathf.RoundToInt(
+                Mathf.Clamp((mobile ? 25f : 27f) * scale, 24f, 42f)
+            );
             GUI.Label(captionArea, ComicCaptions[comicPanel], comicCaptionStyle);
 
-            float buttonY = Screen.height - 72f;
-            if (GUI.Button(
-                new Rect(24f, buttonY, 150f, 48f),
-                "PULAR"))
+            float margin = (mobile ? 28f : 24f) * scale;
+            float buttonHeight = (mobile ? 64f : 48f) * scale;
+            float buttonY = Screen.height - buttonHeight - margin;
+            float skipWidth = (mobile ? 190f : 132f) * scale;
+            float nextWidth = (mobile ? 280f : 210f) * scale;
+            int fontSize = Mathf.RoundToInt((mobile ? 22f : 17f) * scale);
+
+            if (ResponsiveGuiTheme.Button(
+                new Rect(margin, buttonY, skipWidth, buttonHeight),
+                "PULAR",
+                ResponsiveGuiTheme.ButtonTone.Ink,
+                fontSize))
             {
                 StartGame(pendingCameraMode);
             }
@@ -215,18 +226,21 @@ namespace CatsVsDemons.UI
             string nextLabel = comicPanel < ComicCaptions.Length - 1
                 ? "PRÓXIMO"
                 : "DEFENDER A CASA!";
-            if (GUI.Button(
-                new Rect(Screen.width - 254f, buttonY, 230f, 48f),
-                nextLabel))
+            if (ResponsiveGuiTheme.Button(
+                new Rect(
+                    Screen.width - nextWidth - margin,
+                    buttonY,
+                    nextWidth,
+                    buttonHeight
+                ),
+                nextLabel,
+                ResponsiveGuiTheme.ButtonTone.Gold,
+                fontSize))
             {
                 if (comicPanel < ComicCaptions.Length - 1)
-                {
                     comicPanel++;
-                }
                 else
-                {
                     StartGame(pendingCameraMode);
-                }
             }
         }
 
@@ -269,27 +283,29 @@ namespace CatsVsDemons.UI
                 "Sair"
             };
 
-            float buttonWidth = 140f;
-            float gap = 12f;
+            bool mobile = ResponsiveGuiTheme.IsMobile;
+            float scale = ResponsiveGuiTheme.LayoutScale;
+            float buttonWidth = (mobile ? 176f : 118f) * scale;
+            float buttonHeight = (mobile ? 54f : 40f) * scale;
+            float gap = (mobile ? 14f : 10f) * scale;
             float totalWidth =
-                (buttonWidth * labels.Length) +
-                (gap * (labels.Length - 1));
+                buttonWidth * labels.Length + gap * (labels.Length - 1);
             float left = (Screen.width - totalWidth) * 0.5f;
-            float top = Screen.height - 100f;
-
-            int oldSize = GUI.skin.button.fontSize;
-            GUI.skin.button.fontSize = 17;
+            float top = Screen.height - buttonHeight - 24f * scale;
+            int fontSize = Mathf.RoundToInt((mobile ? 18f : 14f) * scale);
 
             for (int index = 0; index < labels.Length; index++)
             {
-                if (!GUI.Button(
+                if (!ResponsiveGuiTheme.Button(
                     new Rect(
                         left + index * (buttonWidth + gap),
                         top,
                         buttonWidth,
-                        42f
+                        buttonHeight
                     ),
-                    labels[index]))
+                    labels[index],
+                    ResponsiveGuiTheme.ButtonTone.Ink,
+                    fontSize))
                 {
                     continue;
                 }
@@ -310,8 +326,6 @@ namespace CatsVsDemons.UI
                         break;
                 }
             }
-
-            GUI.skin.button.fontSize = oldSize;
         }
 
         private void DrawPanel()
@@ -375,14 +389,19 @@ namespace CatsVsDemons.UI
                 DrawSettings(panel);
             }
 
-            if (GUI.Button(
+            float backScale = ResponsiveGuiTheme.LayoutScale;
+            float backWidth = (ResponsiveGuiTheme.IsMobile ? 220f : 160f) * backScale;
+            float backHeight = (ResponsiveGuiTheme.IsMobile ? 58f : 42f) * backScale;
+            if (ResponsiveGuiTheme.Button(
                 new Rect(
-                    panel.x + (width - 180f) * 0.5f,
-                    panel.yMax - 70f,
-                    180f,
-                    44f
+                    panel.x + (width - backWidth) * 0.5f,
+                    panel.yMax - backHeight - 18f * backScale,
+                    backWidth,
+                    backHeight
                 ),
-                "Voltar"))
+                "VOLTAR",
+                ResponsiveGuiTheme.ButtonTone.Gold,
+                Mathf.RoundToInt(17f * backScale)))
             {
                 activePanel = Panel.None;
             }

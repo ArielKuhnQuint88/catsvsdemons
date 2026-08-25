@@ -222,7 +222,9 @@ namespace CatsVsDemons.UI
             int kinHealth = kin != null ? kin.CurrentHealth : 0;
             int kinMax = kin != null ? kin.MaxHealth : 0;
 
-            float scale = Mathf.Clamp(Screen.height / 1080f, 0.72f, 1.2f);
+            float scale = ResponsiveGuiTheme.IsMobile
+                ? Mathf.Clamp(Screen.height / 720f, 1.05f, 1.75f)
+                : Mathf.Clamp(Screen.height / 1080f, 0.68f, 1f);
             float width = 460f * scale;
             float height = 116f * scale;
             Rect panel = new Rect(
@@ -666,17 +668,9 @@ namespace CatsVsDemons.UI
         {
             Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
             if (background != null)
-            {
-                GUI.DrawTexture(
-                    screen,
-                    background,
-                    ScaleMode.ScaleAndCrop
-                );
-            }
+                GUI.DrawTexture(screen, background, ScaleMode.ScaleAndCrop);
             else
-            {
                 GUI.Box(screen, GUIContent.none);
-            }
 
             DrawTexture(
                 new Rect(0f, 0f, Screen.width, Screen.height * 0.25f),
@@ -703,14 +697,19 @@ namespace CatsVsDemons.UI
                 messageStyle
             );
 
-            if (GUI.Button(
+            float scale = ResponsiveGuiTheme.LayoutScale;
+            float width = (ResponsiveGuiTheme.IsMobile ? 260f : 190f) * scale;
+            float height = (ResponsiveGuiTheme.IsMobile ? 62f : 46f) * scale;
+            if (ResponsiveGuiTheme.Button(
                 new Rect(
-                    (Screen.width - 220f) * 0.5f,
-                    Screen.height * 0.88f,
-                    220f,
-                    52f
+                    (Screen.width - width) * 0.5f,
+                    Screen.height - height - 22f * scale,
+                    width,
+                    height
                 ),
-                "Reiniciar"))
+                "REINICIAR",
+                ResponsiveGuiTheme.ButtonTone.Gold,
+                Mathf.RoundToInt(18f * scale)))
             {
                 RestartGame();
             }
@@ -718,9 +717,15 @@ namespace CatsVsDemons.UI
 
         private void DrawPauseButton()
         {
-            if (GUI.Button(
-                new Rect(Screen.width - 130f, 22f, 105f, 42f),
-                paused ? "Continuar" : "Pausar"))
+            float scale = ResponsiveGuiTheme.LayoutScale;
+            float width = (ResponsiveGuiTheme.IsMobile ? 140f : 96f) * scale;
+            float height = (ResponsiveGuiTheme.IsMobile ? 52f : 36f) * scale;
+            float margin = 18f * scale;
+            if (ResponsiveGuiTheme.Button(
+                new Rect(Screen.width - width - margin, margin, width, height),
+                paused ? "CONTINUAR" : "PAUSAR",
+                ResponsiveGuiTheme.ButtonTone.Ink,
+                Mathf.RoundToInt(14f * scale)))
             {
                 paused = !paused;
                 Time.timeScale = paused ? 0f : 1f;
@@ -729,37 +734,39 @@ namespace CatsVsDemons.UI
 
         private void DrawPauseMenu()
         {
-            GUI.Box(
+            DrawTexture(
                 new Rect(0f, 0f, Screen.width, Screen.height),
-                GUIContent.none
+                new Color(0.01f, 0.02f, 0.04f, 0.9f)
             );
             GUI.Label(
-                new Rect(0f, Screen.height * 0.34f, Screen.width, 90f),
+                new Rect(0f, Screen.height * 0.30f, Screen.width, 90f),
                 "PAUSADO",
                 resultStyle
             );
 
-            if (GUI.Button(
-                new Rect(
-                    (Screen.width - 220f) * 0.5f,
-                    Screen.height * 0.5f,
-                    220f,
-                    52f
-                ),
-                "Continuar"))
+            float scale = ResponsiveGuiTheme.LayoutScale;
+            float width = (ResponsiveGuiTheme.IsMobile ? 270f : 190f) * scale;
+            float height = (ResponsiveGuiTheme.IsMobile ? 64f : 46f) * scale;
+            float gap = 16f * scale;
+            float left = (Screen.width - width) * 0.5f;
+            float top = Screen.height * 0.48f;
+            int fontSize = Mathf.RoundToInt(18f * scale);
+
+            if (ResponsiveGuiTheme.Button(
+                new Rect(left, top, width, height),
+                "CONTINUAR",
+                ResponsiveGuiTheme.ButtonTone.Gold,
+                fontSize))
             {
                 paused = false;
                 Time.timeScale = 1f;
             }
 
-            if (GUI.Button(
-                new Rect(
-                    (Screen.width - 220f) * 0.5f,
-                    Screen.height * 0.5f + 66f,
-                    220f,
-                    52f
-                ),
-                "Reiniciar"))
+            if (ResponsiveGuiTheme.Button(
+                new Rect(left, top + height + gap, width, height),
+                "REINICIAR",
+                ResponsiveGuiTheme.ButtonTone.Crimson,
+                fontSize))
             {
                 RestartGame();
             }
