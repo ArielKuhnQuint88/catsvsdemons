@@ -82,7 +82,7 @@ namespace CatsVsDemons.Editor
                 PrimitiveType.Cube,
                 parent,
                 new Vector3(0f, -0.18f, 0f),
-                new Vector3(96f, 0.3f, 76f),
+                new Vector3(124f, 0.3f, 82f),
                 new Color(0.16f, 0.43f, 0.2f)
             );
 
@@ -580,10 +580,10 @@ namespace CatsVsDemons.Editor
             world.transform.SetParent(parent);
 
             CreatePart("OuterWater", PrimitiveType.Cube, world.transform,
-                new Vector3(0f, -0.78f, 0f), new Vector3(132f, 0.28f, 104f),
+                new Vector3(0f, -0.78f, 0f), new Vector3(164f, 0.28f, 124f),
                 new Color(0.035f, 0.2f, 0.28f));
             CreatePart("OuterIsland", PrimitiveType.Cube, world.transform,
-                new Vector3(0f, -0.48f, 0f), new Vector3(108f, 0.38f, 82f),
+                new Vector3(0f, -0.48f, 0f), new Vector3(140f, 0.38f, 96f),
                 new Color(0.10f, 0.30f, 0.16f));
 
             Vector3[] mountainPositions =
