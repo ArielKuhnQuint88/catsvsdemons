@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatsVsDemons.CameraSystem;
 using UnityEngine;
 
 namespace CatsVsDemons.Waves
@@ -17,14 +18,14 @@ namespace CatsVsDemons.Waves
         private EnemyWaveSpawner spawner;
         private Transform pathsRoot;
         private Transform buildSpotsRoot;
-        private Light sun;
+        private CameraModeController cameraController;
         private bool captured;
 
         private void Awake()
         {
             pathsRoot = GameObject.Find("Game/Paths")?.transform;
             buildSpotsRoot = GameObject.Find("Game/BuildSpots")?.transform;
-            sun = Object.FindFirstObjectByType<Light>();
+            cameraController = Object.FindFirstObjectByType<CameraModeController>();
             CaptureInitialState();
         }
 
@@ -98,6 +99,13 @@ namespace CatsVsDemons.Waves
             ApplyBuildSpotLayout(phase);
             ApplyGardenTheme(phase);
 
+            if (cameraController == null)
+            {
+                cameraController =
+                    Object.FindFirstObjectByType<CameraModeController>();
+            }
+            cameraController?.SetPhaseZoom(phase);
+
             string title = phase == 1
                 ? "Jardim das Cerejeiras"
                 : phase == 2
@@ -109,8 +117,12 @@ namespace CatsVsDemons.Waves
 
         private void ApplyPathLayout(int phase)
         {
-            float amplitude = phase == 1 ? 0f : phase == 2 ? 2.5f : 3.2f;
-            float cycles = phase == 1 ? 0f : phase == 2 ? 5.0f : 6.5f;
+            float startExtension =
+                phase == 1 ? 0f : phase == 2 ? 6.5f : 11.5f;
+            float waveAmplitude =
+                phase == 1 ? 0f : phase == 2 ? 0.45f : 0.75f;
+            float waveCycles =
+                phase == 1 ? 0f : phase == 2 ? 2.0f : 3.0f;
             int pathIndex = 0;
 
             foreach (KeyValuePair<Transform, Vector3[]> entry in basePaths)
@@ -122,14 +134,29 @@ namespace CatsVsDemons.Waves
                 }
 
                 Vector3[] baseline = entry.Value;
-                Vector3[] curved = new Vector3[baseline.Length];
+                Vector3[] extended = new Vector3[baseline.Length];
                 List<Transform> joints = GetJoints(path);
+
+                Vector3 entranceDirection =
+                    baseline[Mathf.Min(1, baseline.Length - 1)] - baseline[0];
+                entranceDirection.y = 0f;
+                if (entranceDirection.sqrMagnitude < 0.0001f)
+                {
+                    entranceDirection = Vector3.forward;
+                }
+                entranceDirection.Normalize();
 
                 for (int index = 0; index < baseline.Length; index++)
                 {
                     float t = baseline.Length <= 1
                         ? 0f
                         : index / (float)(baseline.Length - 1);
+
+                    float entranceWeight =
+                        1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.36f));
+                    Vector3 extension =
+                        -entranceDirection * startExtension * entranceWeight;
+
                     Vector3 previous = baseline[Mathf.Max(0, index - 1)];
                     Vector3 next = baseline[Mathf.Min(baseline.Length - 1, index + 1)];
                     Vector3 tangent = next - previous;
@@ -141,15 +168,22 @@ namespace CatsVsDemons.Waves
                     tangent.Normalize();
 
                     Vector3 side = Vector3.Cross(Vector3.up, tangent);
-                    float envelope = Mathf.Sin(t * Mathf.PI);
+                    float centerEnvelope = Mathf.Sin(t * Mathf.PI);
+                    float houseProtection =
+                        1f - Mathf.SmoothStep(0.55f, 0.82f, t);
                     float wave = Mathf.Sin(
-                        (t * cycles * Mathf.PI * 2f) + pathIndex * 1.37f
+                        (t * waveCycles * Mathf.PI * 2f) + pathIndex * 0.83f
                     );
+
                     Vector3 position =
-                        baseline[index] + side * wave * amplitude * envelope;
-                    position.x = Mathf.Clamp(position.x, -20.3f, 20.3f);
-                    position.z = Mathf.Clamp(position.z, -14.8f, 14.8f);
-                    curved[index] = position;
+                        baseline[index] +
+                        extension +
+                        side * wave * waveAmplitude *
+                        centerEnvelope * houseProtection;
+
+                    position.x = Mathf.Clamp(position.x, -29f, 29f);
+                    position.z = Mathf.Clamp(position.z, -21f, 21f);
+                    extended[index] = position;
 
                     if (index < joints.Count)
                     {
@@ -160,7 +194,7 @@ namespace CatsVsDemons.Waves
                 UpdateRibbon(
                     path,
                     path.name + "_Border",
-                    curved,
+                    extended,
                     BorderWidth,
                     BorderHeight,
                     false
@@ -168,7 +202,7 @@ namespace CatsVsDemons.Waves
                 UpdateRibbon(
                     path,
                     path.name + "_Surface",
-                    curved,
+                    extended,
                     SurfaceWidth,
                     SurfaceHeight,
                     true
@@ -209,65 +243,27 @@ namespace CatsVsDemons.Waves
 
                 if (phase == 2)
                 {
-                    if (ContainsAny(objectName, "GardenGrass", "InnerGarden"))
-                        color = new Color(0.31f, 0.38f, 0.12f);
-                    else if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
+                    if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
                         color = new Color(0.92f, 0.25f, 0.035f);
-                    else if (ContainsAny(objectName, "BambooLeaves", "PineCrown"))
-                        color = new Color(0.34f, 0.39f, 0.08f);
-                    else if (ContainsAny(objectName, "WaterHighlight"))
-                        color = new Color(0.08f, 0.48f, 0.48f);
                     else if (ContainsAny(objectName, "Petal"))
                         color = new Color(1f, 0.58f, 0.10f);
                 }
                 else if (phase >= 3)
                 {
-                    if (ContainsAny(objectName, "GardenGrass", "InnerGarden"))
-                        color = new Color(0.08f, 0.19f, 0.18f);
-                    else if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
+                    if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
                         color = new Color(0.64f, 0.08f, 0.48f);
-                    else if (ContainsAny(objectName, "BambooLeaves", "PineCrown"))
-                        color = new Color(0.06f, 0.22f, 0.20f);
-                    else if (ContainsAny(objectName, "WaterHighlight", "DeepWater"))
-                        color = new Color(0.12f, 0.18f, 0.48f);
+                    else if (ContainsAny(objectName, "WaterHighlight"))
+                        color = new Color(0.08f, 0.48f, 0.62f);
                     else if (ContainsAny(objectName, "Petal"))
                         color = new Color(0.68f, 0.30f, 1f);
                     else if (ContainsAny(objectName, "LanternLight"))
-                        color = new Color(0.84f, 0.16f, 1f);
+                        color = new Color(0.84f, 0.30f, 1f);
                 }
 
                 renderer.material.color = color;
             }
 
-            if (phase == 1)
-            {
-                RenderSettings.fogColor = new Color(0.26f, 0.36f, 0.43f);
-                RenderSettings.fogDensity = 0.0075f;
-                SetSun(new Color(1f, 0.84f, 0.68f), 1.25f);
-            }
-            else if (phase == 2)
-            {
-                RenderSettings.fogColor = new Color(0.42f, 0.29f, 0.18f);
-                RenderSettings.fogDensity = 0.009f;
-                SetSun(new Color(1f, 0.62f, 0.34f), 1.18f);
-            }
-            else
-            {
-                RenderSettings.fogColor = new Color(0.12f, 0.08f, 0.22f);
-                RenderSettings.fogDensity = 0.013f;
-                SetSun(new Color(0.48f, 0.38f, 0.86f), 0.88f);
-            }
-        }
-
-        private void SetSun(Color color, float intensity)
-        {
-            if (sun == null)
-            {
-                return;
-            }
-
-            sun.color = color;
-            sun.intensity = intensity;
+            RenderSettings.fog = false;
         }
 
         private static bool ContainsAny(string value, params string[] terms)
