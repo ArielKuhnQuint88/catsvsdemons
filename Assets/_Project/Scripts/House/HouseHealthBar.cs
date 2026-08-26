@@ -7,7 +7,7 @@ namespace CatsVsDemons.House
         [SerializeField] private HouseHealth houseHealth;
         [SerializeField] private Transform fill;
         [SerializeField] private float fullWidth = 4f;
-        [SerializeField] private float minimumWorldHeight = 7.2f;
+        [SerializeField] private float minimumWorldHeight = 8.35f;
 
         private Camera mainCamera;
 
