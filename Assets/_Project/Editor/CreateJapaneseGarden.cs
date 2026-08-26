@@ -82,7 +82,7 @@ namespace CatsVsDemons.Editor
                 PrimitiveType.Cube,
                 parent,
                 new Vector3(0f, -0.18f, 0f),
-                new Vector3(43f, 0.3f, 33f),
+                new Vector3(60f, 0.3f, 45f),
                 new Color(0.16f, 0.43f, 0.2f)
             );
 
