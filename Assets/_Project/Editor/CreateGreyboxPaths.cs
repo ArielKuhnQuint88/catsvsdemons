@@ -75,14 +75,14 @@ namespace CatsVsDemons.Editor
             {
                 P(-20f, 8f), P(-15f, 8f), P(-12f, 12f), P(-6f, 12f),
                 P(-4f, 8f), P(-10f, 5f), P(-14f, 1f), P(-12f, -4f),
-                P(-7f, -5f), P(-4f, -1f), P(-6f, 3f), P(-2.5f, 2.5f)
+                P(-7f, -5f), P(-4f, -1f), P(-7f, 3.5f), P(-5.8f, 1.8f)
             };
 
             Vector3[] rightPath =
             {
                 P(20f, 7f), P(15f, 7f), P(12f, 11f), P(7f, 11f),
                 P(4f, 7f), P(10f, 4f), P(14f, 0f), P(12f, -4f),
-                P(8f, -5f), P(4f, -1f), P(6f, 3f), P(2.5f, 2.5f)
+                P(8f, -5f), P(4f, -1f), P(7f, 3.5f), P(5.8f, 1.8f)
             };
 
             Vector3[] bottomPath =
@@ -90,22 +90,39 @@ namespace CatsVsDemons.Editor
                 P(0f, -15f), P(-8f, -14f), P(-15f, -11f), P(-16f, -7f),
                 P(-11f, -6f), P(-6f, -9f), P(0f, -11f), P(7f, -11f),
                 P(15f, -8f), P(16f, -4f), P(11f, -2f), P(6f, -4f),
-                P(2f, -6f), P(0f, -2.5f)
+                P(2.5f, -7f), P(0f, -4.8f)
+            };
+
+            Vector3[] upperLeftPath =
+            {
+                P(-18f, 14f), P(-13f, 14f), P(-10f, 10f), P(-15f, 7f),
+                P(-12f, 3f), P(-8f, 5.5f), P(-5.2f, 4.6f)
+            };
+
+            Vector3[] upperRightPath =
+            {
+                P(18f, 14f), P(13f, 14f), P(10f, 10f), P(15f, 7f),
+                P(12f, 3f), P(8f, 5.5f), P(5.2f, 4.6f)
             };
 
             CreatePath("Path_Left", leftPath, pathsRoot, pathMaterial, borderMaterial);
             CreatePath("Path_Right", rightPath, pathsRoot, pathMaterial, borderMaterial);
             CreatePath("Path_Bottom", bottomPath, pathsRoot, pathMaterial, borderMaterial);
+            CreatePath("Path_UpperLeft", upperLeftPath, pathsRoot, pathMaterial, borderMaterial);
+            CreatePath("Path_UpperRight", upperRightPath, pathsRoot, pathMaterial, borderMaterial);
 
             CreateSpawnPoint("Spawn_Left", leftPath[0], spawnRoot);
             CreateSpawnPoint("Spawn_Right", rightPath[0], spawnRoot);
             CreateSpawnPoint("Spawn_Bottom", bottomPath[0], spawnRoot);
+            CreateSpawnPoint("Spawn_UpperLeft", upperLeftPath[0], spawnRoot);
+            CreateSpawnPoint("Spawn_UpperRight", upperRightPath[0], spawnRoot);
 
             Vector3[] spots =
             {
                 P(-16f, 11.5f), P(-8.5f, 9f), P(-16f, -2f), P(-8f, -8f),
                 P(16f, 10.5f), P(8.5f, 8f), P(16f, -1f), P(9f, -8f),
-                P(-13f, -13.5f), P(-3f, -13.5f), P(13f, -11.5f), P(5f, -6.5f)
+                P(-13f, -13.5f), P(-3f, -13.5f), P(13f, -11.5f), P(5f, -6.5f),
+                P(-18f, 10f), P(-11f, 12f), P(18f, 10f), P(11f, 12f)
             };
 
             for (int i = 0; i < spots.Length; i++)
