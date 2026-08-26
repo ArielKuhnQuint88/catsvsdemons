@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using CatsVsDemons.Defense;
 using CatsVsDemons.Enemies;
 using CatsVsDemons.House;
@@ -51,6 +52,8 @@ namespace CatsVsDemons.Waves
                 GameObject root = GameObject.Find("Game/Enemies");
                 enemiesRoot = root != null ? root.transform : null;
             }
+
+            RefreshAvailablePaths();
 
             if (enemyTemplate == null || enemiesRoot == null)
             {
@@ -190,6 +193,30 @@ namespace CatsVsDemons.Waves
             Debug.Log(
                 $"Phase {CurrentPhase}: {spots.Length} build spots cleared."
             );
+        }
+
+        private void RefreshAvailablePaths()
+        {
+            GameObject pathsObject = GameObject.Find("Game/Paths");
+            if (pathsObject == null)
+            {
+                return;
+            }
+
+            List<string> discovered = new();
+            foreach (Transform path in pathsObject.transform)
+            {
+                if (path.name.StartsWith("Path_"))
+                {
+                    discovered.Add(path.name);
+                }
+            }
+
+            if (discovered.Count > 0)
+            {
+                pathNames = discovered.ToArray();
+                Debug.Log($"WaveSpawner found {pathNames.Length} enemy routes.", this);
+            }
         }
 
         private void SpawnEnemy(int enemyIndex)
