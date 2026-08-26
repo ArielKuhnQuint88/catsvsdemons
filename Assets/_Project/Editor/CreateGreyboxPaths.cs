@@ -98,15 +98,15 @@ namespace CatsVsDemons.Editor
 
             Vector3[] upperLeftPath =
             {
-                P(-32f, 24f), P(-27f, 21f), P(-22f, 18f), P(-18f, 14f),
-                P(-13f, 14f), P(-10f, 10f), P(-15f, 7f),
+                P(-46f, 24f), P(-40f, 22f), P(-34f, 19f), P(-28f, 17f),
+                P(-22f, 16f), P(-18f, 14f), P(-13f, 14f), P(-10f, 10f), P(-15f, 7f),
                 P(-12f, 3f), P(-8f, 5.5f), P(-5.2f, 4.6f)
             };
 
             Vector3[] upperRightPath =
             {
-                P(32f, 24f), P(27f, 21f), P(22f, 18f), P(18f, 14f),
-                P(13f, 14f), P(10f, 10f), P(15f, 7f),
+                P(46f, 24f), P(40f, 22f), P(34f, 19f), P(28f, 17f),
+                P(22f, 16f), P(18f, 14f), P(13f, 14f), P(10f, 10f), P(15f, 7f),
                 P(12f, 3f), P(8f, 5.5f), P(5.2f, 4.6f)
             };
 
