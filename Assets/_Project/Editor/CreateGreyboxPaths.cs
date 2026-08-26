@@ -73,20 +73,23 @@ namespace CatsVsDemons.Editor
 
             Vector3[] leftPath =
             {
-                P(-20f, 8f), P(-15f, 8f), P(-12f, 12f), P(-6f, 12f),
+                P(-34f, 8f), P(-29f, 8f), P(-24f, 10f), P(-20f, 8f),
+                P(-15f, 8f), P(-12f, 12f), P(-6f, 12f),
                 P(-4f, 8f), P(-10f, 5f), P(-14f, 1f), P(-12f, -4f),
                 P(-7f, -5f), P(-4f, -1f), P(-7f, 3.5f), P(-5.8f, 1.8f)
             };
 
             Vector3[] rightPath =
             {
-                P(20f, 7f), P(15f, 7f), P(12f, 11f), P(7f, 11f),
+                P(34f, 7f), P(29f, 7f), P(24f, 9f), P(20f, 7f),
+                P(15f, 7f), P(12f, 11f), P(7f, 11f),
                 P(4f, 7f), P(10f, 4f), P(14f, 0f), P(12f, -4f),
                 P(8f, -5f), P(4f, -1f), P(7f, 3.5f), P(5.8f, 1.8f)
             };
 
             Vector3[] bottomPath =
             {
+                P(0f, -29f), P(-5f, -25f), P(-11f, -21f), P(-7f, -17f),
                 P(0f, -15f), P(-8f, -14f), P(-15f, -11f), P(-16f, -7f),
                 P(-11f, -6f), P(-6f, -9f), P(0f, -11f), P(7f, -11f),
                 P(15f, -8f), P(16f, -4f), P(11f, -2f), P(6f, -4f),
@@ -95,13 +98,15 @@ namespace CatsVsDemons.Editor
 
             Vector3[] upperLeftPath =
             {
-                P(-18f, 14f), P(-13f, 14f), P(-10f, 10f), P(-15f, 7f),
+                P(-32f, 24f), P(-27f, 21f), P(-22f, 18f), P(-18f, 14f),
+                P(-13f, 14f), P(-10f, 10f), P(-15f, 7f),
                 P(-12f, 3f), P(-8f, 5.5f), P(-5.2f, 4.6f)
             };
 
             Vector3[] upperRightPath =
             {
-                P(18f, 14f), P(13f, 14f), P(10f, 10f), P(15f, 7f),
+                P(32f, 24f), P(27f, 21f), P(22f, 18f), P(18f, 14f),
+                P(13f, 14f), P(10f, 10f), P(15f, 7f),
                 P(12f, 3f), P(8f, 5.5f), P(5.2f, 4.6f)
             };
 
