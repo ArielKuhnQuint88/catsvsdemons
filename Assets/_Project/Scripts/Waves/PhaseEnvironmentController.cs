@@ -181,8 +181,8 @@ namespace CatsVsDemons.Waves
                         side * wave * waveAmplitude *
                         centerEnvelope * houseProtection;
 
-                    position.x = Mathf.Clamp(position.x, -29f, 29f);
-                    position.z = Mathf.Clamp(position.z, -21f, 21f);
+                    position.x = Mathf.Clamp(position.x, -46.5f, 46.5f);
+                    position.z = Mathf.Clamp(position.z, -36.5f, 36.5f);
                     extended[index] = position;
 
                     if (index < joints.Count)
