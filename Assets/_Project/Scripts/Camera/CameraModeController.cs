@@ -19,6 +19,7 @@ namespace CatsVsDemons.CameraSystem
         private Vector3 mobileTarget = new Vector3(0f, 1.5f, 3f);
         private Vector3 mobileViewDirection;
         private float mobileDistance;
+        private float baseIsometricDistance;
         private float previousPinchDistance;
         private Vector2 previousTouchCenter;
         private bool twoFingerGestureActive;
@@ -117,16 +118,31 @@ namespace CatsVsDemons.CameraSystem
                 Vector3.up
             );
 
-            if (Application.isMobilePlatform)
+            mobileTarget = target;
+            mobileViewDirection =
+                (transform.position - mobileTarget).normalized;
+            mobileDistance = Vector3.Distance(
+                transform.position,
+                mobileTarget
+            );
+            baseIsometricDistance = mobileDistance;
+        }
+
+        public void SetPhaseZoom(int phase)
+        {
+            if (gameCamera == null || firstPerson || baseIsometricDistance <= 0f)
             {
-                mobileTarget = target;
-                mobileViewDirection =
-                    (transform.position - mobileTarget).normalized;
-                mobileDistance = Vector3.Distance(
-                    transform.position,
-                    mobileTarget
-                );
+                return;
             }
+
+            float multiplier = phase <= 1 ? 1f : phase == 2 ? 1.10f : 1.20f;
+            mobileDistance = baseIsometricDistance * multiplier;
+            transform.position =
+                mobileTarget + mobileViewDirection * mobileDistance;
+            transform.rotation = Quaternion.LookRotation(
+                mobileTarget - transform.position,
+                Vector3.up
+            );
         }
 
         private void Update()
