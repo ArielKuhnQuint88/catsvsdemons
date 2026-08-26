@@ -1,4 +1,5 @@
 using System.IO;
+using CatsVsDemons.Waves;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -47,6 +48,8 @@ namespace CatsVsDemons.Editor
             {
                 root.transform.SetParent(environment);
             }
+
+            root.AddComponent<PhaseEnvironmentController>();
 
             BuildGround(root.transform);
             BuildHouse(root.transform);
