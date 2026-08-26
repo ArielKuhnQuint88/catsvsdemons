@@ -109,8 +109,8 @@ namespace CatsVsDemons.Waves
 
         private void ApplyPathLayout(int phase)
         {
-            float amplitude = phase == 1 ? 0f : phase == 2 ? 1.05f : 1.75f;
-            float cycles = phase == 1 ? 0f : phase == 2 ? 3.25f : 5.0f;
+            float amplitude = phase == 1 ? 0f : phase == 2 ? 2.5f : 3.2f;
+            float cycles = phase == 1 ? 0f : phase == 2 ? 5.0f : 6.5f;
             int pathIndex = 0;
 
             foreach (KeyValuePair<Transform, Vector3[]> entry in basePaths)
