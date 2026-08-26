@@ -135,7 +135,7 @@ namespace CatsVsDemons.CameraSystem
                 return;
             }
 
-            float multiplier = phase <= 1 ? 1f : phase == 2 ? 1.10f : 1.20f;
+            float multiplier = phase <= 1 ? 1f : phase == 2 ? 1.12f : 1.25f;
             mobileDistance = baseIsometricDistance * multiplier;
             transform.position =
                 mobileTarget + mobileViewDirection * mobileDistance;
@@ -192,7 +192,7 @@ namespace CatsVsDemons.CameraSystem
             mobileDistance = Mathf.Clamp(
                 mobileDistance - pinchDelta * 0.025f,
                 20f,
-                43f
+                60f
             );
 
             Vector2 panDelta = touchCenter - previousTouchCenter;
