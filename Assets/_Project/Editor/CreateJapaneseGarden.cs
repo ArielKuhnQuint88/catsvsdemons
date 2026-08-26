@@ -82,7 +82,7 @@ namespace CatsVsDemons.Editor
                 PrimitiveType.Cube,
                 parent,
                 new Vector3(0f, -0.18f, 0f),
-                new Vector3(60f, 0.3f, 45f),
+                new Vector3(96f, 0.3f, 76f),
                 new Color(0.16f, 0.43f, 0.2f)
             );
 
@@ -119,50 +119,51 @@ namespace CatsVsDemons.Editor
             Color paper = new Color(1f, 0.88f, 0.62f);
 
             CreatePart("Foundation", PrimitiveType.Cube, house.transform,
-                new Vector3(0f, 0.25f, 0f), new Vector3(7.6f, 0.5f, 5.8f), wood);
+                new Vector3(0f, 0.28f, 0f), new Vector3(5.4f, 0.56f, 3.8f), wood);
             CreatePart("MainWalls", PrimitiveType.Cube, house.transform,
-                new Vector3(0f, 1.9f, 0f), new Vector3(6.8f, 3.1f, 5f), plaster);
+                new Vector3(0f, 2.25f, 0f), new Vector3(4.8f, 3.9f, 3.2f), plaster);
 
             for (int side = -1; side <= 1; side += 2)
             {
-                for (int z = -2; z <= 2; z += 2)
+                for (int z = -1; z <= 1; z++)
                 {
                     CreatePart("WoodPost", PrimitiveType.Cube, house.transform,
-                        new Vector3(side * 3.55f, 1.9f, z),
-                        new Vector3(0.22f, 3.5f, 0.22f), wood);
+                        new Vector3(side * 2.52f, 2.25f, z * 1.35f),
+                        new Vector3(0.20f, 4.25f, 0.20f), wood);
                 }
             }
 
-            for (int x = -2; x <= 2; x += 2)
+            for (int panel = -1; panel <= 1; panel++)
             {
+                float x = panel * 1.55f;
                 CreatePart("ShojiDoor", PrimitiveType.Cube, house.transform,
-                    new Vector3(x, 1.75f, -2.53f),
-                    new Vector3(1.75f, 2.75f, 0.1f), paper);
+                    new Vector3(x, 2.15f, -1.63f),
+                    new Vector3(1.36f, 3.45f, 0.1f), paper);
                 CreatePart("ShojiFrameV", PrimitiveType.Cube, house.transform,
-                    new Vector3(x, 1.75f, -2.61f),
-                    new Vector3(0.08f, 2.75f, 0.08f), wood);
-                for (int row = 0; row < 3; row++)
+                    new Vector3(x, 2.15f, -1.71f),
+                    new Vector3(0.07f, 3.45f, 0.08f), wood);
+                for (int row = 0; row < 4; row++)
                 {
                     CreatePart("ShojiFrameH", PrimitiveType.Cube, house.transform,
-                        new Vector3(x, 0.85f + row * 0.85f, -2.62f),
-                        new Vector3(1.75f, 0.06f, 0.08f), wood);
+                        new Vector3(x, 0.82f + row * 0.86f, -1.72f),
+                        new Vector3(1.36f, 0.055f, 0.08f), wood);
                 }
             }
 
-            CreateRoof(house.transform, new Vector3(0f, 3.75f, 0f),
-                new Vector3(8.5f, 0.45f, 6.8f), roof);
+            CreateRoof(house.transform, new Vector3(0f, 4.55f, 0f),
+                new Vector3(6.25f, 0.48f, 4.55f), roof);
             CreatePart("UpperFloor", PrimitiveType.Cube, house.transform,
-                new Vector3(0f, 4.45f, 0f), new Vector3(4.2f, 1.3f, 3.2f), red);
-            CreateRoof(house.transform, new Vector3(0f, 5.35f, 0f),
-                new Vector3(5.5f, 0.38f, 4.4f), roof);
+                new Vector3(0f, 5.55f, 0f), new Vector3(3.45f, 1.75f, 2.45f), red);
+            CreateRoof(house.transform, new Vector3(0f, 6.72f, 0f),
+                new Vector3(4.65f, 0.42f, 3.45f), roof);
 
             CreatePart("Ridge", PrimitiveType.Cylinder, house.transform,
-                new Vector3(0f, 5.75f, 0f), new Vector3(0.16f, 2.3f, 0.16f),
+                new Vector3(0f, 7.16f, 0f), new Vector3(0.15f, 1.85f, 0.15f),
                 red, new Vector3(0f, 0f, 90f));
 
             for (int side = -1; side <= 1; side += 2)
             {
-                CreateLantern(house.transform, new Vector3(side * 3.1f, 1.45f, -2.9f));
+                CreateLantern(house.transform, new Vector3(side * 2.15f, 1.6f, -2.05f));
             }
         }
 
@@ -579,10 +580,10 @@ namespace CatsVsDemons.Editor
             world.transform.SetParent(parent);
 
             CreatePart("OuterWater", PrimitiveType.Cube, world.transform,
-                new Vector3(0f, -0.78f, 0f), new Vector3(112f, 0.28f, 88f),
+                new Vector3(0f, -0.78f, 0f), new Vector3(132f, 0.28f, 104f),
                 new Color(0.035f, 0.2f, 0.28f));
             CreatePart("OuterIsland", PrimitiveType.Cube, world.transform,
-                new Vector3(0f, -0.48f, 0f), new Vector3(76f, 0.38f, 57f),
+                new Vector3(0f, -0.48f, 0f), new Vector3(108f, 0.38f, 82f),
                 new Color(0.10f, 0.30f, 0.16f));
 
             Vector3[] mountainPositions =
