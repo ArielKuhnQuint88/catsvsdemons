@@ -31,6 +31,7 @@ namespace CatsVsDemons.Enemies
         private KinHealth kinTarget;
         private float attackTimer;
         private float nextTargetSearch;
+        private KinHealth availableKin;
 
         private void Awake()
         {
@@ -84,6 +85,7 @@ namespace CatsVsDemons.Enemies
 
         private void Start()
         {
+            availableKin = UnityEngine.Object.FindFirstObjectByType<KinHealth>();
             LoadPath();
 
             if (waypoints.Count == 0)
@@ -174,7 +176,12 @@ namespace CatsVsDemons.Enemies
         private void FindCombatTarget()
         {
             float nearestDistance = aggroRange;
-            KinHealth kin = UnityEngine.Object.FindFirstObjectByType<KinHealth>();
+            KinHealth kin = availableKin;
+            if (kin == null)
+            {
+                availableKin = UnityEngine.Object.FindFirstObjectByType<KinHealth>();
+                kin = availableKin;
+            }
             if (kin != null && !kin.IsDown)
             {
                 float distance = Vector3.Distance(
@@ -190,24 +197,16 @@ namespace CatsVsDemons.Enemies
                 }
             }
 
-            DefenseHealth[] defenses =
-                UnityEngine.Object.FindObjectsByType<DefenseHealth>(
-                    FindObjectsSortMode.None
-                );
-            foreach (DefenseHealth defense in defenses)
+            DefenseHealth defense = DefenseRegistry.FindNearest(
+                transform.position, nearestDistance);
+            if (defense != null)
             {
-                if (defense == null || defense.IsDestroyed)
-                {
-                    continue;
-                }
-
                 float distance = Vector3.Distance(
                     transform.position,
                     defense.transform.position
                 );
                 if (distance <= nearestDistance)
                 {
-                    nearestDistance = distance;
                     combatTarget = defense.transform;
                     defenseTarget = defense;
                     kinTarget = null;

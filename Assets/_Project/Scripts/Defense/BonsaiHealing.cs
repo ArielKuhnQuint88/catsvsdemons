@@ -8,6 +8,8 @@ namespace CatsVsDemons.Defense
         [SerializeField] private float healingRange = 5f;
         [SerializeField] private int healingAmount = 5;
         [SerializeField] private float healingInterval = 1f;
+        [SerializeField] private float defenseHealingRange = 7f;
+        [SerializeField] private int defenseHealingAmount = 4;
 
         private KinHealth kin;
         private float healingTimer;
@@ -39,6 +41,9 @@ namespace CatsVsDemons.Defense
             }
 
             kin.Heal(healingAmount);
+            DefenseRegistry.HealInRange(
+                transform.position, defenseHealingRange, defenseHealingAmount);
+            CatsVsDemons.Feedback.GameFeedback.PlayHeal();
             healingTimer = healingInterval;
         }
 
@@ -46,6 +51,8 @@ namespace CatsVsDemons.Defense
         {
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(transform.position, healingRange);
+            Gizmos.color = new Color(0.2f, 1f, 0.55f, 0.65f);
+            Gizmos.DrawWireSphere(transform.position, defenseHealingRange);
         }
     }
 }

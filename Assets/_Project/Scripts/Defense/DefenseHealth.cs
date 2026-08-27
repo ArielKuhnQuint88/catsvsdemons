@@ -28,6 +28,9 @@ namespace CatsVsDemons.Defense
             mainCamera = Camera.main;
         }
 
+        private void OnEnable() => DefenseRegistry.Register(this);
+        private void OnDisable() => DefenseRegistry.Unregister(this);
+
         public void Initialize(BuildSpot buildSpot, int health, float height)
         {
             owner = buildSpot;
@@ -57,6 +60,16 @@ namespace CatsVsDemons.Defense
                 owner.NotifyDefenseDestroyed(gameObject);
             else
                 Destroy(gameObject);
+        }
+
+        public void Heal(int amount)
+        {
+            if (amount <= 0 || IsDestroyed || CurrentHealth >= maxHealth)
+                return;
+            CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);
+            EnsureHealthBar();
+            UpdateHealthBar();
+            HealthChanged?.Invoke(CurrentHealth, maxHealth);
         }
 
         private void LateUpdate()

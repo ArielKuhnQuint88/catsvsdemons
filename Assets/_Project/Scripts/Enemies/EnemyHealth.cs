@@ -17,6 +17,9 @@ namespace CatsVsDemons.Enemies
 
         private Wallet wallet;
 
+        private void OnEnable() => EnemyRegistry.Register(this);
+        private void OnDisable() => EnemyRegistry.Unregister(this);
+
         private void Awake()
         {
             CurrentHealth = maxHealth;
@@ -45,8 +48,7 @@ namespace CatsVsDemons.Enemies
 
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             HealthChanged?.Invoke(CurrentHealth, maxHealth);
-
-            Debug.Log($"{name} health: {CurrentHealth}/{maxHealth}");
+            CatsVsDemons.Feedback.GameFeedback.PlayHit();
 
             if (IsDead)
             {

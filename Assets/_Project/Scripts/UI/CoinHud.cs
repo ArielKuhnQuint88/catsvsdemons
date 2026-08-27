@@ -48,6 +48,12 @@ namespace CatsVsDemons.UI
 
         private void Awake()
         {
+            if (GetComponent<ResponsiveCanvasHud>() == null)
+                gameObject.AddComponent<ResponsiveCanvasHud>();
+            enabled = false;
+            return;
+
+#pragma warning disable CS0162
             wallet = Object.FindFirstObjectByType<Wallet>();
             house = Object.FindFirstObjectByType<HouseHealth>();
             kin = Object.FindFirstObjectByType<KinHealth>();
@@ -92,6 +98,7 @@ namespace CatsVsDemons.UI
             portalIcon = LoadEndingTexture("TowerPortal");
             bonsaiIcon = LoadEndingTexture("TowerBonsai");
             lanternIcon = LoadEndingTexture("TowerLantern");
+#pragma warning restore CS0162
         }
 
         private void Update()

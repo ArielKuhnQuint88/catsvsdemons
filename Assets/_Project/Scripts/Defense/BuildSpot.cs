@@ -6,6 +6,7 @@ namespace CatsVsDemons.Defense
 {
     public sealed class BuildSpot : MonoBehaviour
     {
+        public static event System.Action<DefenseType, GameObject> DefenseBuilt;
         [SerializeField] private bool isOccupied;
 
         private Wallet wallet;
@@ -54,6 +55,11 @@ namespace CatsVsDemons.Defense
             Debug.Log(
                 $"{TowerBuildSelection.GetDisplayName()} construído por {cost} moedas."
             );
+            CatsVsDemons.Feedback.GameFeedback.PlayBuild();
+            GameObject built = transform.childCount > 0
+                ? transform.GetChild(transform.childCount - 1).gameObject
+                : null;
+            DefenseBuilt?.Invoke(TowerBuildSelection.Selected, built);
 
             Renderer spotRenderer = GetComponent<Renderer>();
             if (spotRenderer != null)

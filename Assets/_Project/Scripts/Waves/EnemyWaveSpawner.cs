@@ -4,6 +4,7 @@ using CatsVsDemons.Defense;
 using CatsVsDemons.Enemies;
 using CatsVsDemons.House;
 using UnityEngine;
+using CatsVsDemons.UI;
 
 namespace CatsVsDemons.Waves
 {
@@ -70,6 +71,8 @@ namespace CatsVsDemons.Waves
 
         private IEnumerator RunPhases()
         {
+            yield return new WaitUntil(() => !TutorialDirector.BlockWaves);
+
             for (int phase = 1; phase <= totalPhases; phase++)
             {
                 if (HouseWasDestroyed())
@@ -310,13 +313,7 @@ namespace CatsVsDemons.Waves
 
         private int CountActiveEnemies()
         {
-            EnemyPathFollower[] activeEnemies =
-                Object.FindObjectsByType<EnemyPathFollower>(
-                    FindObjectsInactive.Exclude,
-                    FindObjectsSortMode.None
-                );
-
-            return activeEnemies.Length;
+            return EnemyRegistry.Count;
         }
 
         private bool HouseWasDestroyed()

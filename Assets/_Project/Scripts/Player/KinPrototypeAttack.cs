@@ -12,6 +12,15 @@ namespace CatsVsDemons.Player
         [SerializeField] private float rotationSpeed = 14f;
 
         private float nextAttackTime;
+        private KinEnergy energy;
+
+        private void Awake()
+        {
+            energy = GetComponent<KinEnergy>();
+            if (energy == null) energy = gameObject.AddComponent<KinEnergy>();
+            if (GetComponent<KinSpecialAttack>() == null)
+                gameObject.AddComponent<KinSpecialAttack>();
+        }
 
         private void Update()
         {
@@ -52,34 +61,13 @@ namespace CatsVsDemons.Player
             if (target != null && !target.IsDead)
             {
                 target.TakeDamage(damage);
+                energy.Add(8f);
             }
         }
 
         private EnemyHealth FindNearestTarget()
         {
-            EnemyHealth[] enemies = Object.FindObjectsByType<EnemyHealth>(
-                FindObjectsSortMode.None
-            );
-            EnemyHealth nearest = null;
-            float nearestDistance = attackRange;
-            foreach (EnemyHealth enemy in enemies)
-            {
-                if (enemy == null || enemy.IsDead)
-                {
-                    continue;
-                }
-
-                float distance = Vector3.Distance(
-                    transform.position,
-                    enemy.transform.position
-                );
-                if (distance <= nearestDistance)
-                {
-                    nearest = enemy;
-                    nearestDistance = distance;
-                }
-            }
-            return nearest;
+            return EnemyRegistry.FindNearest(transform.position, attackRange);
         }
 
         private void OnDrawGizmosSelected()

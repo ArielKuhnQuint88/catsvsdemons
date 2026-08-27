@@ -9,12 +9,14 @@ namespace CatsVsDemons.Defense
 
     public static class TowerBuildSelection
     {
+        public static event System.Action<DefenseType> SelectionChanged;
         public static DefenseType Selected { get; private set; } =
             DefenseType.Lantern;
 
         public static void Select(DefenseType type)
         {
             Selected = type;
+            SelectionChanged?.Invoke(type);
         }
 
         public static int GetCost()

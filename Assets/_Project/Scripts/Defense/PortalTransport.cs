@@ -72,6 +72,7 @@ namespace CatsVsDemons.Defense
             exitPosition.y = kin.transform.position.y;
             kin.transform.position = exitPosition;
             nextTeleportTime = Time.time + teleportCooldown;
+            CatsVsDemons.Feedback.GameFeedback.PlayPortal();
 
             Debug.Log("Kin atravessou um portal.");
         }
