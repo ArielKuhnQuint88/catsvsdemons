@@ -70,7 +70,12 @@ namespace CatsVsDemons.Defense
                 exitDirection * exitDistance;
 
             exitPosition.y = kin.transform.position.y;
-            kin.transform.position = exitPosition;
+            KinPrototypeController controller =
+                kin.GetComponent<KinPrototypeController>();
+            if (controller != null)
+                controller.TeleportTo(exitPosition);
+            else
+                kin.transform.position = exitPosition;
             nextTeleportTime = Time.time + teleportCooldown;
             CatsVsDemons.Feedback.GameFeedback.PlayPortal();
 

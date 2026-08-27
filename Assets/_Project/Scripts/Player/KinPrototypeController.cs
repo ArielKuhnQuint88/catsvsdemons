@@ -19,12 +19,16 @@ namespace CatsVsDemons.Player
         private Vector2 mobileDragPosition;
         private Vector2 mobileInput;
         private Texture2D joystickCircle;
+        private Vector3 lastSafePosition;
+        private float nextGroundCheck;
+        private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
         private void Awake()
         {
             characterController = GetComponent<CharacterController>();
             mainCamera = Camera.main;
             joystickCircle = CreateCircleTexture(128);
+            lastSafePosition = transform.position;
 
             RuntimeModelVisuals.Attach(
                 transform,
@@ -37,6 +41,7 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
+            ValidateGroundPosition();
             ReadMobileInput();
             Keyboard keyboard = Keyboard.current;
             Vector2 input = mobileInput;
@@ -86,6 +91,76 @@ namespace CatsVsDemons.Player
             position.x = Mathf.Clamp(position.x, horizontalBounds.x, horizontalBounds.y);
             position.z = Mathf.Clamp(position.z, verticalBounds.x, verticalBounds.y);
             transform.position = position;
+            RememberSafePosition();
+        }
+
+        public void TeleportTo(Vector3 position)
+        {
+            characterController.enabled = false;
+            transform.position = position;
+            characterController.enabled = true;
+            lastSafePosition = position;
+        }
+
+        private void ValidateGroundPosition()
+        {
+            if (transform.position.y < -1.5f)
+            {
+                RecoverFromFall();
+                return;
+            }
+
+            if (Time.time < nextGroundCheck)
+                return;
+
+            nextGroundCheck = Time.time + 0.2f;
+            RememberSafePosition();
+        }
+
+        private void RememberSafePosition()
+        {
+            Vector3 origin = transform.position + Vector3.up * 2f;
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                Vector3.down,
+                groundHits,
+                5f,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore
+            );
+            float nearestDistance = float.MaxValue;
+            RaycastHit groundHit = default;
+            bool foundGround = false;
+            for (int index = 0; index < hitCount; index++)
+            {
+                RaycastHit hit = groundHits[index];
+                if (hit.collider == null ||
+                    hit.collider.transform.IsChildOf(transform) ||
+                    hit.distance >= nearestDistance)
+                    continue;
+                nearestDistance = hit.distance;
+                groundHit = hit;
+                foundGround = true;
+            }
+
+            if (foundGround)
+            {
+                Vector3 candidate = transform.position;
+                float standingOffset =
+                    characterController.height * 0.5f -
+                    characterController.center.y +
+                    characterController.skinWidth;
+                candidate.y = groundHit.point.y + standingOffset;
+                lastSafePosition = candidate;
+            }
+        }
+
+        private void RecoverFromFall()
+        {
+            characterController.enabled = false;
+            transform.position = lastSafePosition;
+            characterController.enabled = true;
+            Debug.LogWarning("Kin saiu do terreno e foi reposicionado.", this);
         }
 
         private void ReadMobileInput()

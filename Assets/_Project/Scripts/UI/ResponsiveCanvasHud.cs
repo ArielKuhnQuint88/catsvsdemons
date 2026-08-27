@@ -137,21 +137,24 @@ namespace CatsVsDemons.UI
         private void BuildTopPanel()
         {
             RectTransform panel = ui.Panel("Status", safeArea,
-                RuntimeUiFactory.Paper, new Vector2(720, 194));
+                RuntimeUiFactory.Paper, new Vector2(760, 178));
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
             panel.anchoredPosition = new Vector2(0, -18);
 
-            AddBarRow(panel, "CASA", -28, out houseBar,
+            AddBarRow(panel, "CASA", -20, out houseBar,
                 new Color(0.88f, 0.12f, 0.08f), 20);
-            AddBarRow(panel, "KIN", -66, out kinBar,
+            AddBarRow(panel, "KIN", -54, out kinBar,
                 new Color(0.12f, 0.72f, 0.25f), 16);
-            AddBarRow(panel, "ENERGIA", -101, out energyBar,
+            AddBarRow(panel, "ENERGIA", -86, out energyBar,
                 RuntimeUiFactory.Gold, 13);
             stats = ui.Label("Stats", "", panel, 20, RuntimeUiFactory.Ink,
-                new Vector2(680, 42), TextAnchor.MiddleCenter);
+                new Vector2(720, 38), TextAnchor.MiddleCenter);
             RectTransform statsRect = (RectTransform)stats.transform;
-            statsRect.anchoredPosition = new Vector2(0, -151);
+            statsRect.anchorMin = new Vector2(0.5f, 0f);
+            statsRect.anchorMax = new Vector2(0.5f, 0f);
+            statsRect.pivot = new Vector2(0.5f, 0f);
+            statsRect.anchoredPosition = new Vector2(0, 8);
         }
 
         private void AddBarRow(RectTransform panel, string name, float y,
@@ -160,11 +163,15 @@ namespace CatsVsDemons.UI
             Text label = ui.Label(name, name, panel, 19, RuntimeUiFactory.Ink,
                 new Vector2(96, 28), TextAnchor.MiddleLeft);
             RectTransform labelRect = (RectTransform)label.transform;
-            labelRect.anchoredPosition = new Vector2(-286, y);
+            labelRect.anchorMin = labelRect.anchorMax = new Vector2(0f, 1f);
+            labelRect.pivot = new Vector2(0f, 1f);
+            labelRect.anchoredPosition = new Vector2(22, y);
             bar = ui.Bar($"{name} Bar", panel, new Vector2(568, height));
             bar.color = color;
-            ((RectTransform)bar.transform.parent).anchoredPosition =
-                new Vector2(51, y);
+            RectTransform barRect = (RectTransform)bar.transform.parent;
+            barRect.anchorMin = barRect.anchorMax = new Vector2(0f, 1f);
+            barRect.pivot = new Vector2(0f, 1f);
+            barRect.anchoredPosition = new Vector2(124, y - 4);
         }
 
         private void BuildActions()
