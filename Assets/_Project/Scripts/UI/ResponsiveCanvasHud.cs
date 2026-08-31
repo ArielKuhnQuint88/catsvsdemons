@@ -30,7 +30,7 @@ namespace CatsVsDemons.UI
         private Text pauseLabel;
         private Text resultTitle;
         private Text resultMessage;
-        private RawImage resultArtwork;
+        private Image resultBackground;
         private Text tutorialTitle;
         private Text tutorialBody;
         private Text tutorialAction;
@@ -44,8 +44,9 @@ namespace CatsVsDemons.UI
         private GameObject pausePanel;
         private GameObject resultPanel;
         private GameObject tutorialPanel;
-        private Texture2D victoryArtwork;
-        private Texture2D defeatArtwork;
+        private Sprite resultBackgroundSprite;
+        private Texture2D resultBackgroundTexture;
+        private bool ownsResultBackgroundTexture;
         private int phase;
         private int totalPhases;
         private int wave;
@@ -87,6 +88,7 @@ namespace CatsVsDemons.UI
         private void OnDestroy()
         {
             Unsubscribe();
+            ClearResultArtwork();
             Time.timeScale = 1f;
         }
 
@@ -293,15 +295,9 @@ namespace CatsVsDemons.UI
             pausePanel.SetActive(false);
 
             resultPanel = FullScreenPanel("Result Panel");
-            RectTransform artworkRect = ui.Rect("Result Artwork",
-                resultPanel.transform);
-            artworkRect.anchorMin = Vector2.zero;
-            artworkRect.anchorMax = Vector2.one;
-            artworkRect.offsetMin = artworkRect.offsetMax = Vector2.zero;
-            resultArtwork = artworkRect.gameObject.AddComponent<RawImage>();
-            resultArtwork.raycastTarget = false;
-            victoryArtwork = LoadArtwork("EndingVictory");
-            defeatArtwork = LoadArtwork("EndingDefeat");
+            resultBackground = resultPanel.GetComponent<Image>();
+            resultBackground.type = Image.Type.Simple;
+            resultBackground.preserveAspect = false;
 
             RectTransform shadeRect = ui.Rect("Result Shade",
                 resultPanel.transform);
@@ -416,47 +412,58 @@ namespace CatsVsDemons.UI
         }
 
         private void ShowResult(string title, string message,
-            Texture2D artwork)
+            string artworkName)
         {
             if (ended) return;
             ended = true;
             Time.timeScale = 0f;
-            SetResultArtwork(artwork);
+            SetResultArtwork(artworkName);
             resultTitle.text = title;
             resultMessage.text = message;
+            resultPanel.transform.SetAsLastSibling();
             resultPanel.SetActive(true);
             pauseButton.gameObject.SetActive(false);
             HideTutorial();
+            Canvas.ForceUpdateCanvases();
         }
 
-        private void SetResultArtwork(Texture2D artwork)
+        private void SetResultArtwork(string artworkName)
         {
-            resultArtwork.texture = artwork;
-            resultArtwork.enabled = artwork != null;
-            UpdateResultArtworkCrop();
-        }
-
-        private void UpdateResultArtworkCrop()
-        {
-            if (resultArtwork == null || resultArtwork.texture == null) return;
-
-            float targetWidth = Mathf.Max(1f, Screen.safeArea.width);
-            float targetHeight = Mathf.Max(1f, Screen.safeArea.height);
-            float targetAspect = targetWidth / targetHeight;
-            float artworkAspect =
-                (float)resultArtwork.texture.width / resultArtwork.texture.height;
-
-            if (targetAspect > artworkAspect)
+            ClearResultArtwork();
+            Texture2D artwork = LoadArtwork(artworkName);
+            if (artwork == null)
             {
-                float visibleHeight = artworkAspect / targetAspect;
-                resultArtwork.uvRect = new Rect(
-                    0f, (1f - visibleHeight) * 0.5f, 1f, visibleHeight);
+                resultBackground.sprite = null;
+                resultBackground.color =
+                    new Color(0.01f, 0.012f, 0.025f, 0.94f);
+                Debug.LogError($"[CatsVsDemons] Arte final não encontrada: " +
+                    $"Resources/UI/{artworkName}Data.bytes ou {artworkName}.jpg");
                 return;
             }
 
-            float visibleWidth = targetAspect / artworkAspect;
-            resultArtwork.uvRect = new Rect(
-                (1f - visibleWidth) * 0.5f, 0f, visibleWidth, 1f);
+            resultBackgroundTexture = artwork;
+            ownsResultBackgroundTexture = artwork.name == $"{artworkName}_Hud";
+            resultBackgroundSprite = Sprite.Create(artwork,
+                new Rect(0f, 0f, artwork.width, artwork.height),
+                new Vector2(0.5f, 0.5f), 100f, 0,
+                SpriteMeshType.FullRect);
+            resultBackgroundSprite.name = $"{artworkName}_Result";
+            resultBackground.sprite = resultBackgroundSprite;
+            resultBackground.type = Image.Type.Simple;
+            resultBackground.preserveAspect = false;
+            resultBackground.color = Color.white;
+            resultBackground.enabled = true;
+        }
+
+        private void ClearResultArtwork()
+        {
+            if (resultBackgroundSprite != null)
+                Destroy(resultBackgroundSprite);
+            if (ownsResultBackgroundTexture && resultBackgroundTexture != null)
+                Destroy(resultBackgroundTexture);
+            resultBackgroundSprite = null;
+            resultBackgroundTexture = null;
+            ownsResultBackgroundTexture = false;
         }
 
         private void Restart()
@@ -478,7 +485,6 @@ namespace CatsVsDemons.UI
             safeArea.anchorMin = min;
             safeArea.anchorMax = max;
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
-            UpdateResultArtworkCrop();
         }
 
         private static void SetFill(Image image, float current, float maximum)
@@ -505,10 +511,11 @@ namespace CatsVsDemons.UI
         }
         private void OnPreparationEnded() => preparing = false;
         private void OnHouseDestroyed() => ShowResult("A CASA CAIU!",
-            "Mesmo ferido, Kin fez tudo o que pôde.", defeatArtwork);
+            "Mesmo ferido, Kin fez tudo o que pôde.", "EndingDefeat");
         private void OnKinDown() => ShowResult("KIN FOI DERROTADO!",
-            "Seu dono nunca saberá como Kin tentou protegê-lo.", defeatArtwork);
+            "Seu dono nunca saberá como Kin tentou protegê-lo.",
+            "EndingDefeat");
         private void OnVictory() => ShowResult("A CASA ESTÁ SEGURA!",
-            "O guardião da noite venceu mais uma batalha.", victoryArtwork);
+            "O guardião da noite venceu mais uma batalha.", "EndingVictory");
     }
 }
