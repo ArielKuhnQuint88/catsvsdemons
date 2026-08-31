@@ -282,9 +282,9 @@ namespace CatsVsDemons.Editor
             PlayerSettings.Android.targetArchitectures =
                 AndroidArchitecture.ARM64;
             PlayerSettings.Android.minSdkVersion =
-                AndroidSdkVersions.AndroidApiLevel23;
+                AndroidSdkVersions.AndroidApiLevel26;
             PlayerSettings.Android.targetSdkVersion =
-                AndroidSdkVersions.AndroidApiLevelAuto;
+                AndroidSdkVersions.AndroidApiLevel36;
             PlayerSettings.SetUseDefaultGraphicsAPIs(
                 BuildTarget.Android,
                 false
@@ -310,7 +310,7 @@ namespace CatsVsDemons.Editor
             }
 
             PlayerSettings.Android.targetSdkVersion =
-                (AndroidSdkVersions)36;
+                AndroidSdkVersions.AndroidApiLevel36;
             EditorUserBuildSettings.buildAppBundle = true;
             AssetDatabase.SaveAssets();
         }
