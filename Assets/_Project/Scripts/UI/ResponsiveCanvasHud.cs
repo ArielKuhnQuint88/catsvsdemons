@@ -30,6 +30,7 @@ namespace CatsVsDemons.UI
         private Text pauseLabel;
         private Text resultTitle;
         private Text resultMessage;
+        private RawImage resultArtwork;
         private Text tutorialTitle;
         private Text tutorialBody;
         private Text tutorialAction;
@@ -43,6 +44,8 @@ namespace CatsVsDemons.UI
         private GameObject pausePanel;
         private GameObject resultPanel;
         private GameObject tutorialPanel;
+        private Texture2D victoryArtwork;
+        private Texture2D defeatArtwork;
         private int phase;
         private int totalPhases;
         private int wave;
@@ -290,6 +293,25 @@ namespace CatsVsDemons.UI
             pausePanel.SetActive(false);
 
             resultPanel = FullScreenPanel("Result Panel");
+            RectTransform artworkRect = ui.Rect("Result Artwork",
+                resultPanel.transform);
+            artworkRect.anchorMin = Vector2.zero;
+            artworkRect.anchorMax = Vector2.one;
+            artworkRect.offsetMin = artworkRect.offsetMax = Vector2.zero;
+            resultArtwork = artworkRect.gameObject.AddComponent<RawImage>();
+            resultArtwork.raycastTarget = false;
+            victoryArtwork = LoadArtwork("EndingVictory");
+            defeatArtwork = LoadArtwork("EndingDefeat");
+
+            RectTransform shadeRect = ui.Rect("Result Shade",
+                resultPanel.transform);
+            shadeRect.anchorMin = Vector2.zero;
+            shadeRect.anchorMax = Vector2.one;
+            shadeRect.offsetMin = shadeRect.offsetMax = Vector2.zero;
+            Image shade = shadeRect.gameObject.AddComponent<Image>();
+            shade.color = new Color(0.01f, 0.012f, 0.025f, 0.38f);
+            shade.raycastTarget = false;
+
             resultTitle = ui.Label("Result Title", "", resultPanel.transform, 58,
                 Color.white, new Vector2(1300, 100), TextAnchor.MiddleCenter);
             ((RectTransform)resultTitle.transform).anchoredPosition =
@@ -393,15 +415,48 @@ namespace CatsVsDemons.UI
             pauseLabel.text = paused ? "CONTINUAR" : "PAUSAR";
         }
 
-        private void ShowResult(string title, string message)
+        private void ShowResult(string title, string message,
+            Texture2D artwork)
         {
+            if (ended) return;
             ended = true;
             Time.timeScale = 0f;
+            SetResultArtwork(artwork);
             resultTitle.text = title;
             resultMessage.text = message;
             resultPanel.SetActive(true);
             pauseButton.gameObject.SetActive(false);
             HideTutorial();
+        }
+
+        private void SetResultArtwork(Texture2D artwork)
+        {
+            resultArtwork.texture = artwork;
+            resultArtwork.enabled = artwork != null;
+            UpdateResultArtworkCrop();
+        }
+
+        private void UpdateResultArtworkCrop()
+        {
+            if (resultArtwork == null || resultArtwork.texture == null) return;
+
+            float targetWidth = Mathf.Max(1f, Screen.safeArea.width);
+            float targetHeight = Mathf.Max(1f, Screen.safeArea.height);
+            float targetAspect = targetWidth / targetHeight;
+            float artworkAspect =
+                (float)resultArtwork.texture.width / resultArtwork.texture.height;
+
+            if (targetAspect > artworkAspect)
+            {
+                float visibleHeight = artworkAspect / targetAspect;
+                resultArtwork.uvRect = new Rect(
+                    0f, (1f - visibleHeight) * 0.5f, 1f, visibleHeight);
+                return;
+            }
+
+            float visibleWidth = targetAspect / artworkAspect;
+            resultArtwork.uvRect = new Rect(
+                (1f - visibleWidth) * 0.5f, 0f, visibleWidth, 1f);
         }
 
         private void Restart()
@@ -423,6 +478,7 @@ namespace CatsVsDemons.UI
             safeArea.anchorMin = min;
             safeArea.anchorMax = max;
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
+            UpdateResultArtworkCrop();
         }
 
         private static void SetFill(Image image, float current, float maximum)
@@ -449,10 +505,10 @@ namespace CatsVsDemons.UI
         }
         private void OnPreparationEnded() => preparing = false;
         private void OnHouseDestroyed() => ShowResult("A CASA CAIU!",
-            "Mesmo ferido, Kin fez tudo o que pôde.");
+            "Mesmo ferido, Kin fez tudo o que pôde.", defeatArtwork);
         private void OnKinDown() => ShowResult("KIN FOI DERROTADO!",
-            "Seu dono nunca saberá como Kin tentou protegê-lo.");
+            "Seu dono nunca saberá como Kin tentou protegê-lo.", defeatArtwork);
         private void OnVictory() => ShowResult("A CASA ESTÁ SEGURA!",
-            "O guardião da noite venceu mais uma batalha.");
+            "O guardião da noite venceu mais uma batalha.", victoryArtwork);
     }
 }
