@@ -10,8 +10,8 @@ $ErrorActionPreference = "Stop"
 
 $taskName = "CatsVsDemons Auto Sync"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$syncScript = (Resolve-Path (Join-Path $PSScriptRoot
-        "Sync-CatsVsDemons.ps1")).Path
+$syncScriptPath = Join-Path $PSScriptRoot "Sync-CatsVsDemons.ps1"
+$syncScript = (Resolve-Path -LiteralPath $syncScriptPath).Path
 
 if ($Remove) {
     $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue

@@ -1,0 +1,40 @@
+name: Validate PowerShell
+
+on:
+  push:
+    paths:
+      - "Tools/Git/*.ps1"
+      - ".github/workflows/validate-powershell.yml"
+  pull_request:
+    paths:
+      - "Tools/Git/*.ps1"
+      - ".github/workflows/validate-powershell.yml"
+
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse scripts with Windows PowerShell
+        shell: powershell
+        run: |
+          $failed = $false
+          Get-ChildItem "Tools/Git/*.ps1" | ForEach-Object {
+              $tokens = $null
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  $_.FullName,
+                  [ref]$tokens,
+                  [ref]$errors
+              ) | Out-Null
+              if ($errors.Count -gt 0) {
+                  $failed = $true
+                  Write-Error ("{0}: {1}" -f $_.Name,
+                      ($errors.Message -join "; "))
+              }
+          }
+          if ($failed) {
+              exit 1
+          }

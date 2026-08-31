@@ -119,8 +119,8 @@ try {
         & git -C $repoRoot diff --cached --quiet
         $diffExitCode = $LASTEXITCODE
         if ($diffExitCode -eq 1) {
-            $message = "Sincronizacao automatica: {0}" -f (Get-Date -Format
-                "yyyy-MM-dd HH:mm:ss")
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            $message = "Sincronizacao automatica: $timestamp"
             $null = Invoke-Git -Arguments @("commit", "-m", $message)
         }
         elseif ($diffExitCode -gt 1) {
