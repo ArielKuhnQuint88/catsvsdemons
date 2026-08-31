@@ -58,6 +58,18 @@ function Test-RebaseInProgress {
     return $mergeRebase -or $applyRebase
 }
 
+function Invoke-OriginRebase {
+    try {
+        $null = Invoke-Git -Arguments @("pull", "--rebase", "origin", "main")
+    }
+    catch {
+        if (Test-RebaseInProgress) {
+            & git -C $repoRoot rebase --abort 2>&1 | Out-Null
+        }
+        throw "Conflito ao baixar o GitHub. Os commits locais foram preservados. $($_.Exception.Message)"
+    }
+}
+
 try {
     try {
         $hasLock = $mutex.WaitOne(0, $false)
@@ -117,15 +129,7 @@ try {
     }
 
     $null = Invoke-Git -Arguments @("fetch", "--prune", "origin", "main")
-    try {
-        $null = Invoke-Git -Arguments @("pull", "--rebase", "origin", "main")
-    }
-    catch {
-        if (Test-RebaseInProgress) {
-            & git -C $repoRoot rebase --abort 2>&1 | Out-Null
-        }
-        throw "Conflito ao baixar o GitHub. Os commits locais foram preservados. $($_.Exception.Message)"
-    }
+    Invoke-OriginRebase
 
     if (-not $NoPush) {
         try {
@@ -133,7 +137,7 @@ try {
         }
         catch {
             Write-SyncLog "O GitHub mudou durante o envio; tentando novamente."
-            $null = Invoke-Git -Arguments @("pull", "--rebase", "origin", "main")
+            Invoke-OriginRebase
             $null = Invoke-Git -Arguments @("push", "origin", "main")
         }
     }
