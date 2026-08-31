@@ -9,6 +9,7 @@ namespace CatsVsDemons.Player
     {
         [SerializeField] private float moveSpeed = 7f;
         [SerializeField] private float rotationSpeed = 12f;
+        [SerializeField] private float gravity = -28f;
         [SerializeField] private Vector2 horizontalBounds = new Vector2(-19f, 19f);
         [SerializeField] private Vector2 verticalBounds = new Vector2(-14f, 14f);
 
@@ -21,6 +22,7 @@ namespace CatsVsDemons.Player
         private Texture2D joystickCircle;
         private Vector3 lastSafePosition;
         private float nextGroundCheck;
+        private float verticalVelocity;
         private readonly RaycastHit[] groundHits = new RaycastHit[8];
 
         private void Awake()
@@ -29,6 +31,7 @@ namespace CatsVsDemons.Player
             mainCamera = Camera.main;
             joystickCircle = CreateCircleTexture(128);
             lastSafePosition = transform.position;
+            EnsureSafetyFloor();
 
             RuntimeModelVisuals.Attach(
                 transform,
@@ -41,6 +44,11 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
+            if (characterController == null)
+                characterController = GetComponent<CharacterController>();
+            if (!characterController.enabled)
+                characterController.enabled = true;
+
             ValidateGroundPosition();
             ReadMobileInput();
             Keyboard keyboard = Keyboard.current;
@@ -60,11 +68,6 @@ namespace CatsVsDemons.Player
 
             input = Vector2.ClampMagnitude(input, 1f);
 
-            if (input.sqrMagnitude < 0.01f)
-            {
-                return;
-            }
-
             if (mainCamera == null)
             {
                 mainCamera = Camera.main;
@@ -78,33 +81,58 @@ namespace CatsVsDemons.Player
                 ? Vector3.ProjectOnPlane(mainCamera.transform.right, Vector3.up).normalized
                 : Vector3.right;
 
-            Vector3 direction = (forward * input.y + right * input.x).normalized;
-            characterController.SimpleMove(direction * moveSpeed);
+            Vector3 direction = forward * input.y + right * input.x;
+            if (direction.sqrMagnitude > 1f) direction.Normalize();
 
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                Quaternion.LookRotation(direction, Vector3.up),
-                rotationSpeed * Time.deltaTime
-            );
+            if (characterController.isGrounded && verticalVelocity < 0f)
+                verticalVelocity = -2f;
+            else
+                verticalVelocity = Mathf.Max(verticalVelocity + gravity * Time.deltaTime,
+                    gravity);
+
+            Vector3 motion = direction * moveSpeed;
+            motion.y = verticalVelocity;
+            CollisionFlags flags = characterController.Move(motion * Time.deltaTime);
+            if ((flags & CollisionFlags.Below) != 0)
+                verticalVelocity = -2f;
 
             Vector3 position = transform.position;
-            position.x = Mathf.Clamp(position.x, horizontalBounds.x, horizontalBounds.y);
-            position.z = Mathf.Clamp(position.z, verticalBounds.x, verticalBounds.y);
-            transform.position = position;
-            RememberSafePosition();
+            Vector3 correction = new Vector3(
+                Mathf.Clamp(position.x, horizontalBounds.x, horizontalBounds.y) -
+                    position.x,
+                0f,
+                Mathf.Clamp(position.z, verticalBounds.x, verticalBounds.y) -
+                    position.z
+            );
+            if (correction.sqrMagnitude > 0.0001f)
+                characterController.Move(correction);
+
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    Quaternion.LookRotation(direction, Vector3.up),
+                    rotationSpeed * Time.deltaTime
+                );
+            }
+
+            if (characterController.isGrounded) RememberSafePosition();
         }
 
         public void TeleportTo(Vector3 position)
         {
+            Vector3 safeDestination = FindGroundedPosition(position,
+                out Vector3 grounded) ? grounded : lastSafePosition;
             characterController.enabled = false;
-            transform.position = position;
+            transform.position = safeDestination;
             characterController.enabled = true;
-            lastSafePosition = position;
+            verticalVelocity = -2f;
+            lastSafePosition = safeDestination;
         }
 
         private void ValidateGroundPosition()
         {
-            if (transform.position.y < -1.5f)
+            if (transform.position.y < -0.9f)
             {
                 RecoverFromFall();
                 return;
@@ -136,6 +164,7 @@ namespace CatsVsDemons.Player
                 RaycastHit hit = groundHits[index];
                 if (hit.collider == null ||
                     hit.collider.transform.IsChildOf(transform) ||
+                    hit.normal.y < 0.55f ||
                     hit.distance >= nearestDistance)
                     continue;
                 nearestDistance = hit.distance;
@@ -160,7 +189,51 @@ namespace CatsVsDemons.Player
             characterController.enabled = false;
             transform.position = lastSafePosition;
             characterController.enabled = true;
+            verticalVelocity = -2f;
             Debug.LogWarning("Kin saiu do terreno e foi reposicionado.", this);
+        }
+
+        private bool FindGroundedPosition(Vector3 position, out Vector3 grounded)
+        {
+            Vector3 origin = new Vector3(position.x,
+                Mathf.Max(position.y + 8f, 12f), position.z);
+            int hitCount = Physics.RaycastNonAlloc(origin, Vector3.down,
+                groundHits, 30f, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+            float nearestDistance = float.MaxValue;
+            grounded = position;
+            bool found = false;
+            for (int index = 0; index < hitCount; index++)
+            {
+                RaycastHit hit = groundHits[index];
+                if (hit.collider == null ||
+                    hit.collider.transform.IsChildOf(transform) ||
+                    hit.normal.y < 0.55f || hit.distance >= nearestDistance)
+                    continue;
+                nearestDistance = hit.distance;
+                float standingOffset = characterController.height * 0.5f -
+                    characterController.center.y + characterController.skinWidth;
+                grounded = hit.point + Vector3.up * standingOffset;
+                found = true;
+            }
+            return found;
+        }
+
+        private void EnsureSafetyFloor()
+        {
+            const string floorName = "Kin Safety Floor";
+            if (GameObject.Find(floorName) != null) return;
+            GameObject floor = new(floorName);
+            floor.hideFlags = HideFlags.HideInHierarchy;
+            float centerX = (horizontalBounds.x + horizontalBounds.y) * 0.5f;
+            float centerZ = (verticalBounds.x + verticalBounds.y) * 0.5f;
+            floor.transform.position = new Vector3(centerX, -0.45f, centerZ);
+            BoxCollider collider = floor.AddComponent<BoxCollider>();
+            collider.size = new Vector3(
+                horizontalBounds.y - horizontalBounds.x + 4f,
+                0.4f,
+                verticalBounds.y - verticalBounds.x + 4f
+            );
         }
 
         private void ReadMobileInput()
@@ -179,11 +252,12 @@ namespace CatsVsDemons.Player
             if (secondFingerPressed)
             {
                 mobileDragActive = false;
+                mobileInput = Vector2.zero;
                 return;
             }
 
             Vector2 position = touchscreen.primaryTouch.position.ReadValue();
-            if (touchscreen.primaryTouch.press.wasPressedThisFrame &&
+            if (!mobileDragActive && touchscreen.primaryTouch.press.isPressed &&
                 position.x < Screen.width * 0.42f &&
                 position.y < Screen.height * 0.55f)
             {

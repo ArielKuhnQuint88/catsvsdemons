@@ -36,6 +36,10 @@ namespace CatsVsDemons.UI
         private Button specialButton;
         private Button pauseButton;
         private readonly Button[] defenseButtons = new Button[3];
+        private readonly DefenseType[] defenseTypes =
+        {
+            DefenseType.Portal, DefenseType.Bonsai, DefenseType.Lantern
+        };
         private GameObject pausePanel;
         private GameObject resultPanel;
         private GameObject tutorialPanel;
@@ -137,7 +141,7 @@ namespace CatsVsDemons.UI
         private void BuildTopPanel()
         {
             RectTransform panel = ui.Panel("Status", safeArea,
-                RuntimeUiFactory.Paper, new Vector2(760, 178));
+                RuntimeUiFactory.Paper, new Vector2(760, 310));
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
             panel.anchoredPosition = new Vector2(0, -18);
@@ -151,10 +155,77 @@ namespace CatsVsDemons.UI
             stats = ui.Label("Stats", "", panel, 20, RuntimeUiFactory.Ink,
                 new Vector2(720, 38), TextAnchor.MiddleCenter);
             RectTransform statsRect = (RectTransform)stats.transform;
-            statsRect.anchorMin = new Vector2(0.5f, 0f);
-            statsRect.anchorMax = new Vector2(0.5f, 0f);
-            statsRect.pivot = new Vector2(0.5f, 0f);
-            statsRect.anchoredPosition = new Vector2(0, 8);
+            statsRect.anchorMin = statsRect.anchorMax = new Vector2(0.5f, 1f);
+            statsRect.pivot = new Vector2(0.5f, 1f);
+            statsRect.anchoredPosition = new Vector2(0, -116);
+
+            string[] labels = { "PORTAL  10", "BONSAI  15", "LANTERNA  10" };
+            string[] artwork = { "TowerPortal", "TowerBonsai", "TowerLantern" };
+            Color[] colors =
+            {
+                new(0.04f, 0.38f, 0.78f), new(0.05f, 0.55f, 0.2f),
+                new(0.55f, 0.24f, 0.72f)
+            };
+            for (int index = 0; index < defenseButtons.Length; index++)
+            {
+                AddDefenseButton(panel, index, labels[index], artwork[index],
+                    colors[index]);
+            }
+        }
+
+        private void AddDefenseButton(RectTransform panel, int index,
+            string label, string artwork, Color color)
+        {
+            int captured = index;
+            Button button = ui.Button($"Defense {index}", label, panel,
+                new Color(color.r, color.g, color.b, 0.92f),
+                new Vector2(206, 116));
+            defenseButtons[index] = button;
+            RectTransform buttonRect = (RectTransform)button.transform;
+            buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(0.5f, 1f);
+            buttonRect.pivot = new Vector2(0.5f, 1f);
+            buttonRect.anchoredPosition = new Vector2((index - 1) * 226, -174);
+
+            Text labelText = button.GetComponentInChildren<Text>();
+            RectTransform labelRect = (RectTransform)labelText.transform;
+            labelRect.sizeDelta = new Vector2(194, 30);
+            labelRect.anchoredPosition = new Vector2(0, -39);
+            labelText.fontSize = 19;
+
+            RectTransform border = ui.Rect("Golden Circle", button.transform);
+            border.sizeDelta = new Vector2(82, 82);
+            border.anchoredPosition = new Vector2(0, 15);
+            Image borderImage = border.gameObject.AddComponent<Image>();
+            borderImage.sprite = RuntimeUiFactory.CircleSprite;
+            borderImage.color = RuntimeUiFactory.Gold;
+            borderImage.raycastTarget = false;
+
+            RectTransform maskRect = ui.Rect("Artwork Mask", border);
+            maskRect.sizeDelta = new Vector2(72, 72);
+            Image maskImage = maskRect.gameObject.AddComponent<Image>();
+            maskImage.sprite = RuntimeUiFactory.CircleSprite;
+            maskImage.color = Color.white;
+            maskImage.raycastTarget = false;
+            Mask mask = maskRect.gameObject.AddComponent<Mask>();
+            mask.showMaskGraphic = false;
+
+            Texture2D texture = LoadArtwork(artwork);
+            if (texture != null)
+            {
+                RectTransform iconRect = ui.Rect("Artwork", maskRect);
+                iconRect.anchorMin = Vector2.zero;
+                iconRect.anchorMax = Vector2.one;
+                iconRect.offsetMin = iconRect.offsetMax = Vector2.zero;
+                Image icon = iconRect.gameObject.AddComponent<Image>();
+                icon.sprite = Sprite.Create(texture,
+                    new Rect(0, 0, texture.width, texture.height),
+                    new Vector2(0.5f, 0.5f), 100f);
+                icon.preserveAspect = false;
+                icon.raycastTarget = false;
+            }
+
+            button.onClick.AddListener(() =>
+                TowerBuildSelection.Select(defenseTypes[captured]));
         }
 
         private void AddBarRow(RectTransform panel, string name, float y,
@@ -176,39 +247,12 @@ namespace CatsVsDemons.UI
 
         private void BuildActions()
         {
-            RectTransform row = ui.Rect("Defenses", safeArea);
-            row.anchorMin = row.anchorMax = new Vector2(1, 0);
-            row.pivot = new Vector2(1, 0);
-            row.sizeDelta = new Vector2(570, 120);
-            row.anchoredPosition = new Vector2(-22, 22);
-            DefenseType[] types =
-            {
-                DefenseType.Portal, DefenseType.Bonsai, DefenseType.Lantern
-            };
-            string[] names = { "PORTAL\n10", "BONSAI\n15", "LANTERNA\n10" };
-            Color[] colors =
-            {
-                new(0.04f, 0.38f, 0.78f), new(0.05f, 0.55f, 0.2f),
-                new(0.55f, 0.24f, 0.72f)
-            };
-            for (int index = 0; index < 3; index++)
-            {
-                int captured = index;
-                defenseButtons[index] = ui.Button(names[index], names[index], row,
-                    colors[index], new Vector2(174, 108));
-                RectTransform rect = (RectTransform)defenseButtons[index].transform;
-                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 0);
-                rect.anchoredPosition = new Vector2(index * 192, 0);
-                defenseButtons[index].onClick.AddListener(() =>
-                    TowerBuildSelection.Select(types[captured]));
-            }
-
             specialButton = ui.Button("Special", "GOLPE\n0%", safeArea,
                 new Color(0.64f, 0.11f, 0.055f), new Vector2(150, 150));
             RectTransform specialRect = (RectTransform)specialButton.transform;
             specialRect.anchorMin = specialRect.anchorMax = new Vector2(1, 0);
             specialRect.pivot = new Vector2(1, 0);
-            specialRect.anchoredPosition = new Vector2(-620, 22);
+            specialRect.anchoredPosition = new Vector2(-22, 22);
             specialLabel = specialButton.GetComponentInChildren<Text>();
             specialButton.onClick.AddListener(() => special?.TryUse());
 
@@ -267,7 +311,7 @@ namespace CatsVsDemons.UI
                 new Vector2(820, 178));
             tutorial.anchorMin = tutorial.anchorMax = new Vector2(0.5f, 0);
             tutorial.pivot = new Vector2(0.5f, 0);
-            tutorial.anchoredPosition = new Vector2(-280, 28);
+            tutorial.anchoredPosition = new Vector2(-210, 190);
             tutorialPanel = tutorial.gameObject;
             tutorialTitle = ui.Label("Tutorial Title", "", tutorial, 25,
                 RuntimeUiFactory.Gold, new Vector2(776, 36),
@@ -315,16 +359,29 @@ namespace CatsVsDemons.UI
             countdown.gameObject.SetActive(preparing && !paused && !ended);
             if (preparing) countdown.text = $"FASE {phase}\n{preparation}";
 
-            DefenseType[] types =
-            {
-                DefenseType.Portal, DefenseType.Bonsai, DefenseType.Lantern
-            };
             for (int index = 0; index < 3; index++)
             {
                 Image image = defenseButtons[index].GetComponent<Image>();
-                image.transform.localScale = TowerBuildSelection.Selected == types[index]
+                image.transform.localScale =
+                    TowerBuildSelection.Selected == defenseTypes[index]
                     ? Vector3.one * 1.08f : Vector3.one;
             }
+        }
+
+        private static Texture2D LoadArtwork(string name)
+        {
+            TextAsset encoded = Resources.Load<TextAsset>($"UI/{name}Data");
+            if (encoded != null)
+            {
+                Texture2D decoded = new(2, 2, TextureFormat.RGBA32, false)
+                {
+                    name = $"{name}_Hud"
+                };
+                if (ImageConversion.LoadImage(decoded, encoded.bytes, true))
+                    return decoded;
+                Object.Destroy(decoded);
+            }
+            return Resources.Load<Texture2D>($"UI/{name}");
         }
 
         private void TogglePause()

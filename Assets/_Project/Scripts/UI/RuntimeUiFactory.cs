@@ -10,6 +10,7 @@ namespace CatsVsDemons.UI
         private readonly Font font = Resources.GetBuiltinResource<Font>(
             "LegacyRuntime.ttf");
         private static Sprite rounded;
+        private static Sprite circle;
 
         public static readonly Color Ink = new(0.075f, 0.03f, 0.025f, 0.97f);
         public static readonly Color Gold = new(0.95f, 0.61f, 0.12f, 1f);
@@ -142,6 +143,37 @@ namespace CatsVsDemons.UI
                     new Vector2(0.5f, 0.5f), 100f, 0,
                     SpriteMeshType.FullRect, new Vector4(16, 16, 16, 16));
                 return rounded;
+            }
+        }
+
+        public static Sprite CircleSprite
+        {
+            get
+            {
+                if (circle != null) return circle;
+                const int size = 128;
+                Texture2D texture = new(size, size, TextureFormat.RGBA32, false)
+                {
+                    name = "Runtime UI Circle",
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                Color32[] pixels = new Color32[size * size];
+                float center = (size - 1) * 0.5f;
+                float radiusSquared = (center - 1f) * (center - 1f);
+                for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    byte alpha = dx * dx + dy * dy <= radiusSquared
+                        ? (byte)255 : (byte)0;
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                }
+                texture.SetPixels32(pixels);
+                texture.Apply(false, true);
+                circle = Sprite.Create(texture, new Rect(0, 0, size, size),
+                    new Vector2(0.5f, 0.5f), 100f);
+                return circle;
             }
         }
     }
