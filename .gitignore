@@ -48,6 +48,9 @@ sysinfo.txt
 Thumbs.db
 desktop.ini
 
+# ChatGPT/Codex transient uploads
+/upload/
+
 # Secrets and local configuration
 .env
 .env.*

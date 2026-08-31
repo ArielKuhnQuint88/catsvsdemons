@@ -109,6 +109,38 @@ docs/
 - [Como contribuir](CONTRIBUTING.md)
 - [Game Concept original no Prezi](https://prezi.com/view/dgeKHwZEjqjX1hIC55NR/?referral_token=8JTueZlnB3FN)
 
+## Sincronização automática no Windows
+
+Na primeira ativação, preserve qualquer mudança local e baixe a versão mais
+nova do projeto:
+
+```powershell
+git stash push -u -m "Backup antes da sincronização automática"
+git pull origin main
+```
+
+Depois, execute no PowerShell, na pasta do projeto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Tools\Git\Install-AutoSync.ps1
+```
+
+O sincronizador roda a cada cinco minutos. Quando o Unity está fechado, ele:
+
+1. cria um commit das alterações pendentes;
+2. baixa e reorganiza os commits mais novos de `origin/main`;
+3. envia os commits locais para o GitHub.
+
+As operações simultâneas são bloqueadas, conflitos não são sobrescritos e os
+commits locais permanecem preservados. O histórico fica em
+`.git\catsvsdemons-autosync.log`.
+
+Para remover a tarefa automática:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Tools\Git\Install-AutoSync.ps1 -Remove
+```
+
 ## Autoria
 
 Projeto criado por **Ariel Kühn Quint** e desenvolvido pela **QiP Games**.
