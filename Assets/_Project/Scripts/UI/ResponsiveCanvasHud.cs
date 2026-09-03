@@ -154,11 +154,28 @@ namespace CatsVsDemons.UI
 
         private void BuildTopPanel()
         {
+            // A dark lacquer frame gives the washi card a stronger silhouette
+            // against bright maps without making the HUD heavier.
+            RectTransform frame = ui.Panel("Status Frame", safeArea,
+                new Color(0.15f, 0.055f, 0.025f, 0.96f),
+                new Vector2(792, 322));
+            frame.anchorMin = frame.anchorMax = new Vector2(0.5f, 1f);
+            frame.pivot = new Vector2(0.5f, 1f);
+            frame.anchoredPosition = new Vector2(0, -14);
+            frame.GetComponent<Image>().raycastTarget = false;
+
             RectTransform panel = ui.Panel("Status", safeArea,
                 RuntimeUiFactory.Paper, new Vector2(760, 310));
             panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
             panel.anchoredPosition = new Vector2(0, -18);
+
+            RectTransform accent = ui.Panel("Status Gold Accent", panel,
+                RuntimeUiFactory.Gold, new Vector2(704, 5));
+            accent.anchorMin = accent.anchorMax = new Vector2(0.5f, 1f);
+            accent.pivot = new Vector2(0.5f, 1f);
+            accent.anchoredPosition = new Vector2(0, -9);
+            accent.GetComponent<Image>().raycastTarget = false;
 
             AddBarRow(panel, "CASA", -20, out houseBar,
                 new Color(0.88f, 0.12f, 0.08f), 20);
@@ -205,6 +222,7 @@ namespace CatsVsDemons.UI
             labelRect.sizeDelta = new Vector2(194, 30);
             labelRect.anchoredPosition = new Vector2(0, -39);
             labelText.fontSize = 19;
+            labelText.color = RuntimeUiFactory.Ink;
 
             RectTransform border = ui.Rect("Golden Circle", button.transform);
             border.sizeDelta = new Vector2(82, 82);
@@ -261,23 +279,80 @@ namespace CatsVsDemons.UI
 
         private void BuildActions()
         {
+            // Keep the controls inside a thumb-friendly zone rather than flush
+            // against the edge. Some Game View and phone safe-area combinations
+            // crop strict right-edge anchors.
+            Vector2 specialAnchor = new Vector2(0.84f, 0f);
+            Vector2 specialPivot = new Vector2(0.5f, 0f);
+            Vector2 specialPosition = new Vector2(0f, 34f);
+            CreateCircleLayer("Special Shadow", safeArea, specialAnchor,
+                specialPivot, specialPosition, new Vector2(202, 202),
+                new Color(0.02f, 0.012f, 0.01f, 0.78f));
+            CreateCircleLayer("Special Gold Rim", safeArea, specialAnchor,
+                specialPivot, specialPosition, new Vector2(194, 194),
+                RuntimeUiFactory.Gold);
+
             specialButton = ui.Button("Special", "GOLPE\n0%", safeArea,
-                new Color(0.64f, 0.11f, 0.055f), new Vector2(150, 150));
+                RuntimeUiFactory.Paper, new Vector2(174, 174));
             RectTransform specialRect = (RectTransform)specialButton.transform;
-            specialRect.anchorMin = specialRect.anchorMax = new Vector2(1, 0);
-            specialRect.pivot = new Vector2(1, 0);
-            specialRect.anchoredPosition = new Vector2(-22, 22);
+            Position(specialRect, specialAnchor, specialPivot, specialPosition);
+            Image specialImage = specialButton.GetComponent<Image>();
+            specialImage.sprite = RuntimeUiFactory.CircleSprite;
+            specialImage.type = Image.Type.Simple;
+            specialButton.targetGraphic = specialImage;
+            ColorBlock specialColors = specialButton.colors;
+            specialColors.highlightedColor = new Color(1f, 0.92f, 0.67f, 1f);
+            specialColors.pressedColor = RuntimeUiFactory.Gold;
+            specialColors.disabledColor = new Color(0.68f, 0.56f, 0.34f, 0.95f);
+            specialButton.colors = specialColors;
             specialLabel = specialButton.GetComponentInChildren<Text>();
+            specialLabel.color = RuntimeUiFactory.Ink;
+            specialLabel.fontSize = 22;
+            specialLabel.lineSpacing = 0.82f;
             specialButton.onClick.AddListener(() => special?.TryUse());
 
+            Vector2 pauseAnchor = new Vector2(0.89f, 1f);
+            Vector2 pausePivot = new Vector2(0.5f, 1f);
+            Vector2 pausePosition = new Vector2(0f, -24f);
+            RectTransform pauseShadow = ui.Panel("Pause Shadow", safeArea,
+                RuntimeUiFactory.Ink, new Vector2(164, 68));
+            Position(pauseShadow, pauseAnchor, pausePivot, pausePosition);
+            pauseShadow.GetComponent<Image>().raycastTarget = false;
+            RectTransform pauseRim = ui.Panel("Pause Gold Rim", safeArea,
+                RuntimeUiFactory.Gold, new Vector2(156, 60));
+            Position(pauseRim, pauseAnchor, pausePivot, pausePosition);
+            pauseRim.GetComponent<Image>().raycastTarget = false;
+
             pauseButton = ui.Button("Pause", "PAUSAR", safeArea,
-                RuntimeUiFactory.Ink, new Vector2(150, 58));
+                RuntimeUiFactory.Paper, new Vector2(146, 50));
             RectTransform pauseRect = (RectTransform)pauseButton.transform;
-            pauseRect.anchorMin = pauseRect.anchorMax = pauseRect.pivot =
-                new Vector2(1, 1);
-            pauseRect.anchoredPosition = new Vector2(-22, -20);
+            Position(pauseRect, pauseAnchor, pausePivot, pausePosition);
             pauseLabel = pauseButton.GetComponentInChildren<Text>();
+            pauseLabel.color = RuntimeUiFactory.Ink;
+            pauseLabel.fontSize = 19;
             pauseButton.onClick.AddListener(TogglePause);
+        }
+
+        private Image CreateCircleLayer(string name, Transform parent,
+            Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size,
+            Color color)
+        {
+            RectTransform rect = ui.Rect(name, parent);
+            rect.sizeDelta = size;
+            Position(rect, anchor, pivot, position);
+            Image image = rect.gameObject.AddComponent<Image>();
+            image.sprite = RuntimeUiFactory.CircleSprite;
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        private static void Position(RectTransform rect, Vector2 anchor,
+            Vector2 pivot, Vector2 position)
+        {
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
         }
 
         private void BuildOverlays()
