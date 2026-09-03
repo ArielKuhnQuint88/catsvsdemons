@@ -26,16 +26,19 @@ namespace CatsVsDemons.Waves
 
         private HouseHealth houseHealth;
         private Transform enemiesRoot;
+        private bool continueFromIntermission;
 
         public int CurrentPhase { get; private set; }
         public int TotalPhases => totalPhases;
         public int CurrentWave { get; private set; }
         public int TotalWaves => totalWaves;
+        public bool IsInIntermission { get; private set; }
 
         public event System.Action<int, int> PhaseStarted;
         public event System.Action<int, int> WaveStarted;
         public event System.Action<int, int> PreparationChanged;
         public event System.Action PreparationEnded;
+        public event System.Action<int, int> IntermissionStarted;
         public event System.Action Victory;
 
         public void Initialize(GameObject template, Transform root)
@@ -47,6 +50,14 @@ namespace CatsVsDemons.Waves
         private void Start()
         {
             houseHealth = Object.FindFirstObjectByType<HouseHealth>();
+
+            HouseIntermissionController intermission =
+                GetComponent<HouseIntermissionController>();
+            if (intermission == null)
+            {
+                intermission = gameObject.AddComponent<HouseIntermissionController>();
+            }
+            intermission.Initialize(this);
 
             if (enemiesRoot == null)
             {
@@ -99,6 +110,11 @@ namespace CatsVsDemons.Waves
                 yield return StartCoroutine(
                     RunPhaseWaves(phaseMultiplier)
                 );
+
+                if (phase < totalPhases && !HouseWasDestroyed())
+                {
+                    yield return StartCoroutine(RunIntermission(phase));
+                }
             }
 
             if (!HouseWasDestroyed())
@@ -106,6 +122,39 @@ namespace CatsVsDemons.Waves
                 Debug.Log("Victory: all phases were completed.");
                 Victory?.Invoke();
             }
+        }
+
+        public void ContinueFromHouse()
+        {
+            if (IsInIntermission)
+            {
+                continueFromIntermission = true;
+            }
+        }
+
+        private IEnumerator RunIntermission(int completedPhase)
+        {
+            if (IntermissionStarted == null)
+            {
+                Debug.LogWarning(
+                    "House intermission controller was not found; " +
+                    "continuing to the next phase.",
+                    this
+                );
+                yield break;
+            }
+
+            IsInIntermission = true;
+            continueFromIntermission = false;
+            CurrentWave = 0;
+            IntermissionStarted.Invoke(completedPhase, totalPhases);
+
+            yield return new WaitUntil(
+                () => continueFromIntermission || HouseWasDestroyed()
+            );
+
+            IsInIntermission = false;
+            continueFromIntermission = false;
         }
 
         private IEnumerator RunPhaseWaves(int phaseMultiplier)

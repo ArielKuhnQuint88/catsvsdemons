@@ -13,6 +13,7 @@ namespace CatsVsDemons.UI
     public sealed class ResponsiveCanvasHud : MonoBehaviour
     {
         private RuntimeUiFactory ui;
+        private Canvas rootCanvas;
         private RectTransform safeArea;
         private Rect lastSafeArea;
         private Wallet wallet;
@@ -59,8 +60,8 @@ namespace CatsVsDemons.UI
         private void Awake()
         {
             ui = new RuntimeUiFactory();
-            Canvas canvas = ui.CreateCanvas(transform);
-            safeArea = ui.Rect("Safe Area", canvas.transform);
+            rootCanvas = ui.CreateCanvas(transform);
+            safeArea = ui.Rect("Safe Area", rootCanvas.transform);
             safeArea.anchorMin = Vector2.zero;
             safeArea.anchorMax = Vector2.one;
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
@@ -101,6 +102,14 @@ namespace CatsVsDemons.UI
         }
 
         public void HideTutorial() => tutorialPanel.SetActive(false);
+
+        public void SetHudVisible(bool visible)
+        {
+            if (rootCanvas != null)
+            {
+                rootCanvas.gameObject.SetActive(visible);
+            }
+        }
 
         private void FindSystems()
         {
