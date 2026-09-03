@@ -10,6 +10,9 @@ namespace CatsVsDemons.Waves
         private const float BorderWidth = 2.85f;
         private const float SurfaceHeight = 0.12f;
         private const float BorderHeight = 0.025f;
+        private const float ViewportMargin = 0.08f;
+        private const float EntrancePadding = 3f;
+        private const float MaximumEntranceExtension = 48f;
 
         private readonly Dictionary<Transform, Vector3[]> basePaths = new();
         private readonly Dictionary<Transform, Vector3> baseBuildSpots = new();
@@ -20,6 +23,7 @@ namespace CatsVsDemons.Waves
         private Transform buildSpotsRoot;
         private CameraModeController cameraController;
         private bool captured;
+        private int pendingPathRefreshPhase;
 
         private void Awake()
         {
@@ -95,16 +99,17 @@ namespace CatsVsDemons.Waves
             CaptureInitialState();
             phase = Mathf.Clamp(phase, 1, Mathf.Max(1, totalPhases));
 
-            ApplyPathLayout(phase);
-            ApplyBuildSpotLayout(phase);
-            ApplyGardenTheme(phase);
-
             if (cameraController == null)
             {
                 cameraController =
                     Object.FindFirstObjectByType<CameraModeController>();
             }
             cameraController?.SetPhaseZoom(phase);
+
+            ApplyPathLayout(phase);
+            ApplyBuildSpotLayout(phase);
+            ApplyGardenTheme(phase);
+            pendingPathRefreshPhase = phase;
 
             string title = phase == 1
                 ? "Jardim das Cerejeiras"
@@ -117,8 +122,8 @@ namespace CatsVsDemons.Waves
 
         private void ApplyPathLayout(int phase)
         {
-            float startExtension =
-                phase == 1 ? 0f : phase == 2 ? 6.5f : 11.5f;
+            float minimumExtension =
+                phase == 1 ? 12f : phase == 2 ? 16f : 20f;
             float waveAmplitude =
                 phase == 1 ? 0f : phase == 2 ? 0.45f : 0.75f;
             float waveCycles =
@@ -134,17 +139,21 @@ namespace CatsVsDemons.Waves
                 }
 
                 Vector3[] baseline = entry.Value;
+                if (baseline.Length == 0)
+                {
+                    continue;
+                }
+
                 Vector3[] extended = new Vector3[baseline.Length];
                 List<Transform> joints = GetJoints(path);
 
-                Vector3 entranceDirection =
-                    baseline[Mathf.Min(1, baseline.Length - 1)] - baseline[0];
-                entranceDirection.y = 0f;
-                if (entranceDirection.sqrMagnitude < 0.0001f)
-                {
-                    entranceDirection = Vector3.forward;
-                }
-                entranceDirection.Normalize();
+                Vector3 outwardDirection = GetOutwardDirection(baseline);
+                float startExtension = GetEntranceExtension(
+                    path,
+                    baseline[0],
+                    outwardDirection,
+                    minimumExtension
+                );
 
                 for (int index = 0; index < baseline.Length; index++)
                 {
@@ -155,7 +164,7 @@ namespace CatsVsDemons.Waves
                     float entranceWeight =
                         1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / 0.36f));
                     Vector3 extension =
-                        -entranceDirection * startExtension * entranceWeight;
+                        outwardDirection * startExtension * entranceWeight;
 
                     Vector3 previous = baseline[Mathf.Max(0, index - 1)];
                     Vector3 next = baseline[Mathf.Min(baseline.Length - 1, index + 1)];
@@ -181,8 +190,8 @@ namespace CatsVsDemons.Waves
                         side * wave * waveAmplitude *
                         centerEnvelope * houseProtection;
 
-                    position.x = Mathf.Clamp(position.x, -60f, 60f);
-                    position.z = Mathf.Clamp(position.z, -40f, 40f);
+                    position.x = Mathf.Clamp(position.x, -72f, 72f);
+                    position.z = Mathf.Clamp(position.z, -56f, 56f);
                     extended[index] = position;
 
                     if (index < joints.Count)
@@ -191,6 +200,7 @@ namespace CatsVsDemons.Waves
                     }
                 }
 
+                UpdateLegacySegments(path, extended);
                 UpdateRibbon(
                     path,
                     path.name + "_Border",
@@ -208,6 +218,119 @@ namespace CatsVsDemons.Waves
                     true
                 );
                 pathIndex++;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (pendingPathRefreshPhase <= 0)
+            {
+                return;
+            }
+
+            int phase = pendingPathRefreshPhase;
+            pendingPathRefreshPhase = 0;
+
+            cameraController?.SetPhaseZoom(phase);
+            ApplyPathLayout(phase);
+        }
+
+        private static Vector3 GetOutwardDirection(Vector3[] baseline)
+        {
+            Vector3 direction = baseline[0] - baseline[baseline.Length - 1];
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return Vector3.back;
+            }
+
+            return Mathf.Abs(direction.x) >= Mathf.Abs(direction.z)
+                ? new Vector3(Mathf.Sign(direction.x), 0f, 0f)
+                : new Vector3(0f, 0f, Mathf.Sign(direction.z));
+        }
+
+        private static float GetEntranceExtension(
+            Transform path,
+            Vector3 entrance,
+            Vector3 outwardDirection,
+            float minimumExtension)
+        {
+            Camera gameCamera = Camera.main;
+            if (gameCamera == null || !gameCamera.isActiveAndEnabled)
+            {
+                return minimumExtension;
+            }
+
+            float extension = minimumExtension;
+            while (extension < MaximumEntranceExtension)
+            {
+                Vector3 candidate = path.TransformPoint(
+                    entrance + outwardDirection * extension
+                );
+                Vector3 viewport = gameCamera.WorldToViewportPoint(candidate);
+
+                bool insidePaddedViewport =
+                    viewport.z > 0f &&
+                    viewport.x >= -ViewportMargin &&
+                    viewport.x <= 1f + ViewportMargin &&
+                    viewport.y >= -ViewportMargin &&
+                    viewport.y <= 1f + ViewportMargin;
+
+                if (!insidePaddedViewport)
+                {
+                    break;
+                }
+
+                extension += 1f;
+            }
+
+            return Mathf.Min(
+                MaximumEntranceExtension,
+                extension + EntrancePadding
+            );
+        }
+
+        private static void UpdateLegacySegments(
+            Transform path,
+            Vector3[] points)
+        {
+            List<Transform> segments = new();
+            foreach (Transform child in path)
+            {
+                if (child.name.StartsWith("Segment_"))
+                {
+                    segments.Add(child);
+                }
+            }
+
+            segments.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            int segmentCount = Mathf.Min(segments.Count, points.Length - 1);
+
+            for (int index = 0; index < segmentCount; index++)
+            {
+                Transform segment = segments[index];
+                Vector3 start = points[index];
+                Vector3 end = points[index + 1];
+                Vector3 direction = end - start;
+                direction.y = 0f;
+
+                if (direction.sqrMagnitude < 0.0001f)
+                {
+                    continue;
+                }
+
+                Vector3 center = (start + end) * 0.5f;
+                center.y = segment.localPosition.y;
+                segment.localPosition = center;
+                segment.localRotation = Quaternion.LookRotation(
+                    direction.normalized,
+                    Vector3.up
+                );
+
+                Vector3 scale = segment.localScale;
+                scale.z = direction.magnitude;
+                segment.localScale = scale;
             }
         }
 
