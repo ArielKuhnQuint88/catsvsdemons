@@ -26,6 +26,7 @@ namespace CatsVsDemons.Waves
 
         private HouseHealth houseHealth;
         private Transform enemiesRoot;
+        private PhaseEnvironmentController phaseEnvironment;
         private bool continueFromIntermission;
 
         public int CurrentPhase { get; private set; }
@@ -47,6 +48,26 @@ namespace CatsVsDemons.Waves
             enemiesRoot = root;
         }
 
+        private void Awake()
+        {
+            // The scene keeps the three authored routes, while the environment
+            // controller pushes their entrances beyond the active camera. Add it
+            // here so a demon always spawns where its route begins: off-screen.
+            GameObject gameRoot = GameObject.Find("Game");
+            if (gameRoot == null)
+            {
+                return;
+            }
+
+            phaseEnvironment =
+                gameRoot.GetComponent<PhaseEnvironmentController>();
+            if (phaseEnvironment == null)
+            {
+                phaseEnvironment =
+                    gameRoot.AddComponent<PhaseEnvironmentController>();
+            }
+        }
+
         private void Start()
         {
             houseHealth = Object.FindFirstObjectByType<HouseHealth>();
@@ -66,6 +87,7 @@ namespace CatsVsDemons.Waves
             }
 
             RefreshAvailablePaths();
+            phaseEnvironment?.ApplyPhase(1, totalPhases);
 
             if (enemyTemplate == null || enemiesRoot == null)
             {
