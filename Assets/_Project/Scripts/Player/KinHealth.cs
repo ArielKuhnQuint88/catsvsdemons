@@ -7,6 +7,8 @@ namespace CatsVsDemons.Player
     {
         [SerializeField] private int maxHealth = 100;
 
+        private int baseMaxHealth;
+
         public int CurrentHealth { get; private set; }
         public int MaxHealth => maxHealth;
         public bool IsDown => CurrentHealth <= 0;
@@ -16,6 +18,8 @@ namespace CatsVsDemons.Player
 
         private void Awake()
         {
+            baseMaxHealth = Mathf.Max(1, maxHealth);
+            maxHealth = baseMaxHealth;
             CurrentHealth = maxHealth;
         }
 
@@ -49,6 +53,22 @@ namespace CatsVsDemons.Player
             }
 
             CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + amount);
+            HealthChanged?.Invoke(CurrentHealth, maxHealth);
+        }
+
+        public void SetShopMaximumBonus(int bonus)
+        {
+            int previousMaximum = maxHealth;
+            bool wasDown = IsDown;
+            maxHealth = baseMaxHealth + Mathf.Max(0, bonus);
+            if (!wasDown)
+            {
+                CurrentHealth = Mathf.Clamp(
+                    CurrentHealth + maxHealth - previousMaximum,
+                    1,
+                    maxHealth
+                );
+            }
             HealthChanged?.Invoke(CurrentHealth, maxHealth);
         }
     }

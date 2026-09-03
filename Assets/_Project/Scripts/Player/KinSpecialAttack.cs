@@ -14,9 +14,19 @@ namespace CatsVsDemons.Player
         [SerializeField] private int damage = 35;
         private KinEnergy energy;
         private LineRenderer ring;
+        private int baseDamage;
         public event Action Used;
 
-        private void Awake() => energy = GetComponent<KinEnergy>();
+        private void Awake()
+        {
+            baseDamage = Mathf.Max(1, damage);
+            energy = GetComponent<KinEnergy>();
+        }
+
+        public void SetShopDamageBonus(int bonus)
+        {
+            damage = baseDamage + Mathf.Max(0, bonus);
+        }
 
         private void Update()
         {

@@ -13,13 +13,20 @@ namespace CatsVsDemons.Player
 
         private float nextAttackTime;
         private KinEnergy energy;
+        private int baseDamage;
 
         private void Awake()
         {
+            baseDamage = Mathf.Max(1, damage);
             energy = GetComponent<KinEnergy>();
             if (energy == null) energy = gameObject.AddComponent<KinEnergy>();
             if (GetComponent<KinSpecialAttack>() == null)
                 gameObject.AddComponent<KinSpecialAttack>();
+        }
+
+        public void SetShopDamageBonus(int bonus)
+        {
+            damage = baseDamage + Mathf.Max(0, bonus);
         }
 
         private void Update()
