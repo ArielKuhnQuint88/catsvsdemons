@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace CatsVsDemons.Waves
 {
+    [DefaultExecutionOrder(-100)]
     public sealed class PhaseEnvironmentController : MonoBehaviour
     {
         private const float SurfaceWidth = 2.45f;
