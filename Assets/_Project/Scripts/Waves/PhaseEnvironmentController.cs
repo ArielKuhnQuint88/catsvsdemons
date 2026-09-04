@@ -53,7 +53,10 @@ namespace CatsVsDemons.Waves
             }
 
             spawner.PhaseStarted += ApplyPhase;
-            ApplyPhase(Mathf.Max(1, spawner.CurrentPhase), spawner.TotalPhases);
+            int initialPhase = spawner.CurrentPhase > 0
+                ? spawner.CurrentPhase
+                : spawner.StartingPhase;
+            ApplyPhase(Mathf.Max(1, initialPhase), spawner.TotalPhases);
         }
 
         private void OnDestroy()
@@ -122,23 +125,20 @@ namespace CatsVsDemons.Waves
             ApplyGardenTheme(phase);
             pendingPathRefreshPhase = phase;
 
-            string title = phase == 1
-                ? "Jardim das Cerejeiras"
-                : phase == 2
-                    ? "Jardim do Outono"
-                    : "Jardim do Eclipse";
+            string title = CampaignProgress.GetPhaseTitle(phase);
 
             Debug.Log($"Phase {phase}: {title} loaded.", this);
         }
 
         private void ApplyPathLayout(int phase)
         {
-            float minimumExtension =
-                phase == 1 ? 12f : phase == 2 ? 16f : 20f;
-            float waveAmplitude =
-                phase == 1 ? 0f : phase == 2 ? 0.45f : 0.75f;
-            float waveCycles =
-                phase == 1 ? 0f : phase == 2 ? 2.0f : 3.0f;
+            int scenario = CampaignProgress.GetScenarioIndex(phase);
+            int season = CampaignProgress.GetSeasonIndex(phase);
+            float minimumExtension = 12f + scenario * 3f + season * 1.2f;
+            float waveAmplitude = season * 0.12f + scenario * 0.18f;
+            float waveCycles = season < 2
+                ? 0f
+                : 1.35f + season * 0.45f + scenario * 0.35f;
             int pathIndex = 0;
             laidOutPaths.Clear();
 
@@ -261,6 +261,7 @@ namespace CatsVsDemons.Waves
 
             cameraController?.SetPhaseZoom(phase);
             ApplyPathLayout(phase);
+            ApplyGardenTheme(phase);
         }
 
         private static Vector3 GetOutwardDirection(Vector3[] baseline)
@@ -964,7 +965,9 @@ namespace CatsVsDemons.Waves
 
         private void ApplyBuildSpotLayout(int phase)
         {
-            float radialScale = phase == 1 ? 1f : phase == 2 ? 1.06f : 1.12f;
+            int scenario = CampaignProgress.GetScenarioIndex(phase);
+            int season = CampaignProgress.GetSeasonIndex(phase);
+            float radialScale = 1f + scenario * 0.06f + season * 0.015f;
             foreach (KeyValuePair<Transform, Vector3> entry in baseBuildSpots)
             {
                 if (entry.Key == null)
@@ -981,6 +984,13 @@ namespace CatsVsDemons.Waves
 
         private void ApplyGardenTheme(int phase)
         {
+            int scenario = CampaignProgress.GetScenarioIndex(phase);
+            int season = CampaignProgress.GetSeasonIndex(phase);
+            Color foliage = GetFoliageColor(scenario, season);
+            Color petals = GetPetalColor(scenario, season);
+            Color water = GetWaterColor(scenario, season);
+            Color lantern = GetLanternColor(scenario, season);
+
             foreach (KeyValuePair<Renderer, Color> entry in baseColors)
             {
                 Renderer renderer = entry.Key;
@@ -992,29 +1002,173 @@ namespace CatsVsDemons.Waves
                 Color color = entry.Value;
                 string objectName = renderer.gameObject.name;
 
-                if (phase == 2)
+                if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
                 {
-                    if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
-                        color = new Color(0.92f, 0.25f, 0.035f);
-                    else if (ContainsAny(objectName, "Petal"))
-                        color = new Color(1f, 0.58f, 0.10f);
+                    color = foliage;
                 }
-                else if (phase >= 3)
+                else if (ContainsAny(objectName, "Petal"))
                 {
-                    if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
-                        color = new Color(0.64f, 0.08f, 0.48f);
-                    else if (ContainsAny(objectName, "WaterHighlight"))
-                        color = new Color(0.08f, 0.48f, 0.62f);
-                    else if (ContainsAny(objectName, "Petal"))
-                        color = new Color(0.68f, 0.30f, 1f);
-                    else if (ContainsAny(objectName, "LanternLight"))
-                        color = new Color(0.84f, 0.30f, 1f);
+                    color = petals;
+                }
+                else if (ContainsAny(objectName, "Water", "DeepWater"))
+                {
+                    color = water;
+                }
+                else if (ContainsAny(objectName, "LanternLight"))
+                {
+                    color = lantern;
+                }
+                else if (scenario == 1 &&
+                    ContainsAny(objectName, "BambooLeaves", "BambooStem"))
+                {
+                    color = foliage;
+                }
+                else if (scenario == 2 &&
+                    ContainsAny(objectName, "ZenStone", "PondRock", "ShoreRock"))
+                {
+                    color = Color.Lerp(color, new Color(0.30f, 0.24f, 0.42f), 0.5f);
                 }
 
                 renderer.material.color = color;
             }
 
-            RenderSettings.fog = false;
+            ApplyRuntimeFlowerTheme(petals);
+            ApplyAtmosphere(scenario, season);
+        }
+
+        private void ApplyRuntimeFlowerTheme(Color petals)
+        {
+            if (restoredFlowerRoot == null)
+            {
+                return;
+            }
+
+            foreach (Renderer renderer in
+                restoredFlowerRoot.GetComponentsInChildren<Renderer>(true))
+            {
+                if (renderer.gameObject.name == "Petal")
+                {
+                    renderer.sharedMaterial = GetRuntimeMaterial(petals);
+                }
+                else if (renderer.gameObject.name == "FlowerCenter")
+                {
+                    renderer.sharedMaterial = GetRuntimeMaterial(
+                        Color.Lerp(petals, new Color(1f, 0.78f, 0.10f), 0.55f)
+                    );
+                }
+            }
+        }
+
+        private static Color GetFoliageColor(int scenario, int season)
+        {
+            if (scenario == 0)
+            {
+                return season switch
+                {
+                    0 => new Color(1f, 0.42f, 0.66f),
+                    1 => new Color(0.20f, 0.65f, 0.28f),
+                    2 => new Color(0.92f, 0.25f, 0.035f),
+                    _ => new Color(0.84f, 0.89f, 0.94f)
+                };
+            }
+
+            if (scenario == 1)
+            {
+                return season switch
+                {
+                    0 => new Color(0.20f, 0.72f, 0.40f),
+                    1 => new Color(0.08f, 0.48f, 0.18f),
+                    2 => new Color(0.72f, 0.48f, 0.08f),
+                    _ => new Color(0.36f, 0.68f, 0.62f)
+                };
+            }
+
+            return season switch
+            {
+                0 => new Color(0.62f, 0.20f, 0.86f),
+                1 => new Color(0.16f, 0.24f, 0.58f),
+                2 => new Color(0.88f, 0.16f, 0.35f),
+                _ => new Color(0.58f, 0.70f, 0.96f)
+            };
+        }
+
+        private static Color GetPetalColor(int scenario, int season)
+        {
+            Color foliage = GetFoliageColor(scenario, season);
+            float lightness = scenario == 2 ? 0.36f : 0.52f;
+            return Color.Lerp(foliage, Color.white, lightness);
+        }
+
+        private static Color GetWaterColor(int scenario, int season)
+        {
+            if (scenario == 0)
+            {
+                return season == 3
+                    ? new Color(0.30f, 0.62f, 0.76f)
+                    : new Color(0.06f, 0.46f, 0.62f);
+            }
+
+            if (scenario == 1)
+            {
+                return season == 2
+                    ? new Color(0.08f, 0.38f, 0.42f)
+                    : new Color(0.04f, 0.56f, 0.52f);
+            }
+
+            return season == 3
+                ? new Color(0.36f, 0.58f, 0.86f)
+                : new Color(0.10f, 0.16f, 0.45f);
+        }
+
+        private static Color GetLanternColor(int scenario, int season)
+        {
+            if (scenario == 2)
+            {
+                return season == 3
+                    ? new Color(0.68f, 0.78f, 1f)
+                    : new Color(0.82f, 0.30f, 1f);
+            }
+
+            return season == 2
+                ? new Color(1f, 0.48f, 0.10f)
+                : new Color(1f, 0.72f, 0.18f);
+        }
+
+        private static Color GetSkyColor(int scenario, int season)
+        {
+            if (scenario == 0)
+            {
+                return season == 3
+                    ? new Color(0.38f, 0.55f, 0.72f)
+                    : new Color(0.28f, 0.48f, 0.68f);
+            }
+
+            if (scenario == 1)
+            {
+                return season == 2
+                    ? new Color(0.34f, 0.31f, 0.22f)
+                    : new Color(0.12f, 0.38f, 0.34f);
+            }
+
+            return season == 3
+                ? new Color(0.18f, 0.24f, 0.43f)
+                : new Color(0.10f, 0.06f, 0.24f);
+        }
+
+        private static void ApplyAtmosphere(int scenario, int season)
+        {
+            Camera gameCamera = Camera.main;
+            if (gameCamera != null)
+            {
+                gameCamera.backgroundColor = GetSkyColor(scenario, season);
+            }
+
+            RenderSettings.fog = scenario == 2 && season >= 2;
+            if (RenderSettings.fog)
+            {
+                RenderSettings.fogColor = GetSkyColor(scenario, season);
+                RenderSettings.fogDensity = 0.0075f;
+            }
         }
 
         private static bool ContainsAny(string value, params string[] terms)

@@ -38,5 +38,11 @@ namespace CatsVsDemons.Economy
             CoinsChanged?.Invoke(Coins);
             return true;
         }
+
+        public void SetCoins(int amount)
+        {
+            Coins = Mathf.Max(0, amount);
+            CoinsChanged?.Invoke(Coins);
+        }
     }
 }

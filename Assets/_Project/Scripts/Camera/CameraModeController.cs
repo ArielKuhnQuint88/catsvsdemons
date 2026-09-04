@@ -1,4 +1,5 @@
 using CatsVsDemons.Player;
+using CatsVsDemons.Waves;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -135,7 +136,9 @@ namespace CatsVsDemons.CameraSystem
                 return;
             }
 
-            float multiplier = phase <= 1 ? 1f : phase == 2 ? 1.12f : 1.25f;
+            int scenario = CampaignProgress.GetScenarioIndex(phase);
+            int season = CampaignProgress.GetSeasonIndex(phase);
+            float multiplier = 1f + scenario * 0.08f + season * 0.04f;
             mobileDistance = baseIsometricDistance * multiplier;
             transform.position =
                 mobileTarget + mobileViewDirection * mobileDistance;

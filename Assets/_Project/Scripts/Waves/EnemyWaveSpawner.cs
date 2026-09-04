@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using CatsVsDemons.Defense;
+using CatsVsDemons.Economy;
 using CatsVsDemons.Enemies;
 using CatsVsDemons.House;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using CatsVsDemons.UI;
 
 namespace CatsVsDemons.Waves
@@ -11,7 +13,7 @@ namespace CatsVsDemons.Waves
     public sealed class EnemyWaveSpawner : MonoBehaviour
     {
         [SerializeField] private GameObject enemyTemplate;
-        [SerializeField] private int totalPhases = 3;
+        [SerializeField] private int totalPhases = CampaignProgress.TotalPhaseCount;
         [SerializeField] private int totalWaves = 3;
         [SerializeField] private int firstWaveEnemies = 5;
         [SerializeField] private int enemiesAddedPerWave = 2;
@@ -25,14 +27,19 @@ namespace CatsVsDemons.Waves
         };
 
         private HouseHealth houseHealth;
+        private Wallet wallet;
         private Transform enemiesRoot;
         private PhaseEnvironmentController phaseEnvironment;
+        private int sceneFirstPhase = 1;
+        private int sceneLastPhase = 4;
+        private string nextScenarioScene;
         private bool continueFromIntermission;
 
         public int CurrentPhase { get; private set; }
         public int TotalPhases => totalPhases;
         public int CurrentWave { get; private set; }
         public int TotalWaves => totalWaves;
+        public int StartingPhase => sceneFirstPhase;
         public bool IsInIntermission { get; private set; }
 
         public event System.Action<int, int> PhaseStarted;
@@ -50,6 +57,8 @@ namespace CatsVsDemons.Waves
 
         private void Awake()
         {
+            ConfigureCampaignScene();
+
             // The scene keeps the three authored routes, while the environment
             // controller pushes their entrances beyond the active camera. Add it
             // here so a demon always spawns where its route begins: off-screen.
@@ -71,6 +80,12 @@ namespace CatsVsDemons.Waves
         private void Start()
         {
             houseHealth = Object.FindFirstObjectByType<HouseHealth>();
+            wallet = Object.FindFirstObjectByType<Wallet>();
+            if (wallet != null && CampaignProgress.HasStoredCoinsForScene(
+                SceneManager.GetActiveScene().name))
+            {
+                wallet.SetCoins(CampaignProgress.StoredCoins);
+            }
 
             HouseIntermissionController intermission =
                 GetComponent<HouseIntermissionController>();
@@ -87,7 +102,7 @@ namespace CatsVsDemons.Waves
             }
 
             RefreshAvailablePaths();
-            phaseEnvironment?.ApplyPhase(1, totalPhases);
+            phaseEnvironment?.ApplyPhase(StartingPhase, totalPhases);
 
             if (enemyTemplate == null || enemiesRoot == null)
             {
@@ -106,7 +121,7 @@ namespace CatsVsDemons.Waves
         {
             yield return new WaitUntil(() => !TutorialDirector.BlockWaves);
 
-            for (int phase = 1; phase <= totalPhases; phase++)
+            for (int phase = sceneFirstPhase; phase <= sceneLastPhase; phase++)
             {
                 if (HouseWasDestroyed())
                 {
@@ -123,10 +138,11 @@ namespace CatsVsDemons.Waves
 
                 PhaseStarted?.Invoke(CurrentPhase, totalPhases);
 
-                int phaseMultiplier = 1 << (phase - 1);
+                float phaseMultiplier = 1f + (phase - 1) * 0.22f;
 
                 Debug.Log(
-                    $"Phase {phase}/{totalPhases}: enemy multiplier x{phaseMultiplier}."
+                    $"Phase {phase}/{totalPhases}: enemy multiplier x" +
+                    $"{phaseMultiplier:0.00}."
                 );
 
                 yield return StartCoroutine(
@@ -136,14 +152,50 @@ namespace CatsVsDemons.Waves
                 if (phase < totalPhases && !HouseWasDestroyed())
                 {
                     yield return StartCoroutine(RunIntermission(phase));
+
+                    if (CampaignProgress.IsScenarioTransitionAfter(phase))
+                    {
+                        LoadNextScenario(phase);
+                        yield break;
+                    }
                 }
             }
 
-            if (!HouseWasDestroyed())
+            if (!HouseWasDestroyed() && sceneLastPhase >= totalPhases)
             {
                 Debug.Log("Victory: all phases were completed.");
                 Victory?.Invoke();
             }
+        }
+
+        private void ConfigureCampaignScene()
+        {
+            string sceneName = SceneManager.GetActiveScene().name;
+            CampaignScenario scenario =
+                CampaignProgress.GetScenarioForScene(sceneName);
+
+            totalPhases = CampaignProgress.TotalPhaseCount;
+            sceneFirstPhase = CampaignProgress.GetStartingPhase(sceneName);
+            sceneLastPhase = scenario.LastPhase;
+            nextScenarioScene = CampaignProgress.GetNextSceneName(sceneName);
+        }
+
+        private void LoadNextScenario(int completedPhase)
+        {
+            if (string.IsNullOrEmpty(nextScenarioScene))
+            {
+                Debug.LogError(
+                    $"No next scenario was configured after phase " +
+                    $"{completedPhase}.",
+                    this
+                );
+                return;
+            }
+
+            int coins = wallet != null ? wallet.Coins : 0;
+            CampaignProgress.StoreScenarioTransition(completedPhase, coins);
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(nextScenarioScene);
         }
 
         public void ContinueFromHouse()
@@ -179,7 +231,7 @@ namespace CatsVsDemons.Waves
             continueFromIntermission = false;
         }
 
-        private IEnumerator RunPhaseWaves(int phaseMultiplier)
+        private IEnumerator RunPhaseWaves(float phaseMultiplier)
         {
             for (int wave = 1; wave <= totalWaves; wave++)
             {
@@ -207,7 +259,9 @@ namespace CatsVsDemons.Waves
                     firstWaveEnemies +
                     ((wave - 1) * enemiesAddedPerWave);
 
-                int enemyCount = baseEnemyCount * phaseMultiplier;
+                int enemyCount = Mathf.CeilToInt(
+                    baseEnemyCount * phaseMultiplier
+                );
 
                 Debug.Log(
                     $"Phase {CurrentPhase}, wave {wave}/{totalWaves}: " +

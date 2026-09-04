@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using CatsVsDemons.Waves;
 
 namespace CatsVsDemons.UI
 {
@@ -439,6 +440,7 @@ namespace CatsVsDemons.UI
         {
             PlayerPrefs.SetInt("CameraMode", cameraMode);
             PlayerPrefs.Save();
+            CampaignProgress.BeginNewCampaign();
             SceneManager.LoadScene("Game");
         }
 

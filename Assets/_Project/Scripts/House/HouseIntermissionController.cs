@@ -204,9 +204,15 @@ namespace CatsVsDemons.House
             ApplyPurchasedBenefits();
             isOpen = true;
             phaseTitle.text = $"FASE {completedPhase} CONCLUÍDA";
-            phaseMessage.text =
-                $"A casa está segura. Prepare Kin para a fase " +
-                $"{completedPhase + 1} de {totalPhases}.";
+            int nextPhase = completedPhase + 1;
+            bool changingScenario =
+                CampaignProgress.IsScenarioTransitionAfter(completedPhase);
+            string nextDestination = CampaignProgress.GetPhaseTitle(nextPhase);
+            phaseMessage.text = changingScenario
+                ? $"A casa está segura. O próximo portal leva para " +
+                  $"{nextDestination}: fase {nextPhase} de {totalPhases}."
+                : $"A casa está segura. Próxima etapa: {nextDestination} " +
+                  $"(fase {nextPhase} de {totalPhases}).";
             UpdateCoinLabels();
 
             CaptureAndHideBattlefield();
