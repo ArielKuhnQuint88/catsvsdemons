@@ -111,6 +111,25 @@ namespace CatsVsDemons.UI
             }
         }
 
+        public void SetHousePauseState(bool isPaused)
+        {
+            paused = isPaused;
+            if (pausePanel != null)
+            {
+                pausePanel.SetActive(false);
+            }
+
+            if (pauseButton != null && !ended)
+            {
+                pauseButton.gameObject.SetActive(!isPaused);
+            }
+
+            if (pauseLabel != null)
+            {
+                pauseLabel.text = "PAUSAR";
+            }
+        }
+
         private void FindSystems()
         {
             wallet ??= Object.FindFirstObjectByType<Wallet>();
@@ -489,10 +508,27 @@ namespace CatsVsDemons.UI
         private void TogglePause()
         {
             if (ended) return;
-            paused = !paused;
-            Time.timeScale = paused ? 0f : 1f;
-            pausePanel.SetActive(paused);
-            pauseLabel.text = paused ? "CONTINUAR" : "PAUSAR";
+
+            if (paused)
+            {
+                paused = false;
+                Time.timeScale = 1f;
+                pausePanel.SetActive(false);
+                pauseLabel.text = "PAUSAR";
+                return;
+            }
+
+            HouseIntermissionController house =
+                Object.FindFirstObjectByType<HouseIntermissionController>();
+            if (house != null && house.OpenPauseRoom())
+            {
+                return;
+            }
+
+            paused = true;
+            Time.timeScale = 0f;
+            pausePanel.SetActive(true);
+            pauseLabel.text = "CONTINUAR";
         }
 
         private void ShowResult(string title, string message,

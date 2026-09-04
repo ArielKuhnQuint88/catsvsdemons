@@ -11,6 +11,8 @@ namespace CatsVsDemons.House
 {
     public sealed class HouseIntermissionController : MonoBehaviour
     {
+        private const int KinPreviewLayer = 30;
+
         private readonly Dictionary<GameObject, bool> battleStates = new();
 
         private EnemyWaveSpawner waves;
@@ -43,14 +45,31 @@ namespace CatsVsDemons.House
         private Text shopStatus;
         private Button shopActionButton;
         private Text shopActionLabel;
+        private Text houseInstruction;
+        private Button houseContinueButton;
+        private Text houseContinueLabel;
+        private RawImage kinPreviewImage;
+        private Image kinHealthProgress;
+        private Image kinEnergyProgress;
+        private Image kinAttackProgress;
+        private Image kinSpecialProgress;
+        private Text kinLoadoutLabel;
+        private Text kinHealthValue;
+        private Text kinEnergyValue;
+        private Text kinAttackValue;
+        private Text kinSpecialValue;
         private Rect lastSafeArea;
         private bool isOpen;
+        private bool openedFromPause;
 
         private Texture2D houseArtwork;
         private Texture2D clothesArtwork;
         private Texture2D accessoriesArtwork;
         private HouseShopCategory selectedCategory;
         private HouseShopItem selectedItem;
+        private GameObject kinPreviewRoot;
+        private Camera kinPreviewCamera;
+        private RenderTexture kinPreviewTexture;
 
         private Vector3 savedCameraPosition;
         private Quaternion savedCameraRotation;
@@ -127,6 +146,7 @@ namespace CatsVsDemons.House
 
             UpdateCameraFraming();
             UpdateCoinLabels();
+            RefreshKinProfile();
         }
 
         private void OnDestroy()
@@ -141,17 +161,26 @@ namespace CatsVsDemons.House
                 RestoreBattlefield();
                 RestoreCamera();
             }
+
+            DestroyKinPreview();
+            if (openedFromPause)
+            {
+                Time.timeScale = 1f;
+            }
         }
 
         private void FindSceneReferences()
         {
+            waves ??= Object.FindFirstObjectByType<EnemyWaveSpawner>();
             wallet ??= Object.FindFirstObjectByType<Wallet>();
             battleHud ??= Object.FindFirstObjectByType<ResponsiveCanvasHud>();
             cameraController ??=
                 Object.FindFirstObjectByType<CameraModeController>();
             gameCamera ??= Camera.main;
 
-            if (kinHealth != null)
+            if (kinHealth != null && kinEnergy != null &&
+                kinAttack != null && kinSpecialAttack != null &&
+                kinLoadout != null)
             {
                 return;
             }
@@ -202,6 +231,7 @@ namespace CatsVsDemons.House
 
             FindSceneReferences();
             ApplyPurchasedBenefits();
+            openedFromPause = false;
             isOpen = true;
             phaseTitle.text = $"FASE {completedPhase} CONCLUÍDA";
             int nextPhase = completedPhase + 1;
@@ -213,7 +243,12 @@ namespace CatsVsDemons.House
                   $"{nextDestination}: fase {nextPhase} de {totalPhases}."
                 : $"A casa está segura. Próxima etapa: {nextDestination} " +
                   $"(fase {nextPhase} de {totalPhases}).";
+            ConfigureHouseControls(
+                "PRÓXIMA\nFASE",
+                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  PRÓXIMA FASE");
             UpdateCoinLabels();
+            RebuildKinPreview();
+            RefreshKinProfile();
 
             CaptureAndHideBattlefield();
             ConfigureHouseCamera();
@@ -223,6 +258,43 @@ namespace CatsVsDemons.House
             Canvas.ForceUpdateCanvases();
         }
 
+        public bool OpenPauseRoom()
+        {
+            if (isOpen)
+            {
+                return false;
+            }
+
+            FindSceneReferences();
+            if (waves == null || waves.IsInIntermission)
+            {
+                return false;
+            }
+
+            ApplyPurchasedBenefits();
+            openedFromPause = true;
+            isOpen = true;
+            phaseTitle.text = "PAUSA NA CASA";
+            phaseMessage.text =
+                "Kin confere os equipamentos enquanto a batalha espera.";
+            ConfigureHouseControls(
+                "CONTINUAR\nBATALHA",
+                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  CONTINUAR BATALHA");
+            UpdateCoinLabels();
+            RebuildKinPreview();
+            RefreshKinProfile();
+
+            Time.timeScale = 0f;
+            battleHud?.SetHousePauseState(true);
+            CaptureAndHideBattlefield();
+            ConfigureHouseCamera();
+            interiorRoot.SetActive(houseArtwork == null);
+            shopPanel.SetActive(false);
+            interfaceRoot.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+            return true;
+        }
+
         private void ContinueToNextPhase()
         {
             if (!isOpen)
@@ -230,12 +302,23 @@ namespace CatsVsDemons.House
                 return;
             }
 
+            bool resumeBattle = openedFromPause;
             shopPanel.SetActive(false);
             interfaceRoot.SetActive(false);
             interiorRoot.SetActive(false);
+            DestroyKinPreview();
             RestoreBattlefield();
             RestoreCamera();
             isOpen = false;
+            openedFromPause = false;
+            battleHud?.SetHousePauseState(false);
+
+            if (resumeBattle)
+            {
+                Time.timeScale = 1f;
+                return;
+            }
+
             waves?.ContinueFromHouse();
         }
 
@@ -458,9 +541,9 @@ namespace CatsVsDemons.House
                 RuntimeUiFactory.Gold, new Vector2(268f, 54f),
                 TextAnchor.MiddleCenter);
 
-            Text instruction = ui.Label(
+            houseInstruction = ui.Label(
                 "House Instruction",
-                "COMPUTADOR: LOJA  •  QUARTO: DESCANSO  •  PRÓXIMA FASE",
+                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  PRÓXIMA FASE",
                 safeArea,
                 20,
                 Color.white,
@@ -468,24 +551,334 @@ namespace CatsVsDemons.House
                 TextAnchor.MiddleCenter
             );
             RectTransform instructionRect =
-                (RectTransform)instruction.transform;
+                (RectTransform)houseInstruction.transform;
             instructionRect.anchorMin = instructionRect.anchorMax =
                 new Vector2(0.5f, 0f);
             instructionRect.pivot = new Vector2(0.5f, 0f);
             instructionRect.anchoredPosition = new Vector2(0f, 25f);
 
-            Button nextPhase = ui.Button(
+            houseContinueButton = ui.Button(
                 "Next Phase",
                 "PRÓXIMA FASE",
                 safeArea,
                 new Color(0.63f, 0.075f, 0.035f, 0.97f),
                 new Vector2(300f, 88f)
             );
-            RectTransform nextRect = (RectTransform)nextPhase.transform;
+            RectTransform nextRect =
+                (RectTransform)houseContinueButton.transform;
             nextRect.anchorMin = nextRect.anchorMax = new Vector2(1f, 0f);
             nextRect.pivot = new Vector2(1f, 0f);
             nextRect.anchoredPosition = new Vector2(-24f, 24f);
-            nextPhase.onClick.AddListener(ContinueToNextPhase);
+            houseContinueButton.onClick.AddListener(ContinueToNextPhase);
+            houseContinueLabel = houseContinueButton.GetComponentInChildren<Text>();
+
+            BuildKinProfilePanel();
+        }
+
+        private void ConfigureHouseControls(string continueLabel,
+            string instruction)
+        {
+            if (houseContinueLabel != null)
+            {
+                houseContinueLabel.text = continueLabel;
+            }
+
+            if (houseInstruction != null)
+            {
+                houseInstruction.text = instruction;
+            }
+        }
+
+        private void BuildKinProfilePanel()
+        {
+            RectTransform border = ui.Panel(
+                "Kin Profile Border",
+                safeArea,
+                new Color(0.94f, 0.55f, 0.10f, 0.98f),
+                new Vector2(462f, 704f)
+            );
+            border.anchorMin = border.anchorMax = new Vector2(0f, 0f);
+            border.pivot = new Vector2(0f, 0f);
+            border.anchoredPosition = new Vector2(24f, 84f);
+
+            RectTransform panel = ui.Panel(
+                "Kin Profile",
+                border,
+                new Color(0.055f, 0.018f, 0.025f, 0.96f),
+                new Vector2(448f, 690f)
+            );
+
+            Text title = ui.Label("Kin Profile Title", "KIN EQUIPADO",
+                panel, 30, RuntimeUiFactory.Gold, new Vector2(404f, 42f),
+                TextAnchor.MiddleCenter);
+            ((RectTransform)title.transform).anchoredPosition =
+                new Vector2(0f, 303f);
+
+            kinLoadoutLabel = ui.Label("Kin Loadout", "", panel, 19,
+                Color.white, new Vector2(404f, 48f),
+                TextAnchor.MiddleCenter);
+            ((RectTransform)kinLoadoutLabel.transform).anchoredPosition =
+                new Vector2(0f, 256f);
+
+            RectTransform portraitFrame = ui.Panel(
+                "Kin Preview Frame",
+                panel,
+                new Color(0.010f, 0.028f, 0.075f, 0.98f),
+                new Vector2(370f, 266f)
+            );
+            portraitFrame.anchoredPosition = new Vector2(0f, 96f);
+            RectTransform portrait = ui.Rect("Kin Preview", portraitFrame);
+            portrait.sizeDelta = new Vector2(354f, 250f);
+            kinPreviewImage = portrait.gameObject.AddComponent<RawImage>();
+            kinPreviewImage.color = Color.white;
+            kinPreviewImage.raycastTarget = false;
+
+            kinHealthProgress = CreateKinProgressBar(panel, "VIDA", -80f,
+                new Color(0.92f, 0.18f, 0.12f), out kinHealthValue);
+            kinEnergyProgress = CreateKinProgressBar(panel, "ENERGIA", -150f,
+                new Color(0.18f, 0.75f, 0.34f), out kinEnergyValue);
+            kinAttackProgress = CreateKinProgressBar(panel, "ATAQUE", -220f,
+                new Color(0.98f, 0.60f, 0.10f), out kinAttackValue);
+            kinSpecialProgress = CreateKinProgressBar(panel, "GOLPE", -290f,
+                new Color(0.56f, 0.34f, 0.95f), out kinSpecialValue);
+        }
+
+        private Image CreateKinProgressBar(Transform parent, string label,
+            float verticalPosition, Color color, out Text value)
+        {
+            Text labelText = ui.Label($"{label} Label", label, parent, 18,
+                Color.white, new Vector2(160f, 24f), TextAnchor.MiddleLeft);
+            ((RectTransform)labelText.transform).anchoredPosition =
+                new Vector2(-166f, verticalPosition);
+
+            value = ui.Label($"{label} Value", "", parent, 18,
+                RuntimeUiFactory.Gold, new Vector2(160f, 24f),
+                TextAnchor.MiddleRight);
+            ((RectTransform)value.transform).anchoredPosition =
+                new Vector2(166f, verticalPosition);
+
+            Image fill = ui.Bar($"{label} Progress", parent,
+                new Vector2(362f, 22f));
+            ((RectTransform)fill.transform.parent).anchoredPosition =
+                new Vector2(0f, verticalPosition - 25f);
+            fill.color = color;
+            fill.fillAmount = 0f;
+            return fill;
+        }
+
+        private void RefreshKinProfile()
+        {
+            int health = kinHealth != null ? kinHealth.CurrentHealth : 0;
+            int maximumHealth = kinHealth != null ? kinHealth.MaxHealth : 0;
+            int energy = kinEnergy != null
+                ? Mathf.RoundToInt(kinEnergy.Current)
+                : 0;
+            int maximumEnergy = kinEnergy != null
+                ? Mathf.RoundToInt(kinEnergy.Maximum)
+                : 0;
+            int attack = kinAttack != null ? kinAttack.Damage : 0;
+            int special = kinSpecialAttack != null
+                ? kinSpecialAttack.Damage
+                : 0;
+
+            SetKinProgress(kinHealthProgress, kinHealthValue, health,
+                maximumHealth, $"{health}/{maximumHealth}");
+            SetKinProgress(kinEnergyProgress, kinEnergyValue, energy,
+                maximumEnergy, $"{energy}/{maximumEnergy}");
+            SetKinProgress(kinAttackProgress, kinAttackValue, attack, 30,
+                $"{attack} DANO");
+            SetKinProgress(kinSpecialProgress, kinSpecialValue, special, 75,
+                $"{special} DANO");
+
+            if (kinLoadoutLabel != null)
+            {
+                string outfit = GetEquippedItemName(
+                    HouseShopCategory.Clothes, "Samurai Vermelho");
+                string accessory = GetEquippedItemName(
+                    HouseShopCategory.Accessories, "Sem acessório");
+                kinLoadoutLabel.text = $"{outfit}\n{accessory}";
+            }
+        }
+
+        private static void SetKinProgress(Image progress, Text value,
+            int current, int maximum, string label)
+        {
+            if (progress != null)
+            {
+                progress.fillAmount = maximum > 0
+                    ? Mathf.Clamp01(current / (float)maximum)
+                    : 0f;
+            }
+
+            if (value != null)
+            {
+                value.text = label;
+            }
+        }
+
+        private static string GetEquippedItemName(HouseShopCategory category,
+            string fallback)
+        {
+            string itemId = HouseShopSave.GetEquipped(category);
+            if (string.IsNullOrEmpty(itemId))
+            {
+                return fallback;
+            }
+
+            foreach (HouseShopItem item in HouseShopCatalog.Get(category))
+            {
+                if (item.Id == itemId)
+                {
+                    return item.Name;
+                }
+            }
+
+            return fallback;
+        }
+
+        private void RebuildKinPreview()
+        {
+            DestroyKinPreview();
+            if (kinPreviewImage == null || kinHealth == null)
+            {
+                return;
+            }
+
+            Transform kin = kinHealth.transform;
+            Transform sourceModel = kin.Find("GameplayModel");
+            if (sourceModel == null)
+            {
+                return;
+            }
+
+            kinPreviewRoot = new GameObject("House Kin Preview");
+            kinPreviewRoot.transform.SetParent(transform, false);
+            kinPreviewRoot.transform.position = new Vector3(0f, -200f, 0f);
+
+            ClonePreviewObject(sourceModel, kinPreviewRoot.transform,
+                "Kin Preview Model");
+            Transform sourceAccessory = FindLatestChild(kin,
+                "Equipped Shop Accessory");
+            if (sourceAccessory != null)
+            {
+                ClonePreviewObject(sourceAccessory, kinPreviewRoot.transform,
+                    "Kin Preview Accessory");
+            }
+
+            SetLayerRecursively(kinPreviewRoot, KinPreviewLayer);
+            foreach (Collider collider in
+                kinPreviewRoot.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+            }
+            foreach (Rigidbody body in
+                kinPreviewRoot.GetComponentsInChildren<Rigidbody>(true))
+            {
+                body.isKinematic = true;
+                body.detectCollisions = false;
+            }
+
+            GameObject lightRoot = new("House Kin Preview Light");
+            lightRoot.transform.SetParent(kinPreviewRoot.transform, false);
+            lightRoot.transform.localPosition = new Vector3(-1.8f, 2.6f, -2f);
+            Light previewLight = lightRoot.AddComponent<Light>();
+            previewLight.type = LightType.Point;
+            previewLight.range = 8f;
+            previewLight.intensity = 2.2f;
+            previewLight.color = new Color(1f, 0.78f, 0.52f);
+            previewLight.cullingMask = 1 << KinPreviewLayer;
+
+            GameObject cameraRoot = new("House Kin Preview Camera");
+            cameraRoot.transform.SetParent(transform, false);
+            Vector3 target = kinPreviewRoot.transform.position +
+                new Vector3(0f, 0.08f, 0f);
+            cameraRoot.transform.position = target +
+                new Vector3(0f, 0.18f, -5f);
+            cameraRoot.transform.rotation = Quaternion.LookRotation(
+                target - cameraRoot.transform.position, Vector3.up);
+            kinPreviewCamera = cameraRoot.AddComponent<Camera>();
+            kinPreviewCamera.orthographic = true;
+            kinPreviewCamera.orthographicSize = 1.7f;
+            kinPreviewCamera.clearFlags = CameraClearFlags.SolidColor;
+            kinPreviewCamera.backgroundColor =
+                new Color(0.010f, 0.028f, 0.075f, 1f);
+            kinPreviewCamera.cullingMask = 1 << KinPreviewLayer;
+            kinPreviewCamera.nearClipPlane = 0.05f;
+            kinPreviewCamera.farClipPlane = 20f;
+
+            kinPreviewTexture = new RenderTexture(512, 512, 16,
+                RenderTextureFormat.ARGB32)
+            {
+                name = "House Kin Preview Texture"
+            };
+            kinPreviewTexture.Create();
+            kinPreviewCamera.targetTexture = kinPreviewTexture;
+            kinPreviewImage.texture = kinPreviewTexture;
+            kinPreviewCamera.Render();
+        }
+
+        private static void ClonePreviewObject(Transform source,
+            Transform parent, string previewName)
+        {
+            GameObject clone = Object.Instantiate(source.gameObject);
+            clone.name = previewName;
+            clone.transform.SetParent(parent, false);
+            clone.transform.localPosition = source.localPosition;
+            clone.transform.localRotation = source.localRotation;
+            clone.transform.localScale = source.localScale;
+        }
+
+        private static Transform FindLatestChild(Transform parent,
+            string childName)
+        {
+            for (int index = parent.childCount - 1; index >= 0; index--)
+            {
+                Transform child = parent.GetChild(index);
+                if (child.name == childName)
+                {
+                    return child;
+                }
+            }
+
+            return null;
+        }
+
+        private static void SetLayerRecursively(GameObject root, int layer)
+        {
+            root.layer = layer;
+            foreach (Transform child in root.transform)
+            {
+                SetLayerRecursively(child.gameObject, layer);
+            }
+        }
+
+        private void DestroyKinPreview()
+        {
+            if (kinPreviewImage != null)
+            {
+                kinPreviewImage.texture = null;
+            }
+
+            if (kinPreviewCamera != null)
+            {
+                kinPreviewCamera.enabled = false;
+                kinPreviewCamera.targetTexture = null;
+                Destroy(kinPreviewCamera.gameObject);
+                kinPreviewCamera = null;
+            }
+
+            if (kinPreviewRoot != null)
+            {
+                Destroy(kinPreviewRoot);
+                kinPreviewRoot = null;
+            }
+
+            if (kinPreviewTexture != null)
+            {
+                kinPreviewTexture.Release();
+                Destroy(kinPreviewTexture);
+                kinPreviewTexture = null;
+            }
         }
 
         private void BuildShopPanel()
@@ -799,6 +1192,8 @@ namespace CatsVsDemons.House
             if (changed)
             {
                 ApplyPurchasedBenefits();
+                RebuildKinPreview();
+                RefreshKinProfile();
             }
             UpdateCoinLabels();
             RefreshCatalog();

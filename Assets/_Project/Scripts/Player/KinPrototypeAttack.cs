@@ -15,6 +15,8 @@ namespace CatsVsDemons.Player
         private KinEnergy energy;
         private int baseDamage;
 
+        public int Damage => damage;
+
         private void Awake()
         {
             baseDamage = Mathf.Max(1, damage);

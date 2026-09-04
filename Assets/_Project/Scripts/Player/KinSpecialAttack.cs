@@ -17,6 +17,8 @@ namespace CatsVsDemons.Player
         private int baseDamage;
         public event Action Used;
 
+        public int Damage => damage;
+
         private void Awake()
         {
             baseDamage = Mathf.Max(1, damage);
