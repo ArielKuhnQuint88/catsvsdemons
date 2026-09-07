@@ -70,6 +70,9 @@ namespace CatsVsDemons.House
         private GameObject kinPreviewRoot;
         private Camera kinPreviewCamera;
         private RenderTexture kinPreviewTexture;
+        // The preview camera is on Kin's left/front side. 180 degrees makes
+        // the first view show his face instead of his back.
+        private float kinPreviewYaw = 180f;
 
         private Vector3 savedCameraPosition;
         private Quaternion savedCameraRotation;
@@ -247,6 +250,7 @@ namespace CatsVsDemons.House
                 "PRÓXIMA\nFASE",
                 "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  PRÓXIMA FASE");
             UpdateCoinLabels();
+            kinPreviewYaw = 180f;
             RebuildKinPreview();
             RefreshKinProfile();
 
@@ -281,6 +285,7 @@ namespace CatsVsDemons.House
                 "CONTINUAR\nBATALHA",
                 "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  CONTINUAR BATALHA");
             UpdateCoinLabels();
+            kinPreviewYaw = 180f;
             RebuildKinPreview();
             RefreshKinProfile();
 
@@ -607,6 +612,9 @@ namespace CatsVsDemons.House
                 new Color(0.055f, 0.018f, 0.025f, 0.96f),
                 new Vector2(448f, 690f)
             );
+            // Keep every stat and value inside the profile card on narrower
+            // displays as an additional safeguard to their fixed layout.
+            panel.gameObject.AddComponent<RectMask2D>();
 
             Text title = ui.Label("Kin Profile Title", "KIN EQUIPADO",
                 panel, 30, RuntimeUiFactory.Gold, new Vector2(404f, 42f),
@@ -633,6 +641,20 @@ namespace CatsVsDemons.House
             kinPreviewImage.color = Color.white;
             kinPreviewImage.raycastTarget = false;
 
+            Button rotatePreview = ui.Button(
+                "Rotate Kin Preview",
+                "GIRAR\nKIN",
+                portraitFrame,
+                new Color(0.57f, 0.20f, 0.04f, 0.96f),
+                new Vector2(112f, 44f)
+            );
+            RectTransform rotateRect = (RectTransform)rotatePreview.transform;
+            rotateRect.anchorMin = rotateRect.anchorMax =
+                new Vector2(1f, 0f);
+            rotateRect.pivot = new Vector2(1f, 0f);
+            rotateRect.anchoredPosition = new Vector2(-10f, 10f);
+            rotatePreview.onClick.AddListener(RotateKinPreview);
+
             kinHealthProgress = CreateKinProgressBar(panel, "VIDA", -80f,
                 new Color(0.92f, 0.18f, 0.12f), out kinHealthValue);
             kinEnergyProgress = CreateKinProgressBar(panel, "ENERGIA", -150f,
@@ -647,15 +669,15 @@ namespace CatsVsDemons.House
             float verticalPosition, Color color, out Text value)
         {
             Text labelText = ui.Label($"{label} Label", label, parent, 18,
-                Color.white, new Vector2(160f, 24f), TextAnchor.MiddleLeft);
+                Color.white, new Vector2(122f, 24f), TextAnchor.MiddleLeft);
             ((RectTransform)labelText.transform).anchoredPosition =
-                new Vector2(-166f, verticalPosition);
+                new Vector2(-132f, verticalPosition);
 
             value = ui.Label($"{label} Value", "", parent, 18,
-                RuntimeUiFactory.Gold, new Vector2(160f, 24f),
+                RuntimeUiFactory.Gold, new Vector2(122f, 24f),
                 TextAnchor.MiddleRight);
             ((RectTransform)value.transform).anchoredPosition =
-                new Vector2(166f, verticalPosition);
+                new Vector2(132f, verticalPosition);
 
             Image fill = ui.Bar($"{label} Progress", parent,
                 new Vector2(362f, 22f));
@@ -736,6 +758,19 @@ namespace CatsVsDemons.House
             return fallback;
         }
 
+        private void RotateKinPreview()
+        {
+            kinPreviewYaw = Mathf.Repeat(kinPreviewYaw + 180f, 360f);
+            if (kinPreviewRoot == null)
+            {
+                return;
+            }
+
+            kinPreviewRoot.transform.rotation =
+                Quaternion.Euler(0f, kinPreviewYaw, 0f);
+            kinPreviewCamera?.Render();
+        }
+
         private void RebuildKinPreview()
         {
             DestroyKinPreview();
@@ -754,6 +789,8 @@ namespace CatsVsDemons.House
             kinPreviewRoot = new GameObject("House Kin Preview");
             kinPreviewRoot.transform.SetParent(transform, false);
             kinPreviewRoot.transform.position = new Vector3(0f, -200f, 0f);
+            kinPreviewRoot.transform.rotation =
+                Quaternion.Euler(0f, kinPreviewYaw, 0f);
 
             ClonePreviewObject(sourceModel, kinPreviewRoot.transform,
                 "Kin Preview Model");

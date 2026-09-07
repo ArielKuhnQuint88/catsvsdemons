@@ -93,6 +93,8 @@ namespace CatsVsDemons.UI
             RectTransform background = Rect(name, parent);
             background.sizeDelta = size;
             Image bg = background.gameObject.AddComponent<Image>();
+            bg.sprite = RoundedSprite;
+            bg.type = Image.Type.Sliced;
             bg.color = new Color(0.035f, 0.025f, 0.025f, 0.9f);
             RectTransform fill = Rect("Fill", background);
             fill.anchorMin = Vector2.zero;
@@ -100,8 +102,12 @@ namespace CatsVsDemons.UI
             fill.offsetMin = new Vector2(3f, 3f);
             fill.offsetMax = new Vector2(-3f, -3f);
             Image image = fill.gameObject.AddComponent<Image>();
+            // A filled Image needs a source sprite. Without one Unity draws
+            // the fallback texture as a full rectangle, ignoring fillAmount.
+            image.sprite = RoundedSprite;
             image.type = Image.Type.Filled;
             image.fillMethod = Image.FillMethod.Horizontal;
+            image.fillOrigin = (int)Image.OriginHorizontal.Left;
             return image;
         }
 
