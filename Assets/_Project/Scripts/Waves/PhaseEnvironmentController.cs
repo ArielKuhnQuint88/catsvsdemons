@@ -15,9 +15,6 @@ namespace CatsVsDemons.Waves
         private const float EntrancePadding = 3f;
         private const float MaximumEntranceExtension = 48f;
         private const float EntranceBlend = 0.52f;
-        private const float PebbleSpacing = 1.45f;
-        private const float PebbleEdgeOffset = BorderWidth * 0.5f + 0.22f;
-
         private readonly Dictionary<Transform, Vector3[]> basePaths = new();
         private readonly Dictionary<Transform, Vector3> baseBuildSpots = new();
         private readonly Dictionary<Renderer, Color> baseColors = new();
@@ -31,9 +28,12 @@ namespace CatsVsDemons.Waves
         private Transform runtimeGardenRoot;
         private Transform pathBorderRoot;
         private Transform restoredFlowerRoot;
+        private Transform scenarioLandmarkRoot;
         private bool captured;
         private bool gardenLandmarksRestored;
         private int pendingPathRefreshPhase;
+        private int landmarkScenario = -1;
+        private int landmarkSeason = -1;
 
         private void Awake()
         {
@@ -343,137 +343,9 @@ namespace CatsVsDemons.Waves
         private void RebuildPathBorders()
         {
             pathBorderRoot ??= GetRuntimeGardenChild("PathBorders");
+            // Old versions decorated every route with generated pebbles. The
+            // paths now stay visually clean so the scenario landmarks stand out.
             ClearChildren(pathBorderRoot);
-
-            int pathIndex = 0;
-            foreach (KeyValuePair<Transform, Vector3[]> entry in laidOutPaths)
-            {
-                if (entry.Key != null && entry.Value.Length > 1)
-                {
-                    CreatePebbleBorders(pathBorderRoot, entry.Key, entry.Value, pathIndex);
-                }
-                pathIndex++;
-            }
-        }
-
-        private void CreatePebbleBorders(
-            Transform parent,
-            Transform path,
-            Vector3[] points,
-            int pathIndex)
-        {
-            float pathLength = GetPathLength(path, points);
-            if (pathLength < 0.5f)
-            {
-                return;
-            }
-
-            Color[] pebbleColors =
-            {
-                new Color(0.24f, 0.27f, 0.25f),
-                new Color(0.36f, 0.35f, 0.29f),
-                new Color(0.30f, 0.33f, 0.31f)
-            };
-
-            int sampleIndex = 0;
-            for (
-                float distance = 0.55f;
-                distance < pathLength - 0.35f;
-                distance += PebbleSpacing
-            )
-            {
-                SamplePath(path, points, distance, out Vector3 center, out Vector3 tangent);
-                Vector3 side = Vector3.Cross(Vector3.up, tangent).normalized;
-                if (side.sqrMagnitude < 0.0001f)
-                {
-                    continue;
-                }
-
-                for (int edge = -1; edge <= 1; edge += 2)
-                {
-                    float sizeJitter = Hash01(pathIndex, sampleIndex, edge + 5);
-                    float positionJitter = Hash01(pathIndex, sampleIndex, edge + 13);
-                    Vector3 position =
-                        center +
-                        side * edge * (PebbleEdgeOffset + (sizeJitter - 0.5f) * 0.16f) +
-                        tangent * (positionJitter - 0.5f) * 0.22f;
-                    position.y = center.y + 0.15f + sizeJitter * 0.045f;
-
-                    Vector3 scale = new Vector3(
-                        0.38f + sizeJitter * 0.18f,
-                        0.12f + sizeJitter * 0.06f,
-                        0.30f + positionJitter * 0.16f
-                    );
-                    float yaw =
-                        Mathf.Atan2(tangent.x, tangent.z) * Mathf.Rad2Deg +
-                        (positionJitter - 0.5f) * 26f;
-
-                    CreateRuntimeWorldPart(
-                        "PathPebble",
-                        PrimitiveType.Sphere,
-                        parent,
-                        position,
-                        scale,
-                        pebbleColors[(sampleIndex + (edge > 0 ? 1 : 0)) % pebbleColors.Length],
-                        new Vector3(0f, yaw, 0f)
-                    );
-                }
-
-                sampleIndex++;
-            }
-        }
-
-        private static float GetPathLength(Transform path, Vector3[] points)
-        {
-            float length = 0f;
-            for (int index = 0; index < points.Length - 1; index++)
-            {
-                length += Vector3.Distance(
-                    path.TransformPoint(points[index]),
-                    path.TransformPoint(points[index + 1])
-                );
-            }
-            return length;
-        }
-
-        private static void SamplePath(
-            Transform path,
-            Vector3[] points,
-            float distance,
-            out Vector3 position,
-            out Vector3 tangent)
-        {
-            float remaining = distance;
-            for (int index = 0; index < points.Length - 1; index++)
-            {
-                Vector3 start = path.TransformPoint(points[index]);
-                Vector3 end = path.TransformPoint(points[index + 1]);
-                Vector3 segment = end - start;
-                float segmentLength = segment.magnitude;
-                if (segmentLength < 0.0001f)
-                {
-                    continue;
-                }
-
-                if (remaining <= segmentLength)
-                {
-                    tangent = segment / segmentLength;
-                    tangent.y = 0f;
-                    tangent.Normalize();
-                    position = Vector3.Lerp(start, end, remaining / segmentLength);
-                    return;
-                }
-
-                remaining -= segmentLength;
-            }
-
-            position = path.TransformPoint(points[points.Length - 1]);
-            tangent = path.TransformPoint(points[points.Length - 1]) -
-                path.TransformPoint(points[points.Length - 2]);
-            tangent.y = 0f;
-            tangent = tangent.sqrMagnitude < 0.0001f
-                ? Vector3.forward
-                : tangent.normalized;
         }
 
         private void RestoreGardenLandmarks()
@@ -912,14 +784,6 @@ namespace CatsVsDemons.Waves
             return material;
         }
 
-        private static float Hash01(int first, int second, int third)
-        {
-            float value = Mathf.Sin(
-                first * 12.9898f + second * 78.233f + third * 37.719f
-            ) * 43758.5453f;
-            return value - Mathf.Floor(value);
-        }
-
         private static void UpdateLegacySegments(
             Transform path,
             Vector3[] points)
@@ -990,6 +854,7 @@ namespace CatsVsDemons.Waves
             Color petals = GetPetalColor(scenario, season);
             Color water = GetWaterColor(scenario, season);
             Color lantern = GetLanternColor(scenario, season);
+            Color ground = GetGroundColor(scenario, season);
 
             foreach (KeyValuePair<Renderer, Color> entry in baseColors)
             {
@@ -1018,6 +883,10 @@ namespace CatsVsDemons.Waves
                 {
                     color = lantern;
                 }
+                else if (ContainsAny(objectName, "GardenGrass", "RakedSand"))
+                {
+                    color = ground;
+                }
                 else if (scenario == 1 &&
                     ContainsAny(objectName, "BambooLeaves", "BambooStem"))
                 {
@@ -1033,7 +902,8 @@ namespace CatsVsDemons.Waves
             }
 
             ApplyRuntimeFlowerTheme(petals);
-            ApplyAtmosphere(scenario, season);
+            RebuildScenarioLandmarks(scenario, season);
+            ApplyAtmosphere(scenario, season, ground);
         }
 
         private void ApplyRuntimeFlowerTheme(Color petals)
@@ -1059,16 +929,864 @@ namespace CatsVsDemons.Waves
             }
         }
 
+        private void RebuildScenarioLandmarks(int scenario, int season)
+        {
+            scenarioLandmarkRoot ??=
+                GetRuntimeGardenChild("ScenarioLandmarks");
+            if (landmarkScenario == scenario && landmarkSeason == season &&
+                scenarioLandmarkRoot.childCount > 0)
+            {
+                return;
+            }
+
+            ClearChildren(scenarioLandmarkRoot);
+
+            Color foliage = GetFoliageColor(scenario, season);
+            Color petals = GetPetalColor(scenario, season);
+            Color water = GetWaterColor(scenario, season);
+            Color accent = GetAccentColor(scenario, season);
+            Color stone = GetStoneColor(scenario, season);
+
+            switch (scenario)
+            {
+                case 0:
+                    CreateSakuraGardenLandmarks(
+                        scenarioLandmarkRoot,
+                        season,
+                        foliage,
+                        petals,
+                        accent,
+                        stone
+                    );
+                    break;
+                case 1:
+                    CreateBambooGroveLandmarks(
+                        scenarioLandmarkRoot,
+                        season,
+                        foliage,
+                        water,
+                        accent,
+                        stone
+                    );
+                    break;
+                default:
+                    CreateEclipseSanctuaryLandmarks(
+                        scenarioLandmarkRoot,
+                        season,
+                        foliage,
+                        accent,
+                        stone
+                    );
+                    break;
+            }
+
+            landmarkScenario = scenario;
+            landmarkSeason = season;
+        }
+
+        private void CreateSakuraGardenLandmarks(
+            Transform parent,
+            int season,
+            Color foliage,
+            Color petals,
+            Color accent,
+            Color stone)
+        {
+            Color bark = season == 3
+                ? new Color(0.34f, 0.37f, 0.42f)
+                : new Color(0.26f, 0.12f, 0.08f);
+            Vector3[] treePositions =
+            {
+                new Vector3(-27f, 0f, 19f),
+                new Vector3(27f, 0f, 19f),
+                new Vector3(-27f, 0f, -18f),
+                new Vector3(27f, 0f, -18f)
+            };
+
+            for (int index = 0; index < treePositions.Length; index++)
+            {
+                CreateSakuraTree(
+                    parent,
+                    treePositions[index],
+                    0.96f + (index % 2) * 0.12f,
+                    foliage,
+                    bark,
+                    index * 31f
+                );
+            }
+
+            CreateToriiGate(
+                parent,
+                new Vector3(0f, 0f, 27f),
+                0f,
+                1.24f,
+                new Color(0.66f, 0.055f, 0.035f),
+                accent
+            );
+            CreateGardenLantern(parent, new Vector3(-19f, 0f, 4f), stone, accent);
+            CreateGardenLantern(parent, new Vector3(19f, 0f, -4f), stone, accent);
+
+            CreateSeasonalAccents(
+                parent,
+                season,
+                new[]
+                {
+                    new Vector3(-21f, 0f, 13f),
+                    new Vector3(21f, 0f, 13f),
+                    new Vector3(-21f, 0f, -13f),
+                    new Vector3(21f, 0f, -13f)
+                },
+                petals,
+                accent
+            );
+        }
+
+        private void CreateBambooGroveLandmarks(
+            Transform parent,
+            int season,
+            Color foliage,
+            Color water,
+            Color accent,
+            Color stone)
+        {
+            Vector3[] grovePositions =
+            {
+                new Vector3(-28f, 0f, 19f),
+                new Vector3(28f, 0f, 19f),
+                new Vector3(-28f, 0f, -18f),
+                new Vector3(28f, 0f, -18f)
+            };
+
+            for (int index = 0; index < grovePositions.Length; index++)
+            {
+                CreateBambooCluster(
+                    parent,
+                    grovePositions[index],
+                    0.95f + (index % 2) * 0.13f,
+                    foliage,
+                    accent,
+                    index * 41f
+                );
+            }
+
+            CreateStream(parent, new Vector3(23f, 0f, 1.5f), 0f, water, stone);
+            CreateBambooBridge(
+                parent,
+                new Vector3(23f, 0f, 1.5f),
+                0f,
+                new Color(0.46f, 0.22f, 0.06f),
+                accent
+            );
+            CreateStoneGuardian(
+                parent,
+                new Vector3(-24f, 0f, 1.5f),
+                90f,
+                stone,
+                accent
+            );
+
+            CreateSeasonalAccents(
+                parent,
+                season,
+                new[]
+                {
+                    new Vector3(-21f, 0f, 11f),
+                    new Vector3(20f, 0f, 12f),
+                    new Vector3(-20f, 0f, -12f),
+                    new Vector3(20f, 0f, -12f)
+                },
+                foliage,
+                accent
+            );
+        }
+
+        private void CreateEclipseSanctuaryLandmarks(
+            Transform parent,
+            int season,
+            Color foliage,
+            Color accent,
+            Color stone)
+        {
+            Vector3[] obeliskPositions =
+            {
+                new Vector3(-27f, 0f, 18f),
+                new Vector3(27f, 0f, 18f),
+                new Vector3(-27f, 0f, -17f),
+                new Vector3(27f, 0f, -17f)
+            };
+
+            for (int index = 0; index < obeliskPositions.Length; index++)
+            {
+                CreateEclipseObelisk(
+                    parent,
+                    obeliskPositions[index],
+                    index * 37f,
+                    stone,
+                    accent
+                );
+            }
+
+            CreateToriiGate(
+                parent,
+                new Vector3(0f, 0f, 27f),
+                0f,
+                1.32f,
+                new Color(0.08f, 0.035f, 0.14f),
+                accent
+            );
+            CreateRitualCircle(
+                parent,
+                new Vector3(0f, 0f, -24f),
+                stone,
+                accent
+            );
+            CreateEclipseBrazier(parent, new Vector3(-20f, 0f, 3f), stone, accent);
+            CreateEclipseBrazier(parent, new Vector3(20f, 0f, -3f), stone, accent);
+
+            CreateSeasonalAccents(
+                parent,
+                season,
+                new[]
+                {
+                    new Vector3(-20f, 0f, 12f),
+                    new Vector3(20f, 0f, 12f),
+                    new Vector3(-20f, 0f, -12f),
+                    new Vector3(20f, 0f, -12f)
+                },
+                foliage,
+                accent
+            );
+        }
+
+        private void CreateSakuraTree(
+            Transform parent,
+            Vector3 basePosition,
+            float scale,
+            Color foliage,
+            Color bark,
+            float yaw)
+        {
+            float height = 5.2f * scale;
+            CreateRuntimeWorldPart(
+                "SakuraTrunk",
+                PrimitiveType.Cylinder,
+                parent,
+                basePosition + Vector3.up * (height * 0.5f),
+                new Vector3(0.42f * scale, height * 0.5f, 0.42f * scale),
+                bark,
+                new Vector3(0f, yaw, 0f)
+            );
+
+            for (int branch = 0; branch < 3; branch++)
+            {
+                float branchYaw = yaw + branch * 120f + 20f;
+                Vector3 direction = Quaternion.Euler(0f, branchYaw, 0f) *
+                    Vector3.forward;
+                CreateRuntimeWorldPart(
+                    "SakuraBranch",
+                    PrimitiveType.Cube,
+                    parent,
+                    basePosition + Vector3.up * (height * 0.68f) +
+                    direction * (0.92f * scale),
+                    new Vector3(0.22f * scale, 0.18f * scale, 2.15f * scale),
+                    bark,
+                    new Vector3(18f, branchYaw, branch % 2 == 0 ? 16f : -16f)
+                );
+            }
+
+            for (int crown = 0; crown < 5; crown++)
+            {
+                float crownYaw = yaw + crown * 72f;
+                Vector3 direction = Quaternion.Euler(0f, crownYaw, 0f) *
+                    Vector3.forward;
+                float radius = crown == 4 ? 0f : 1.55f * scale;
+                float vertical = height * (0.84f + (crown % 2) * 0.08f);
+                Color crownColor = Color.Lerp(
+                    foliage,
+                    Color.white,
+                    crown == 4 ? 0.08f : 0.18f
+                );
+                CreateRuntimeWorldPart(
+                    "SakuraCrown",
+                    PrimitiveType.Sphere,
+                    parent,
+                    basePosition + Vector3.up * vertical + direction * radius,
+                    new Vector3(2.15f, 1.18f, 1.72f) * scale,
+                    crownColor,
+                    new Vector3(0f, crownYaw, 0f)
+                );
+            }
+        }
+
+        private void CreateToriiGate(
+            Transform parent,
+            Vector3 center,
+            float yaw,
+            float scale,
+            Color gateColor,
+            Color accent)
+        {
+            Vector3 right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                CreateRuntimeWorldPart(
+                    "ToriiPillar",
+                    PrimitiveType.Capsule,
+                    parent,
+                    center + right * side * (2.35f * scale) +
+                    Vector3.up * (2.25f * scale),
+                    new Vector3(0.27f * scale, 2.25f * scale, 0.27f * scale),
+                    gateColor,
+                    new Vector3(0f, yaw, 0f)
+                );
+                CreateRuntimeWorldPart(
+                    "ToriiFoot",
+                    PrimitiveType.Cylinder,
+                    parent,
+                    center + right * side * (2.35f * scale) + Vector3.up * 0.12f,
+                    new Vector3(0.46f * scale, 0.12f, 0.46f * scale),
+                    Color.Lerp(gateColor, Color.black, 0.32f),
+                    Vector3.zero
+                );
+            }
+
+            CreateRuntimeWorldPart(
+                "ToriiMainBeam",
+                PrimitiveType.Cube,
+                parent,
+                center + Vector3.up * (4.48f * scale),
+                new Vector3(5.9f * scale, 0.22f * scale, 0.48f * scale),
+                gateColor,
+                new Vector3(0f, yaw, 0f)
+            );
+            CreateRuntimeWorldPart(
+                "ToriiTopBeam",
+                PrimitiveType.Cube,
+                parent,
+                center + Vector3.up * (4.82f * scale),
+                new Vector3(6.45f * scale, 0.20f * scale, 0.68f * scale),
+                Color.Lerp(gateColor, accent, 0.12f),
+                new Vector3(0f, yaw, 0f)
+            );
+            CreateRuntimeWorldPart(
+                "ToriiEmblem",
+                PrimitiveType.Sphere,
+                parent,
+                center + Vector3.up * (4.48f * scale),
+                new Vector3(0.34f * scale, 0.34f * scale, 0.34f * scale),
+                accent,
+                Vector3.zero
+            );
+        }
+
+        private void CreateGardenLantern(
+            Transform parent,
+            Vector3 position,
+            Color stone,
+            Color light)
+        {
+            CreateRuntimeWorldPart(
+                "LandmarkLanternBase",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 0.16f,
+                new Vector3(0.64f, 0.16f, 0.64f),
+                stone,
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "LandmarkLanternPost",
+                PrimitiveType.Cube,
+                parent,
+                position + Vector3.up * 0.92f,
+                new Vector3(0.22f, 0.76f, 0.22f),
+                Color.Lerp(stone, Color.black, 0.2f),
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "LandmarkLanternRoof",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 1.7f,
+                new Vector3(0.78f, 0.15f, 0.78f),
+                stone,
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "LandmarkLanternGlow",
+                PrimitiveType.Sphere,
+                parent,
+                position + Vector3.up * 1.38f,
+                Vector3.one * 0.24f,
+                light,
+                Vector3.zero
+            );
+        }
+
+        private void CreateBambooCluster(
+            Transform parent,
+            Vector3 center,
+            float scale,
+            Color foliage,
+            Color accent,
+            float yaw)
+        {
+            Color stalk = Color.Lerp(
+                new Color(0.08f, 0.25f, 0.10f),
+                foliage,
+                0.38f
+            );
+            for (int index = 0; index < 5; index++)
+            {
+                float angle = yaw + index * 137.5f;
+                float radius = 0.45f + (index % 3) * 0.42f;
+                Vector3 offset = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward * radius * scale;
+                float height = (4.5f + (index % 3) * 0.72f) * scale;
+                Vector3 basePosition = center + offset;
+
+                CreateRuntimeWorldPart(
+                    "GroveBambooStalk",
+                    PrimitiveType.Capsule,
+                    parent,
+                    basePosition + Vector3.up * (height * 0.5f),
+                    new Vector3(0.20f * scale, height * 0.5f, 0.20f * scale),
+                    stalk,
+                    new Vector3(0f, angle, 0f)
+                );
+                CreateRuntimeWorldPart(
+                    "GroveBambooNode",
+                    PrimitiveType.Cylinder,
+                    parent,
+                    basePosition + Vector3.up * (height * 0.62f),
+                    new Vector3(0.24f * scale, 0.055f * scale, 0.24f * scale),
+                    accent,
+                    Vector3.zero
+                );
+                CreateRuntimeWorldPart(
+                    "GroveBambooLeaves",
+                    PrimitiveType.Sphere,
+                    parent,
+                    basePosition + Vector3.up * (height + 0.12f * scale),
+                    new Vector3(1.12f, 0.34f, 0.86f) * scale,
+                    foliage,
+                    new Vector3(0f, angle, 0f)
+                );
+            }
+        }
+
+        private void CreateStream(
+            Transform parent,
+            Vector3 center,
+            float yaw,
+            Color water,
+            Color stone)
+        {
+            Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            for (int index = -1; index <= 1; index++)
+            {
+                CreateRuntimeWorldPart(
+                    "GroveStream",
+                    PrimitiveType.Cube,
+                    parent,
+                    center + forward * (index * 3.3f) + Vector3.up * 0.03f,
+                    new Vector3(2.4f, 0.06f, 3.65f),
+                    water,
+                    new Vector3(0f, yaw + index * 5f, 0f)
+                );
+            }
+
+            for (int rock = 0; rock < 6; rock++)
+            {
+                float angle = rock * 60f;
+                Vector3 side = Quaternion.Euler(0f, angle, 0f) * Vector3.right;
+                CreateRuntimeWorldPart(
+                    "GroveStreamRock",
+                    PrimitiveType.Sphere,
+                    parent,
+                    center + side * (2.45f + (rock % 2) * 0.42f) +
+                    forward * ((rock - 2.5f) * 0.85f) + Vector3.up * 0.16f,
+                    new Vector3(0.52f, 0.24f, 0.42f),
+                    stone,
+                    new Vector3(0f, angle, 0f)
+                );
+            }
+        }
+
+        private void CreateBambooBridge(
+            Transform parent,
+            Vector3 center,
+            float yaw,
+            Color wood,
+            Color accent)
+        {
+            Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            Vector3 right = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+            for (int plank = -4; plank <= 4; plank++)
+            {
+                float arch = 0.36f +
+                    (1f - Mathf.Abs(plank) / 5f) * 0.34f;
+                CreateRuntimeWorldPart(
+                    "GroveBridgePlank",
+                    PrimitiveType.Cube,
+                    parent,
+                    center + forward * (plank * 0.46f) + Vector3.up * arch,
+                    new Vector3(1.38f, 0.12f, 0.39f),
+                    wood,
+                    new Vector3(plank * -1.2f, yaw, 0f)
+                );
+            }
+
+            for (int sideIndex = -1; sideIndex <= 1; sideIndex += 2)
+            {
+                Vector3 side = right * sideIndex;
+                CreateRuntimeWorldPart(
+                    "GroveBridgeRail",
+                    PrimitiveType.Cube,
+                    parent,
+                    center + side * 0.84f + Vector3.up * 1.16f,
+                    new Vector3(0.08f, 0.08f, 4.62f),
+                    Color.Lerp(wood, accent, 0.16f),
+                    new Vector3(0f, yaw, 0f)
+                );
+
+                for (int post = -2; post <= 2; post += 2)
+                {
+                    CreateRuntimeWorldPart(
+                        "GroveBridgePost",
+                        PrimitiveType.Cylinder,
+                        parent,
+                        center + side * 0.84f + forward * (post * 0.78f) +
+                        Vector3.up * 0.78f,
+                        new Vector3(0.10f, 0.64f, 0.10f),
+                        wood,
+                        Vector3.zero
+                    );
+                }
+            }
+        }
+
+        private void CreateStoneGuardian(
+            Transform parent,
+            Vector3 position,
+            float yaw,
+            Color stone,
+            Color accent)
+        {
+            CreateRuntimeWorldPart(
+                "GroveGuardianBase",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 0.18f,
+                new Vector3(0.82f, 0.18f, 0.82f),
+                stone,
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "GroveGuardianBody",
+                PrimitiveType.Cube,
+                parent,
+                position + Vector3.up * 0.92f,
+                new Vector3(0.76f, 0.72f, 0.52f),
+                stone,
+                new Vector3(0f, yaw, 0f)
+            );
+            CreateRuntimeWorldPart(
+                "GroveGuardianHead",
+                PrimitiveType.Sphere,
+                parent,
+                position + Vector3.up * 1.72f,
+                new Vector3(0.62f, 0.48f, 0.56f),
+                Color.Lerp(stone, Color.white, 0.1f),
+                new Vector3(0f, yaw, 0f)
+            );
+            Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
+            CreateRuntimeWorldPart(
+                "GroveGuardianEye",
+                PrimitiveType.Sphere,
+                parent,
+                position + Vector3.up * 1.76f + forward * 0.46f,
+                Vector3.one * 0.11f,
+                accent,
+                Vector3.zero
+            );
+        }
+
+        private void CreateEclipseObelisk(
+            Transform parent,
+            Vector3 position,
+            float yaw,
+            Color stone,
+            Color accent)
+        {
+            CreateRuntimeWorldPart(
+                "EclipseObeliskBase",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 0.18f,
+                new Vector3(0.96f, 0.18f, 0.96f),
+                Color.Lerp(stone, Color.black, 0.26f),
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "EclipseObelisk",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 2.1f,
+                new Vector3(0.46f, 1.92f, 0.46f),
+                stone,
+                new Vector3(8f, yaw, 7f)
+            );
+            CreateRuntimeWorldPart(
+                "EclipseObeliskCore",
+                PrimitiveType.Sphere,
+                parent,
+                position + Vector3.up * 3.28f,
+                Vector3.one * 0.36f,
+                accent,
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "EclipseObeliskCrown",
+                PrimitiveType.Capsule,
+                parent,
+                position + Vector3.up * 4.28f,
+                new Vector3(0.23f, 0.78f, 0.23f),
+                Color.Lerp(accent, Color.white, 0.16f),
+                new Vector3(18f, yaw, 18f)
+            );
+        }
+
+        private void CreateRitualCircle(
+            Transform parent,
+            Vector3 center,
+            Color stone,
+            Color accent)
+        {
+            CreateRuntimeWorldPart(
+                "EclipseRitualDais",
+                PrimitiveType.Cylinder,
+                parent,
+                center + Vector3.up * 0.11f,
+                new Vector3(3.5f, 0.11f, 3.5f),
+                Color.Lerp(stone, Color.black, 0.38f),
+                Vector3.zero
+            );
+
+            for (int rune = 0; rune < 8; rune++)
+            {
+                float angle = rune * 45f;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward;
+                CreateRuntimeWorldPart(
+                    "EclipseRuneStone",
+                    PrimitiveType.Cube,
+                    parent,
+                    center + direction * 2.62f + Vector3.up * 0.22f,
+                    new Vector3(0.28f, 0.10f, 0.72f),
+                    accent,
+                    new Vector3(0f, angle, 0f)
+                );
+            }
+
+            CreateRuntimeWorldPart(
+                "EclipseRitualCore",
+                PrimitiveType.Sphere,
+                parent,
+                center + Vector3.up * 0.42f,
+                Vector3.one * 0.56f,
+                Color.Lerp(accent, Color.white, 0.1f),
+                Vector3.zero
+            );
+        }
+
+        private void CreateEclipseBrazier(
+            Transform parent,
+            Vector3 position,
+            Color stone,
+            Color flame)
+        {
+            CreateRuntimeWorldPart(
+                "EclipseBrazierBase",
+                PrimitiveType.Cylinder,
+                parent,
+                position + Vector3.up * 0.15f,
+                new Vector3(0.68f, 0.15f, 0.68f),
+                stone,
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "EclipseBrazierBowl",
+                PrimitiveType.Sphere,
+                parent,
+                position + Vector3.up * 0.56f,
+                new Vector3(0.48f, 0.20f, 0.48f),
+                Color.Lerp(stone, Color.black, 0.38f),
+                Vector3.zero
+            );
+            CreateRuntimeWorldPart(
+                "EclipseBrazierFlame",
+                PrimitiveType.Capsule,
+                parent,
+                position + Vector3.up * 1.05f,
+                new Vector3(0.20f, 0.46f, 0.20f),
+                flame,
+                new Vector3(0f, 0f, 15f)
+            );
+        }
+
+        private void CreateSeasonalAccents(
+            Transform parent,
+            int season,
+            Vector3[] anchors,
+            Color mainColor,
+            Color accent)
+        {
+            for (int index = 0; index < anchors.Length; index++)
+            {
+                switch (season)
+                {
+                    case 0:
+                        CreateBloomCluster(parent, anchors[index], mainColor, accent);
+                        break;
+                    case 1:
+                        CreateFireflySwarm(parent, anchors[index], accent, index);
+                        break;
+                    case 2:
+                        CreateLeafPile(parent, anchors[index], mainColor, accent);
+                        break;
+                    default:
+                        CreateFrostCluster(parent, anchors[index], mainColor, accent);
+                        break;
+                }
+            }
+        }
+
+        private void CreateBloomCluster(
+            Transform parent,
+            Vector3 center,
+            Color petals,
+            Color accent)
+        {
+            CreateRuntimeWorldPart(
+                "SeasonBloomStem",
+                PrimitiveType.Cylinder,
+                parent,
+                center + Vector3.up * 0.24f,
+                new Vector3(0.07f, 0.24f, 0.07f),
+                new Color(0.12f, 0.42f, 0.16f),
+                Vector3.zero
+            );
+            for (int petal = 0; petal < 4; petal++)
+            {
+                float angle = petal * 90f;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward;
+                CreateRuntimeWorldPart(
+                    "SeasonBloom",
+                    PrimitiveType.Sphere,
+                    parent,
+                    center + Vector3.up * 0.55f + direction * 0.22f,
+                    new Vector3(0.27f, 0.10f, 0.20f),
+                    petals,
+                    new Vector3(0f, angle, 0f)
+                );
+            }
+            CreateRuntimeWorldPart(
+                "SeasonBloomCenter",
+                PrimitiveType.Sphere,
+                parent,
+                center + Vector3.up * 0.56f,
+                Vector3.one * 0.12f,
+                accent,
+                Vector3.zero
+            );
+        }
+
+        private void CreateFireflySwarm(
+            Transform parent,
+            Vector3 center,
+            Color glow,
+            int seed)
+        {
+            for (int firefly = 0; firefly < 4; firefly++)
+            {
+                float angle = seed * 38f + firefly * 91f;
+                float radius = 0.32f + firefly * 0.18f;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward;
+                CreateRuntimeWorldPart(
+                    "SummerFirefly",
+                    PrimitiveType.Sphere,
+                    parent,
+                    center + direction * radius +
+                    Vector3.up * (0.42f + (firefly % 2) * 0.34f),
+                    Vector3.one * 0.11f,
+                    Color.Lerp(glow, Color.white, 0.3f),
+                    Vector3.zero
+                );
+            }
+        }
+
+        private void CreateLeafPile(
+            Transform parent,
+            Vector3 center,
+            Color leaves,
+            Color accent)
+        {
+            for (int leaf = 0; leaf < 5; leaf++)
+            {
+                float angle = leaf * 72f + 18f;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward;
+                CreateRuntimeWorldPart(
+                    "AutumnLeafPile",
+                    PrimitiveType.Sphere,
+                    parent,
+                    center + direction * (0.18f + leaf * 0.09f) +
+                    Vector3.up * (0.08f + leaf * 0.016f),
+                    new Vector3(0.38f, 0.055f, 0.28f),
+                    leaf % 2 == 0 ? leaves : accent,
+                    new Vector3(0f, angle, 0f)
+                );
+            }
+        }
+
+        private void CreateFrostCluster(
+            Transform parent,
+            Vector3 center,
+            Color frost,
+            Color accent)
+        {
+            for (int shard = 0; shard < 3; shard++)
+            {
+                float angle = shard * 120f + 24f;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) *
+                    Vector3.forward;
+                float height = 0.58f + shard * 0.18f;
+                CreateRuntimeWorldPart(
+                    "WinterFrostCrystal",
+                    PrimitiveType.Capsule,
+                    parent,
+                    center + direction * (0.28f + shard * 0.16f) +
+                    Vector3.up * (height * 0.5f),
+                    new Vector3(0.12f, height * 0.5f, 0.12f),
+                    Color.Lerp(frost, accent, 0.38f),
+                    new Vector3(8f, angle, 12f)
+                );
+            }
+        }
+
         private static Color GetFoliageColor(int scenario, int season)
         {
             if (scenario == 0)
             {
                 return season switch
                 {
-                    0 => new Color(1f, 0.42f, 0.66f),
-                    1 => new Color(0.20f, 0.65f, 0.28f),
-                    2 => new Color(0.92f, 0.25f, 0.035f),
-                    _ => new Color(0.84f, 0.89f, 0.94f)
+                    0 => new Color(1f, 0.45f, 0.70f),
+                    1 => new Color(0.13f, 0.62f, 0.24f),
+                    2 => new Color(0.78f, 0.17f, 0.045f),
+                    _ => new Color(0.74f, 0.84f, 0.92f)
                 };
             }
 
@@ -1076,98 +1794,259 @@ namespace CatsVsDemons.Waves
             {
                 return season switch
                 {
-                    0 => new Color(0.20f, 0.72f, 0.40f),
-                    1 => new Color(0.08f, 0.48f, 0.18f),
-                    2 => new Color(0.72f, 0.48f, 0.08f),
-                    _ => new Color(0.36f, 0.68f, 0.62f)
+                    0 => new Color(0.30f, 0.76f, 0.36f),
+                    1 => new Color(0.035f, 0.38f, 0.14f),
+                    2 => new Color(0.74f, 0.42f, 0.06f),
+                    _ => new Color(0.22f, 0.48f, 0.46f)
                 };
             }
 
             return season switch
             {
-                0 => new Color(0.62f, 0.20f, 0.86f),
-                1 => new Color(0.16f, 0.24f, 0.58f),
-                2 => new Color(0.88f, 0.16f, 0.35f),
-                _ => new Color(0.58f, 0.70f, 0.96f)
+                0 => new Color(0.58f, 0.20f, 0.86f),
+                1 => new Color(0.08f, 0.34f, 0.74f),
+                2 => new Color(0.86f, 0.10f, 0.16f),
+                _ => new Color(0.50f, 0.70f, 0.95f)
             };
         }
 
         private static Color GetPetalColor(int scenario, int season)
         {
-            Color foliage = GetFoliageColor(scenario, season);
-            float lightness = scenario == 2 ? 0.36f : 0.52f;
-            return Color.Lerp(foliage, Color.white, lightness);
+            if (scenario == 0)
+            {
+                return season switch
+                {
+                    0 => new Color(1f, 0.66f, 0.82f),
+                    1 => new Color(1f, 0.88f, 0.42f),
+                    2 => new Color(0.98f, 0.43f, 0.08f),
+                    _ => new Color(0.90f, 0.96f, 1f)
+                };
+            }
+
+            if (scenario == 1)
+            {
+                return season switch
+                {
+                    0 => new Color(0.80f, 1f, 0.52f),
+                    1 => new Color(0.42f, 0.88f, 0.46f),
+                    2 => new Color(1f, 0.66f, 0.12f),
+                    _ => new Color(0.72f, 0.90f, 0.92f)
+                };
+            }
+
+            return season switch
+            {
+                0 => new Color(0.86f, 0.60f, 1f),
+                1 => new Color(0.38f, 0.82f, 1f),
+                2 => new Color(1f, 0.38f, 0.30f),
+                _ => new Color(0.82f, 0.94f, 1f)
+            };
         }
 
         private static Color GetWaterColor(int scenario, int season)
         {
             if (scenario == 0)
             {
-                return season == 3
-                    ? new Color(0.30f, 0.62f, 0.76f)
-                    : new Color(0.06f, 0.46f, 0.62f);
+                return season switch
+                {
+                    0 => new Color(0.08f, 0.50f, 0.68f),
+                    1 => new Color(0.04f, 0.60f, 0.64f),
+                    2 => new Color(0.08f, 0.30f, 0.52f),
+                    _ => new Color(0.34f, 0.70f, 0.84f)
+                };
             }
 
             if (scenario == 1)
             {
-                return season == 2
-                    ? new Color(0.08f, 0.38f, 0.42f)
-                    : new Color(0.04f, 0.56f, 0.52f);
+                return season switch
+                {
+                    0 => new Color(0.08f, 0.62f, 0.52f),
+                    1 => new Color(0.02f, 0.42f, 0.34f),
+                    2 => new Color(0.10f, 0.30f, 0.32f),
+                    _ => new Color(0.28f, 0.56f, 0.64f)
+                };
             }
 
-            return season == 3
-                ? new Color(0.36f, 0.58f, 0.86f)
-                : new Color(0.10f, 0.16f, 0.45f);
+            return season switch
+            {
+                0 => new Color(0.26f, 0.14f, 0.58f),
+                1 => new Color(0.08f, 0.26f, 0.62f),
+                2 => new Color(0.34f, 0.05f, 0.16f),
+                _ => new Color(0.34f, 0.62f, 0.92f)
+            };
         }
 
         private static Color GetLanternColor(int scenario, int season)
         {
-            if (scenario == 2)
+            if (scenario == 0)
             {
-                return season == 3
-                    ? new Color(0.68f, 0.78f, 1f)
-                    : new Color(0.82f, 0.30f, 1f);
+                return season switch
+                {
+                    0 => new Color(1f, 0.58f, 0.76f),
+                    1 => new Color(1f, 0.84f, 0.22f),
+                    2 => new Color(1f, 0.34f, 0.08f),
+                    _ => new Color(0.74f, 0.88f, 1f)
+                };
             }
 
-            return season == 2
-                ? new Color(1f, 0.48f, 0.10f)
-                : new Color(1f, 0.72f, 0.18f);
+            if (scenario == 1)
+            {
+                return season switch
+                {
+                    0 => new Color(0.78f, 1f, 0.32f),
+                    1 => new Color(0.34f, 1f, 0.56f),
+                    2 => new Color(1f, 0.58f, 0.08f),
+                    _ => new Color(0.58f, 0.90f, 1f)
+                };
+            }
+
+            return season switch
+            {
+                0 => new Color(0.90f, 0.38f, 1f),
+                1 => new Color(0.22f, 0.78f, 1f),
+                2 => new Color(1f, 0.18f, 0.16f),
+                _ => new Color(0.72f, 0.86f, 1f)
+            };
         }
 
         private static Color GetSkyColor(int scenario, int season)
         {
             if (scenario == 0)
             {
-                return season == 3
-                    ? new Color(0.38f, 0.55f, 0.72f)
-                    : new Color(0.28f, 0.48f, 0.68f);
+                return season switch
+                {
+                    0 => new Color(0.42f, 0.62f, 0.82f),
+                    1 => new Color(0.22f, 0.62f, 0.78f),
+                    2 => new Color(0.55f, 0.28f, 0.20f),
+                    _ => new Color(0.46f, 0.62f, 0.78f)
+                };
             }
 
             if (scenario == 1)
             {
-                return season == 2
-                    ? new Color(0.34f, 0.31f, 0.22f)
-                    : new Color(0.12f, 0.38f, 0.34f);
+                return season switch
+                {
+                    0 => new Color(0.22f, 0.54f, 0.40f),
+                    1 => new Color(0.04f, 0.30f, 0.22f),
+                    2 => new Color(0.42f, 0.28f, 0.12f),
+                    _ => new Color(0.24f, 0.42f, 0.48f)
+                };
             }
 
-            return season == 3
-                ? new Color(0.18f, 0.24f, 0.43f)
-                : new Color(0.10f, 0.06f, 0.24f);
+            return season switch
+            {
+                0 => new Color(0.20f, 0.06f, 0.36f),
+                1 => new Color(0.04f, 0.14f, 0.36f),
+                2 => new Color(0.30f, 0.035f, 0.09f),
+                _ => new Color(0.12f, 0.22f, 0.42f)
+            };
         }
 
-        private static void ApplyAtmosphere(int scenario, int season)
+        private static Color GetGroundColor(int scenario, int season)
         {
+            if (scenario == 0)
+            {
+                return season switch
+                {
+                    0 => new Color(0.16f, 0.44f, 0.20f),
+                    1 => new Color(0.10f, 0.38f, 0.15f),
+                    2 => new Color(0.34f, 0.22f, 0.09f),
+                    _ => new Color(0.48f, 0.56f, 0.60f)
+                };
+            }
+
+            if (scenario == 1)
+            {
+                return season switch
+                {
+                    0 => new Color(0.08f, 0.34f, 0.16f),
+                    1 => new Color(0.025f, 0.24f, 0.09f),
+                    2 => new Color(0.25f, 0.18f, 0.055f),
+                    _ => new Color(0.20f, 0.34f, 0.38f)
+                };
+            }
+
+            return season switch
+            {
+                0 => new Color(0.15f, 0.06f, 0.24f),
+                1 => new Color(0.035f, 0.10f, 0.25f),
+                2 => new Color(0.24f, 0.035f, 0.055f),
+                _ => new Color(0.20f, 0.30f, 0.42f)
+            };
+        }
+
+        private static Color GetAccentColor(int scenario, int season)
+        {
+            if (scenario == 0)
+            {
+                return season switch
+                {
+                    0 => new Color(1f, 0.80f, 0.32f),
+                    1 => new Color(1f, 0.94f, 0.42f),
+                    2 => new Color(1f, 0.36f, 0.08f),
+                    _ => new Color(0.78f, 0.92f, 1f)
+                };
+            }
+
+            if (scenario == 1)
+            {
+                return season switch
+                {
+                    0 => new Color(0.72f, 1f, 0.34f),
+                    1 => new Color(0.22f, 0.92f, 0.50f),
+                    2 => new Color(1f, 0.62f, 0.10f),
+                    _ => new Color(0.64f, 0.88f, 1f)
+                };
+            }
+
+            return season switch
+            {
+                0 => new Color(0.90f, 0.36f, 1f),
+                1 => new Color(0.18f, 0.86f, 1f),
+                2 => new Color(1f, 0.22f, 0.12f),
+                _ => new Color(0.80f, 0.92f, 1f)
+            };
+        }
+
+        private static Color GetStoneColor(int scenario, int season)
+        {
+            Color baseStone = scenario switch
+            {
+                0 => new Color(0.31f, 0.34f, 0.31f),
+                1 => new Color(0.22f, 0.32f, 0.26f),
+                _ => new Color(0.20f, 0.15f, 0.31f)
+            };
+            return season == 3
+                ? Color.Lerp(baseStone, new Color(0.74f, 0.84f, 0.92f), 0.42f)
+                : baseStone;
+        }
+
+        private static void ApplyAtmosphere(
+            int scenario,
+            int season,
+            Color ground)
+        {
+            Color sky = GetSkyColor(scenario, season);
             Camera gameCamera = Camera.main;
             if (gameCamera != null)
             {
-                gameCamera.backgroundColor = GetSkyColor(scenario, season);
+                gameCamera.backgroundColor = sky;
             }
 
-            RenderSettings.fog = scenario == 2 && season >= 2;
+            GameObject horizon = GameObject.Find("Runtime Horizon Ground");
+            Renderer horizonRenderer = horizon != null
+                ? horizon.GetComponent<Renderer>()
+                : null;
+            if (horizonRenderer != null)
+            {
+                horizonRenderer.material.color = Color.Lerp(ground, sky, 0.12f);
+            }
+
+            RenderSettings.fog = scenario == 2 || season == 3;
             if (RenderSettings.fog)
             {
-                RenderSettings.fogColor = GetSkyColor(scenario, season);
-                RenderSettings.fogDensity = 0.0075f;
+                RenderSettings.fogColor = Color.Lerp(sky, ground, 0.45f);
+                RenderSettings.fogDensity = scenario == 2 ? 0.009f : 0.0035f;
             }
         }
 
