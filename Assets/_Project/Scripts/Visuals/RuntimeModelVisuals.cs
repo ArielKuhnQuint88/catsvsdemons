@@ -104,6 +104,8 @@ namespace CatsVsDemons.Visuals
             }
 
             visual.AddComponent<ProceduralModelAnimator>();
+            if (UsesPartPalette(resourcePath))
+                visual.AddComponent<AutomaticCharacterRig>();
             return true;
         }
 

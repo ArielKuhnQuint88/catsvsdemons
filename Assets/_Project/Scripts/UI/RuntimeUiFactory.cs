@@ -11,6 +11,7 @@ namespace CatsVsDemons.UI
             "LegacyRuntime.ttf");
         private static Sprite rounded;
         private static Sprite circle;
+        private static Sprite ring;
 
         public static readonly Color Ink = new(0.075f, 0.03f, 0.025f, 0.97f);
         public static readonly Color Gold = new(0.95f, 0.61f, 0.12f, 1f);
@@ -69,6 +70,7 @@ namespace CatsVsDemons.UI
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 13;
             text.resizeTextMaxSize = size;
+            text.raycastTarget = false;
             return text;
         }
 
@@ -85,6 +87,7 @@ namespace CatsVsDemons.UI
             Text label = Label("Label", value, rect, 23, Color.white,
                 size - new Vector2(12f, 12f), TextAnchor.MiddleCenter);
             label.raycastTarget = false;
+            rect.gameObject.AddComponent<HudMotion>();
             return button;
         }
 
@@ -96,6 +99,7 @@ namespace CatsVsDemons.UI
             bg.sprite = RoundedSprite;
             bg.type = Image.Type.Sliced;
             bg.color = new Color(0.035f, 0.025f, 0.025f, 0.9f);
+            bg.raycastTarget = false;
             RectTransform fill = Rect("Fill", background);
             fill.anchorMin = Vector2.zero;
             fill.anchorMax = Vector2.one;
@@ -108,6 +112,7 @@ namespace CatsVsDemons.UI
             image.type = Image.Type.Filled;
             image.fillMethod = Image.FillMethod.Horizontal;
             image.fillOrigin = (int)Image.OriginHorizontal.Left;
+            image.raycastTarget = false;
             return image;
         }
 
@@ -180,6 +185,35 @@ namespace CatsVsDemons.UI
                 circle = Sprite.Create(texture, new Rect(0, 0, size, size),
                     new Vector2(0.5f, 0.5f), 100f);
                 return circle;
+            }
+        }
+
+        public static Sprite RingSprite
+        {
+            get
+            {
+                if (ring != null) return ring;
+                const int size = 128;
+                Texture2D texture = new(size, size, TextureFormat.RGBA32, false)
+                {
+                    name = "Runtime HUD Energy Ring",
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+                Color32[] pixels = new Color32[size * size];
+                for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float radius = new Vector2(x - 63.5f, y - 63.5f).magnitude;
+                    float alpha = Mathf.Clamp01(62f - radius) *
+                        Mathf.Clamp01(radius - 55f);
+                    pixels[y * size + x] = new Color32(255, 255, 255,
+                        (byte)Mathf.RoundToInt(alpha * 255f));
+                }
+                texture.SetPixels32(pixels);
+                texture.Apply(false, true);
+                ring = Sprite.Create(texture, new Rect(0, 0, size, size),
+                    new Vector2(0.5f, 0.5f), 100f);
+                return ring;
             }
         }
     }

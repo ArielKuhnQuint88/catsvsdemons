@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatsVsDemons.CameraSystem;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 
 namespace CatsVsDemons.Waves
@@ -904,6 +905,9 @@ namespace CatsVsDemons.Waves
             ApplyRuntimeFlowerTheme(petals);
             RebuildScenarioLandmarks(scenario, season);
             ApplyAtmosphere(scenario, season, ground);
+            GardenVisualPolish polish = GetComponent<GardenVisualPolish>();
+            if (polish == null) polish = gameObject.AddComponent<GardenVisualPolish>();
+            polish.Apply(scenario, season, ground);
         }
 
         private void ApplyRuntimeFlowerTheme(Color petals)

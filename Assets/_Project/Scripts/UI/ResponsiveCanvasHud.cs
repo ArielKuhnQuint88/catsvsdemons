@@ -5,6 +5,7 @@ using CatsVsDemons.House;
 using CatsVsDemons.Player;
 using CatsVsDemons.Waves;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -26,6 +27,27 @@ namespace CatsVsDemons.UI
         private Image kinBar;
         private Image energyBar;
         private Text stats;
+        private Text coinsLabel;
+        private Text coinDelta;
+        private Text phaseBanner;
+        private CanvasGroup phaseBannerGroup;
+        private HudBarAnimator houseBarAnimation;
+        private HudBarAnimator kinBarAnimation;
+        private HudBarAnimator energyBarAnimation;
+        private HudMotion coinMotion;
+        private HudMotion countdownMotion;
+        private HudMotion specialMotion;
+        private Image energyRing;
+        private float coinDeltaTime;
+        private float bannerTime;
+        private float nextSystemSearch;
+        private int displayedCoins = int.MinValue;
+        private int displayedPhase = -1;
+        private int displayedWave = -1;
+        private int displayedEnemies = -1;
+        private int displayedEnergy = -1;
+        private int displayedPreparation = -1;
+        private bool displayedReady;
         private Text countdown;
         private Text specialLabel;
         private Text pauseLabel;
@@ -38,6 +60,7 @@ namespace CatsVsDemons.UI
         private Button specialButton;
         private Button pauseButton;
         private readonly Button[] defenseButtons = new Button[3];
+        private readonly HudMotion[] defenseMotions = new HudMotion[3];
         private readonly DefenseType[] defenseTypes =
         {
             DefenseType.Portal, DefenseType.Bonsai, DefenseType.Lantern
@@ -56,6 +79,7 @@ namespace CatsVsDemons.UI
         private bool preparing;
         private bool paused;
         private bool ended;
+        private readonly System.Collections.Generic.List<Object> ownedArtwork = new();
 
         private void Awake()
         {
@@ -68,6 +92,12 @@ namespace CatsVsDemons.UI
             BuildTopPanel();
             BuildActions();
             BuildOverlays();
+            houseBarAnimation = houseBar.gameObject.AddComponent<HudBarAnimator>();
+            houseBarAnimation.Initialize(houseBar, true);
+            kinBarAnimation = kinBar.gameObject.AddComponent<HudBarAnimator>();
+            kinBarAnimation.Initialize(kinBar, true);
+            energyBarAnimation = energyBar.gameObject.AddComponent<HudBarAnimator>();
+            energyBarAnimation.Initialize(energyBar, false);
             ApplySafeArea();
         }
 
@@ -82,23 +112,38 @@ namespace CatsVsDemons.UI
         private void Update()
         {
             if (lastSafeArea != Screen.safeArea) ApplySafeArea();
-            if (kin == null || energy == null) FindSystems();
+            if ((kin == null || energy == null || house == null ||
+                wallet == null || waves == null) && Time.unscaledTime >= nextSystemSearch)
+            {
+                nextSystemSearch = Time.unscaledTime + 0.5f;
+                Unsubscribe();
+                FindSystems();
+                Subscribe();
+            }
+            if (rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null &&
+                Keyboard.current.escapeKey.wasPressedThisFrame)
+                TogglePause();
             Refresh();
+            AnimateAnnouncements();
         }
 
         private void OnDestroy()
         {
             Unsubscribe();
             ClearResultArtwork();
+            foreach (Object artwork in ownedArtwork)
+                if (artwork != null) Destroy(artwork);
             Time.timeScale = 1f;
         }
 
         public void ShowTutorial(string title, string body, string action)
         {
+            bool changed = tutorialTitle.text != title;
             tutorialPanel.SetActive(true);
             tutorialTitle.text = title;
             tutorialBody.text = body;
             tutorialAction.text = action;
+            if (changed) tutorialPanel.GetComponent<HudReveal>().Replay();
         }
 
         public void HideTutorial() => tutorialPanel.SetActive(false);
@@ -132,14 +177,14 @@ namespace CatsVsDemons.UI
 
         private void FindSystems()
         {
-            wallet ??= Object.FindFirstObjectByType<Wallet>();
-            house ??= Object.FindFirstObjectByType<HouseHealth>();
-            kin ??= Object.FindFirstObjectByType<KinHealth>();
-            waves ??= Object.FindFirstObjectByType<EnemyWaveSpawner>();
+            if (wallet == null) wallet = Object.FindFirstObjectByType<Wallet>();
+            if (house == null) house = Object.FindFirstObjectByType<HouseHealth>();
+            if (kin == null) kin = Object.FindFirstObjectByType<KinHealth>();
+            if (waves == null) waves = Object.FindFirstObjectByType<EnemyWaveSpawner>();
             if (kin != null)
             {
-                energy ??= kin.GetComponent<KinEnergy>();
-                special ??= kin.GetComponent<KinSpecialAttack>();
+                if (energy == null) energy = kin.GetComponent<KinEnergy>();
+                if (special == null) special = kin.GetComponent<KinSpecialAttack>();
             }
         }
 
@@ -148,7 +193,7 @@ namespace CatsVsDemons.UI
             if (house != null) house.Destroyed += OnHouseDestroyed;
             if (kin != null) kin.Downed += OnKinDown;
             if (waves == null) return;
-            phase = waves.CurrentPhase;
+            phase = Mathf.Max(waves.StartingPhase, waves.CurrentPhase);
             totalPhases = waves.TotalPhases;
             wave = waves.CurrentWave;
             totalWaves = waves.TotalWaves;
@@ -202,12 +247,23 @@ namespace CatsVsDemons.UI
                 new Color(0.12f, 0.72f, 0.25f), 16);
             AddBarRow(panel, "ENERGIA", -86, out energyBar,
                 RuntimeUiFactory.Gold, 13);
-            stats = ui.Label("Stats", "", panel, 20, RuntimeUiFactory.Ink,
-                new Vector2(720, 38), TextAnchor.MiddleCenter);
+            panel.GetComponent<Image>().raycastTarget = false;
+            coinsLabel = ui.Label("Coins", "MOEDAS  0", panel, 20,
+                RuntimeUiFactory.Ink, new Vector2(180, 38), TextAnchor.MiddleLeft);
+            RectTransform coinsRect = (RectTransform)coinsLabel.transform;
+            Position(coinsRect, new Vector2(0, 1), new Vector2(0, 1),
+                new Vector2(22, -116));
+            coinMotion = coinsRect.gameObject.AddComponent<HudMotion>();
+            coinDelta = ui.Label("Coin Reward", "", coinsRect, 18,
+                new Color(0.25f, 0.45f, 0.08f), new Vector2(180, 26),
+                TextAnchor.MiddleLeft);
+            coinDelta.gameObject.SetActive(false);
+            stats = ui.Label("Stats", "", panel, 18, RuntimeUiFactory.Ink,
+                new Vector2(520, 38), TextAnchor.MiddleCenter);
             RectTransform statsRect = (RectTransform)stats.transform;
             statsRect.anchorMin = statsRect.anchorMax = new Vector2(0.5f, 1f);
             statsRect.pivot = new Vector2(0.5f, 1f);
-            statsRect.anchoredPosition = new Vector2(0, -116);
+            statsRect.anchoredPosition = new Vector2(90, -116);
 
             string[] labels = { "PORTAL  10", "BONSAI  15", "LANTERNA  10" };
             string[] artwork = { "TowerPortal", "TowerBonsai", "TowerLantern" };
@@ -231,6 +287,7 @@ namespace CatsVsDemons.UI
                 new Color(color.r, color.g, color.b, 0.92f),
                 new Vector2(206, 116));
             defenseButtons[index] = button;
+            defenseMotions[index] = button.GetComponent<HudMotion>();
             RectTransform buttonRect = (RectTransform)button.transform;
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(0.5f, 1f);
             buttonRect.pivot = new Vector2(0.5f, 1f);
@@ -273,6 +330,8 @@ namespace CatsVsDemons.UI
                     new Vector2(0.5f, 0.5f), 100f);
                 icon.preserveAspect = false;
                 icon.raycastTarget = false;
+                ownedArtwork.Add(icon.sprite);
+                if (texture.name == $"{artwork}_Hud") ownedArtwork.Add(texture);
             }
 
             button.onClick.AddListener(() =>
@@ -309,7 +368,16 @@ namespace CatsVsDemons.UI
                 new Color(0.02f, 0.012f, 0.01f, 0.78f));
             CreateCircleLayer("Special Gold Rim", safeArea, specialAnchor,
                 specialPivot, specialPosition, new Vector2(194, 194),
+                new Color(0.24f, 0.14f, 0.06f));
+            energyRing = CreateCircleLayer("Energy Charge Ring", safeArea,
+                specialAnchor, specialPivot, specialPosition, new Vector2(198, 198),
                 RuntimeUiFactory.Gold);
+            energyRing.sprite = RuntimeUiFactory.RingSprite;
+            energyRing.type = Image.Type.Filled;
+            energyRing.fillMethod = Image.FillMethod.Radial360;
+            energyRing.fillOrigin = (int)Image.Origin360.Top;
+            energyRing.fillClockwise = true;
+            energyRing.fillAmount = 0f;
 
             specialButton = ui.Button("Special", "GOLPE\n0%", safeArea,
                 RuntimeUiFactory.Paper, new Vector2(174, 174));
@@ -328,6 +396,7 @@ namespace CatsVsDemons.UI
             specialLabel.color = RuntimeUiFactory.Ink;
             specialLabel.fontSize = 22;
             specialLabel.lineSpacing = 0.82f;
+            specialMotion = specialButton.GetComponent<HudMotion>();
             specialButton.onClick.AddListener(() => special?.TryUse());
 
             Vector2 pauseAnchor = new Vector2(0.89f, 1f);
@@ -380,6 +449,22 @@ namespace CatsVsDemons.UI
                 RuntimeUiFactory.Gold, new Vector2(720, 200),
                 TextAnchor.MiddleCenter);
             countdown.gameObject.SetActive(false);
+            countdown.raycastTarget = false;
+            countdownMotion = countdown.gameObject.AddComponent<HudMotion>();
+            countdown.gameObject.AddComponent<Shadow>().effectColor =
+                new Color(0.06f, 0.025f, 0.015f, 0.95f);
+
+            RectTransform banner = ui.Panel("Phase Banner", safeArea,
+                new Color(0.06f, 0.025f, 0.015f, 0.92f), new Vector2(860, 68));
+            Position(banner, new Vector2(0.5f, 1), new Vector2(0.5f, 1),
+                new Vector2(0, -346));
+            banner.GetComponent<Image>().raycastTarget = false;
+            phaseBannerGroup = banner.gameObject.AddComponent<CanvasGroup>();
+            phaseBannerGroup.blocksRaycasts = false;
+            phaseBannerGroup.interactable = false;
+            phaseBannerGroup.alpha = 0f;
+            phaseBanner = ui.Label("Phase Name", "", banner, 27,
+                RuntimeUiFactory.Gold, new Vector2(820, 54), TextAnchor.MiddleCenter);
 
             pausePanel = FullScreenPanel("Pause Panel");
             Text pausedTitle = ui.Label("Pause Title", "PAUSADO",
@@ -434,6 +519,7 @@ namespace CatsVsDemons.UI
             tutorial.pivot = new Vector2(0.5f, 0);
             tutorial.anchoredPosition = new Vector2(-210, 190);
             tutorialPanel = tutorial.gameObject;
+            tutorial.gameObject.AddComponent<HudReveal>();
             tutorialTitle = ui.Label("Tutorial Title", "", tutorial, 25,
                 RuntimeUiFactory.Gold, new Vector2(776, 36),
                 TextAnchor.MiddleLeft);
@@ -458,35 +544,107 @@ namespace CatsVsDemons.UI
             panel.anchorMin = Vector2.zero;
             panel.anchorMax = Vector2.one;
             panel.offsetMin = panel.offsetMax = Vector2.zero;
+            panel.gameObject.AddComponent<HudReveal>();
             return panel.gameObject;
         }
 
         private void Refresh()
         {
-            SetFill(houseBar, house != null ? house.CurrentHealth : 0,
-                house != null ? house.MaxHealth : 1);
-            SetFill(kinBar, kin != null ? kin.CurrentHealth : 0,
-                kin != null ? kin.MaxHealth : 1);
-            SetFill(energyBar, energy != null ? energy.Current : 0,
-                energy != null ? energy.Maximum : 100);
-            stats.text = $"MOEDAS  {(wallet != null ? wallet.Coins : 0)}" +
-                $"     FASE  {phase}/{totalPhases}     ONDA  {wave}/{totalWaves}" +
-                $"     DEMÔNIOS  {EnemyRegistry.Count}";
+            if (house != null) houseBarAnimation.SetValue(house.CurrentHealth, house.MaxHealth);
+            if (kin != null) kinBarAnimation.SetValue(kin.CurrentHealth, kin.MaxHealth);
+            if (energy != null) energyBarAnimation.SetValue(energy.Current, energy.Maximum);
+            int coins = wallet != null ? wallet.Coins : 0;
+            if (displayedCoins != coins)
+            {
+                if (displayedCoins != int.MinValue)
+                {
+                    int difference = coins - displayedCoins;
+                    coinDelta.text = difference > 0 ? $"+{difference}" : difference.ToString();
+                    coinDelta.color = difference > 0 ? new Color(0.25f, 0.45f, 0.08f)
+                        : new Color(0.65f, 0.08f, 0.025f);
+                    coinDeltaTime = 0.9f;
+                    coinDelta.gameObject.SetActive(true);
+                    coinMotion.Punch();
+                }
+                coinsLabel.text = $"MOEDAS  {coins}";
+                displayedCoins = coins;
+            }
+            int enemies = EnemyRegistry.Count;
+            if (displayedPhase != phase || displayedWave != wave || displayedEnemies != enemies)
+            {
+                stats.text = $"FASE  {phase}/{totalPhases}     ONDA  {wave}/{totalWaves}" +
+                    $"     DEMÔNIOS  {enemies}";
+                displayedPhase = phase;
+                displayedWave = wave;
+                displayedEnemies = enemies;
+            }
             int energyPercent = energy != null
                 ? Mathf.RoundToInt(energy.Normalized * 100f) : 0;
-            specialLabel.text = energy != null && energy.IsFull
-                ? "GOLPE\nPRONTO!" : $"GOLPE\n{energyPercent}%";
-            specialButton.interactable = energy != null && energy.IsFull && !ended;
+            bool ready = energy != null && energy.IsFull;
+            if (displayedEnergy != energyPercent || displayedReady != ready)
+            {
+                specialLabel.text = ready ? "GOLPE\nPRONTO!" : $"GOLPE\n{energyPercent}%";
+                if (ready && !displayedReady) specialMotion.Punch();
+                displayedEnergy = energyPercent;
+                displayedReady = ready;
+            }
+            specialButton.interactable = ready && !ended && !paused;
+            specialMotion.SetReady(ready && !ended && !paused);
+            energyRing.fillAmount = energyBar.fillAmount;
+            energyRing.color = ready ? Color.Lerp(RuntimeUiFactory.Gold, Color.white,
+                0.2f + Mathf.Sin(Time.unscaledTime * 4f) * 0.15f) : RuntimeUiFactory.Gold;
             countdown.gameObject.SetActive(preparing && !paused && !ended);
-            if (preparing) countdown.text = $"FASE {phase}\n{preparation}";
+            if (preparing && displayedPreparation != preparation)
+            {
+                countdown.text = $"FASE {phase}\n{preparation}";
+                displayedPreparation = preparation;
+                countdownMotion.Punch();
+            }
 
             for (int index = 0; index < 3; index++)
             {
-                Image image = defenseButtons[index].GetComponent<Image>();
-                image.transform.localScale =
-                    TowerBuildSelection.Selected == defenseTypes[index]
-                    ? Vector3.one * 1.08f : Vector3.one;
+                defenseMotions[index].SetSelected(
+                    TowerBuildSelection.Selected == defenseTypes[index]);
+                defenseButtons[index].interactable = !ended && !paused;
             }
+        }
+
+        private void AnimateAnnouncements()
+        {
+            if (coinDeltaTime > 0f)
+            {
+                coinDeltaTime = Mathf.Max(0, coinDeltaTime - Time.unscaledDeltaTime);
+                ((RectTransform)coinDelta.transform).anchoredPosition =
+                    new Vector2(0, -8f + (0.9f - coinDeltaTime) * 34f);
+                Color color = coinDelta.color;
+                color.a = Mathf.Clamp01(coinDeltaTime / 0.25f);
+                coinDelta.color = color;
+                if (coinDeltaTime <= 0f) coinDelta.gameObject.SetActive(false);
+            }
+            if (bannerTime > 0f)
+            {
+                bannerTime = Mathf.Max(0f, bannerTime - Time.unscaledDeltaTime);
+                phaseBannerGroup.alpha = Mathf.Min(
+                    Mathf.Clamp01((3f - bannerTime) / 0.25f),
+                    Mathf.Clamp01(bannerTime / 0.5f));
+            }
+        }
+
+        private void Announce(string message)
+        {
+            phaseBanner.text = message;
+            phaseBannerGroup.alpha = 0f;
+            bannerTime = 3f;
+        }
+
+        private void OnApplicationPause(bool backgrounded)
+        {
+            if (!backgrounded || paused || ended || rootCanvas == null ||
+                !rootCanvas.gameObject.activeInHierarchy) return;
+            paused = true;
+            Time.timeScale = 0f;
+            pausePanel.SetActive(true);
+            pauseLabel.text = "CONTINUAR";
         }
 
         private static Texture2D LoadArtwork(string name)
@@ -596,6 +754,7 @@ namespace CatsVsDemons.UI
         private void ApplySafeArea()
         {
             lastSafeArea = Screen.safeArea;
+            if (Screen.width <= 0 || Screen.height <= 0) return;
             Vector2 min = lastSafeArea.position;
             Vector2 max = lastSafeArea.position + lastSafeArea.size;
             min.x /= Screen.width;
@@ -607,21 +766,18 @@ namespace CatsVsDemons.UI
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
         }
 
-        private static void SetFill(Image image, float current, float maximum)
-        {
-            image.fillAmount = maximum > 0f ? Mathf.Clamp01(current / maximum) : 0f;
-        }
-
         private void OnPhase(int value, int total)
         {
             phase = value;
             totalPhases = total;
             wave = 0;
+            Announce($"FASE {phase}  ·  {CampaignProgress.GetPhaseTitle(phase)}");
         }
         private void OnWave(int value, int total)
         {
             wave = value;
             totalWaves = total;
+            Announce($"ONDA {wave}/{totalWaves}  ·  PROTEJA A CASA!");
         }
         private void OnPreparation(int value, int seconds)
         {
@@ -629,7 +785,11 @@ namespace CatsVsDemons.UI
             wave = value;
             preparation = seconds;
         }
-        private void OnPreparationEnded() => preparing = false;
+        private void OnPreparationEnded()
+        {
+            preparing = false;
+            displayedPreparation = -1;
+        }
         private void OnHouseDestroyed() => ShowResult("A CASA CAIU!",
             "Mesmo ferido, Kin fez tudo o que pôde.", "EndingDefeat");
         private void OnKinDown() => ShowResult("KIN FOI DERROTADO!",

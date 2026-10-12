@@ -175,6 +175,11 @@ namespace CatsVsDemons.Visuals
             skinned.rootBone = pelvis;
             skinned.updateWhenOffscreen = false;
             skinned.localBounds = riggedMesh.bounds;
+            Bounds animatedBounds = skinned.localBounds;
+            animatedBounds.Expand(animatedBounds.size * 0.4f);
+            skinned.localBounds = animatedBounds;
+            skinned.shadowCastingMode = sourceRenderer.shadowCastingMode;
+            skinned.receiveShadows = sourceRenderer.receiveShadows;
 
             sourceRenderer.enabled = false;
 

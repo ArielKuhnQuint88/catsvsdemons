@@ -5,15 +5,13 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System;
+using System.Linq;
 
 namespace CatsVsDemons.Editor
 {
     public static class PreparePlayableBuild
     {
-        private const string ScenePath =
-            "Assets/_Project/Scenes/Game.unity";
-        private const string MenuScenePath =
-            "Assets/_Project/Scenes/MainMenu.unity";
         private const string BuildFolder = "Builds/CatsVsDemons-Windows";
         private const string ExecutablePath =
             BuildFolder + "/CatsVsDemons.exe";
@@ -30,10 +28,10 @@ namespace CatsVsDemons.Editor
             ConfigureScenes();
             AssetDatabase.SaveAssets();
 
-            Debug.Log("Game scene added to Build Settings.");
+            Debug.Log("Menu e todas as cenas da campanha adicionados ao build.");
             EditorUtility.DisplayDialog(
                 "Cats vs Demons",
-                "Cena Game preparada para jogar e reiniciar.",
+                "Menu e campanha de 12 fases preparados para exportação.",
                 "OK"
             );
         }
@@ -54,7 +52,7 @@ namespace CatsVsDemons.Editor
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { MenuScenePath, ScenePath },
+                scenes = PlayStoreBuildValidator.ScenePaths,
                 locationPathName = ExecutablePath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.CompressWithLz4HC
@@ -125,7 +123,7 @@ namespace CatsVsDemons.Editor
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { MenuScenePath, ScenePath },
+                scenes = PlayStoreBuildValidator.ScenePaths,
                 locationPathName = ApkPath,
                 target = BuildTarget.Android,
                 options = BuildOptions.None
@@ -154,58 +152,43 @@ namespace CatsVsDemons.Editor
         [MenuItem("Tools/Cats vs Demons/Exportar para Play Store (AAB)")]
         public static void ExportPlayStoreBundle()
         {
-            if (!BuildPipeline.IsBuildTargetSupported(
-                BuildTargetGroup.Android,
-                BuildTarget.Android))
-            {
-                EditorUtility.DisplayDialog(
-                    "Android não instalado",
-                    "Adicione Android Build Support, SDK & NDK Tools e " +
-                    "OpenJDK pelo Unity Hub.",
-                    "OK"
-                );
-                return;
-            }
-
-            if (!HasReleaseSigningKey())
-            {
-                bool openSettings = EditorUtility.DisplayDialog(
-                    "Assinatura obrigatória",
-                    "A Play Store não aceita a chave de teste. Configure " +
-                    "um Custom Keystore e informe as senhas em Player > " +
-                    "Android > Publishing Settings. Guarde o arquivo e " +
-                    "as senhas fora do GitHub.",
-                    "Abrir Player Settings",
-                    "Cancelar"
-                );
-                if (openSettings)
-                {
-                    SettingsService.OpenProjectSettings("Project/Player");
-                }
-                return;
-            }
-
             ConfigureScenes();
             ConfigurePlayStorePlayer();
+            ApplySigningFromEnvironment();
+            System.Collections.Generic.List<string> errors =
+                PlayStoreBuildValidator.CollectErrors(true);
+            if (errors.Count > 0)
+            {
+                string message = string.Join("\n\n", errors);
+                Debug.LogError("Exportação bloqueada:\n" + message);
+                if (Application.isBatchMode) throw new BuildFailedException(message);
+                EditorUtility.DisplayDialog("Corrigir antes de exportar", message, "OK");
+                return;
+            }
+            BuildPlayStoreBundle();
+        }
+
+        private static void BuildPlayStoreBundle()
+        {
             OptimizeImportedAssets();
             OptimizeAndroidTextures();
 
             string absoluteFolder = Path.GetFullPath(PlayStoreBuildFolder);
             Directory.CreateDirectory(absoluteFolder);
-            string safeVersion = PlayerSettings.bundleVersion.Replace('.', '-');
+            string safeVersion = new string(PlayerSettings.bundleVersion.Select(c =>
+                char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
             string relativeBundlePath =
                 $"{PlayStoreBuildFolder}/CatsVsDemons-v{safeVersion}-" +
                 $"{PlayerSettings.Android.bundleVersionCode}.aab";
             string absoluteBundlePath = Path.GetFullPath(relativeBundlePath);
             if (File.Exists(absoluteBundlePath))
-            {
-                File.Delete(absoluteBundlePath);
-            }
+                throw new BuildFailedException("Já existe um AAB desta versão em " +
+                    absoluteBundlePath + ". Aumente Bundle Version Code ou mova o arquivo anterior.");
 
             EditorUserBuildSettings.buildAppBundle = true;
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { MenuScenePath, ScenePath },
+                scenes = PlayStoreBuildValidator.ScenePaths,
                 locationPathName = relativeBundlePath,
                 target = BuildTarget.Android,
                 options = BuildOptions.None
@@ -214,6 +197,8 @@ namespace CatsVsDemons.Editor
             BuildReport report = BuildPipeline.BuildPlayer(options);
             if (report.summary.result != BuildResult.Succeeded)
             {
+                if (Application.isBatchMode)
+                    throw new BuildFailedException("A Unity não conseguiu gerar o AAB. Consulte o log.");
                 EditorUtility.DisplayDialog(
                     "Exportação para Play Store falhou",
                     "Veja o primeiro erro vermelho no Console da Unity.",
@@ -221,6 +206,12 @@ namespace CatsVsDemons.Editor
                 );
                 return;
             }
+
+            PlayStoreBuildValidator.VerifyBundle(absoluteBundlePath);
+            string receipt = PlayStoreBuildValidator.WriteBuildReceipt(absoluteBundlePath);
+            Debug.Log("AAB gerado e bibliotecas ARM64 verificadas: " + absoluteBundlePath +
+                "\nRelatório: " + receipt);
+            if (Application.isBatchMode) return;
 
             EditorUtility.RevealInFinder(absoluteBundlePath);
             EditorUtility.DisplayDialog(
@@ -236,16 +227,15 @@ namespace CatsVsDemons.Editor
 
         private static void ConfigureScenes()
         {
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(MenuScenePath, true),
-                new EditorBuildSettingsScene(ScenePath, true)
-            };
+            EditorBuildSettings.scenes = PlayStoreBuildValidator.ScenePaths
+                .Select(path => new EditorBuildSettingsScene(path, true)).ToArray();
+            PlayStoreBuildValidator.EnsureRuntimeShaders();
         }
 
         private static void ConfigureLightweightPlayer()
         {
             PlayerSettings.productName = "Cats vs Demons";
+            PlayerSettings.companyName = "Quint Games";
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -262,6 +252,7 @@ namespace CatsVsDemons.Editor
         private static void ConfigureLightweightAndroidPlayer()
         {
             PlayerSettings.productName = "Cats vs Demons";
+            PlayerSettings.companyName = "Quint Games";
             PlayerSettings.SetApplicationIdentifier(
                 NamedBuildTarget.Android,
                 "com.qipgames.catsvsdemons"
@@ -294,6 +285,7 @@ namespace CatsVsDemons.Editor
                 new[] { GraphicsDeviceType.OpenGLES3 }
             );
             EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.exportAsGoogleAndroidProject = false;
         }
 
         private static void ConfigurePlayStorePlayer()
@@ -312,20 +304,36 @@ namespace CatsVsDemons.Editor
             PlayerSettings.Android.targetSdkVersion =
                 AndroidSdkVersions.AndroidApiLevel36;
             EditorUserBuildSettings.buildAppBundle = true;
+            EditorUserBuildSettings.development = false;
+            EditorUserBuildSettings.allowDebugging = false;
+            EditorUserBuildSettings.connectProfiler = false;
             AssetDatabase.SaveAssets();
         }
 
-        private static bool HasReleaseSigningKey()
+        [MenuItem("Tools/Cats vs Demons/Preparar Android para Play Console")]
+        public static void PreparePlayConsole()
         {
-            return PlayerSettings.Android.useCustomKeystore &&
-                !string.IsNullOrWhiteSpace(
-                    PlayerSettings.Android.keystoreName
-                ) &&
-                !string.IsNullOrWhiteSpace(
-                    PlayerSettings.Android.keyaliasName
-                ) &&
-                !string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) &&
-                !string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass);
+            ConfigureScenes();
+            ConfigurePlayStorePlayer();
+            OptimizeImportedAssets();
+            OptimizeAndroidTextures();
+            PlayStoreBuildValidator.ValidateFromMenu();
+        }
+
+        private static void ApplySigningFromEnvironment()
+        {
+            string keystore = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PATH");
+            if (!string.IsNullOrWhiteSpace(keystore))
+            {
+                PlayerSettings.Android.useCustomKeystore = true;
+                PlayerSettings.Android.keystoreName = keystore;
+            }
+            string alias = Environment.GetEnvironmentVariable("CVD_KEY_ALIAS");
+            if (!string.IsNullOrWhiteSpace(alias)) PlayerSettings.Android.keyaliasName = alias;
+            string storePassword = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PASSWORD");
+            if (!string.IsNullOrEmpty(storePassword)) PlayerSettings.Android.keystorePass = storePassword;
+            string keyPassword = Environment.GetEnvironmentVariable("CVD_KEY_PASSWORD");
+            if (!string.IsNullOrEmpty(keyPassword)) PlayerSettings.Android.keyaliasPass = keyPassword;
         }
 
         private static void OptimizeImportedAssets()
@@ -377,18 +385,19 @@ namespace CatsVsDemons.Editor
                     continue;
                 }
 
+                bool readable = CharacterRigModelImporter.IsCharacterModel(path);
                 bool changed = importer.meshCompression !=
                         ModelImporterMeshCompression.Medium ||
                     !importer.optimizeMeshPolygons ||
                     !importer.optimizeMeshVertices ||
-                    importer.isReadable;
+                    importer.isReadable != readable;
                 if (changed)
                 {
                     importer.meshCompression =
                         ModelImporterMeshCompression.Medium;
                     importer.optimizeMeshPolygons = true;
                     importer.optimizeMeshVertices = true;
-                    importer.isReadable = false;
+                    importer.isReadable = readable;
                     importer.SaveAndReimport();
                 }
             }
@@ -419,6 +428,11 @@ namespace CatsVsDemons.Editor
                 android.maxTextureSize = path.Contains("/UI/") ? 2048 : 1024;
                 android.format = TextureImporterFormat.ASTC_6x6;
                 android.compressionQuality = 60;
+                android.androidETC2FallbackOverride = AndroidETC2FallbackOverride.Quality32Bit;
+                TextureImporterPlatformSettings previous = importer.GetPlatformTextureSettings("Android");
+                if (previous.overridden && previous.maxTextureSize == android.maxTextureSize &&
+                    previous.format == android.format && previous.compressionQuality == android.compressionQuality &&
+                    previous.androidETC2FallbackOverride == android.androidETC2FallbackOverride) continue;
                 importer.SetPlatformTextureSettings(android);
                 importer.SaveAndReimport();
             }

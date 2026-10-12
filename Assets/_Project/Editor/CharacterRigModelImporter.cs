@@ -62,7 +62,7 @@ namespace CatsVsDemons.Editor
             );
         }
 
-        private static bool IsCharacterModel(string path)
+        internal static bool IsCharacterModel(string path)
         {
             foreach (string model in CharacterModels)
             {

@@ -8,7 +8,9 @@ Kin, um gato branco samurai, precisa proteger uma casa oriental contra ondas de 
 
 ## Status
 
-🧪 Pré-produção / protótipo digital em Unity.
+Versão em preparação para Android: campanha de 12 fases, loja, HUD animado e
+exportador AAB. A compilação na Unity e a validação em dispositivo ainda são
+necessárias antes da publicação. Veja o [guia de exportação para o Play Console](docs/PLAY_CONSOLE_RELEASE.md).
 
 ## Loop principal
 
