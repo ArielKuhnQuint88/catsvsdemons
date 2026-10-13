@@ -27,13 +27,16 @@ A importação de Kin usa materiais no modo Standard, mantendo os nomes do MTL.
 
 Foi criada uma textura de detalhe de fibras, aplicada como variação discreta
 sobre as cores do pelo e da roupa. Isso preserva a separação das quatro cores
-e permite trocar roupas na loja. Uma importação reduzida a uma superfície
+e permite trocar roupas na loja. As superfícies importadas desativam as faixas
+de cor por altura; a loja preserva a cor de cada parte e usa um contorno neutro,
+sem aplicar dourado ao corpo inteiro. Uma importação reduzida a uma superfície
 continua com o fallback por altura; aplicar equipamento mantém a região da
 cabeça clara. Kin recebe também um mínimo de luz ambiente para manter a leitura
 nas sombras.
 
 O diagnóstico **Tools → Cats vs Demons → Verificar personagens (Play Mode)**
-agora confere também UVs e a presença da textura de detalhe. Uma importação
+confere UVs, a textura de detalhe e a paleta após aplicar a roupa padrão,
+incluindo a pelagem clara e a ausência de recoloração por altura nas partes. Uma importação
 com menos de quatro superfícies recebe aviso para reimportar
 `Assets/_Project/Resources/Models/Kin.obj`.
 
@@ -60,14 +63,16 @@ golpe especial, ataques e efeitos automáticos de torres não avançam.
 ## Detalhes do jardim
 
 Foram acrescentados canteiros de flores, folhas e flores nos lagos, faixas
-penduradas nos pavilhões e acabamento nas bordas do telhado da casa. Esses
-detalhes entram nas malhas existentes; o cenário continua agrupado em 18
-malhas, com aproximadamente 39–41 mil triângulos no PC e 28–30 mil no celular,
+penduradas nos pavilhões e acabamento nas bordas do telhado da casa. Os
+lagos são posicionados novamente a cada fase, com folga para pedras, pontes
+e curvas dos caminhos. A vegetação e o terreno respeitam as novas posições.
+Esses detalhes entram nas malhas existentes; o cenário continua agrupado em 18
+malhas, com aproximadamente 37–41 mil triângulos no PC e 27–30 mil no celular,
 além de personagens, caminhos, torres, efeitos e anéis de construção.
 
 ## Atualizar e conferir
 
-Feche a Unity, extraia `Cats_vs_Demons_Guia_Kin_Torres.zip` e copie sua pasta
+Feche a Unity, extraia `Cats_vs_Demons_Lagos_Kin_Corrigidos.zip` e copie sua pasta
 `Assets` para a raiz do projeto, substituindo os arquivos correspondentes.
 Reabra com Unity **6000.5.4f1** e aguarde a importação. O pacote inclui as
 correções e o cenário da revisão anterior.
@@ -89,9 +94,12 @@ correções e o cenário da revisão anterior.
   métodos reais de pausa do guia extraídos do arquivo fonte. Incluem cobrança
   única, saldo insuficiente, base ocupada, cancelamento, entrada consumida,
   pausa existente e retorno após minimizar. Usam substitutos mínimos da API Unity.
-- 24 combinações de cenário/estação/perfil executadas com as classes reais de
-  geometria e substitutos Unity: 2.596 assertivas, preservando orçamento,
-  orientação das faces, rotas e terreno sob as bordas.
+- 227 checagens com as classes completas de materiais e equipamento: quatro
+  superfícies nos renderers original e animado, seis roupas, sete acessórios,
+  texturas preservadas, pelagem clara e fallback de superfície única.
+- 72 combinações de cenário/estação/perfil/extensão executadas com as classes
+  reais de geometria e substitutos Unity: 8.957 assertivas, incluindo margem
+  dos lagos até todos os triângulos dos caminhos, pontes, bases e terreno.
 - 16 combinações de estágio/condicional HLSL do shader de personagens com
   glslang e validação de SPIR-V, usando substitutos dos includes URP.
 - Sintaxe C#, metadados e integridade do ZIP conferidos.

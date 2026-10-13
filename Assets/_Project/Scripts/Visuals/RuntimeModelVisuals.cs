@@ -289,6 +289,7 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_AccentColor", accentColor);
             material.SetColor("_RimColor", rimColor);
             material.SetFloat("_UseBaseMap", 0f);
+            material.SetFloat("_UseHeightPalette", 1f);
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", topStart);
@@ -338,6 +339,8 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_AccentColor", partColor);
             material.SetColor("_RimColor", Color.Lerp(partColor, Color.white, 0.45f));
             material.SetFloat("_UseBaseMap", 0f);
+            // Imported surfaces carry their own color; animated vertex height is irrelevant.
+            material.SetFloat("_UseHeightPalette", 0f);
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", 1f);

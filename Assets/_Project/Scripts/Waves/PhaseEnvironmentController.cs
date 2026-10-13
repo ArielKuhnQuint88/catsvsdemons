@@ -847,7 +847,7 @@ namespace CatsVsDemons.Waves
             polish.Apply(scenario, season, ground);
             GardenArtDirector art = GetComponent<GardenArtDirector>();
             if (art == null) art = gameObject.AddComponent<GardenArtDirector>();
-            art.Schedule(scenario, season, worldRoutes, buildSpotsRoot);
+            art.Schedule(scenario, season, worldRoutes, buildSpotsRoot, BorderWidth);
         }
 
         private void ApplyRuntimeFlowerTheme(Color petals)

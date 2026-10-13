@@ -12,6 +12,21 @@ namespace CatsVsDemons.Visuals
         private readonly List<Material> materials = new();
         private readonly List<Vector3[]> routes = new();
         private readonly List<Vector3> buildPositions = new();
+        private readonly List<Vector3> pondPositions = new();
+        // Contains the entire water, irregular stone shore, bridge and rails.
+        public const float PondFootprintRadius = 3.4f;
+        public const float PondPathMargin = 0.75f;
+        private static readonly (Vector3 Center, float Radius)[] PondLandmarkClearances =
+        {
+            (new Vector3(0, 0, 1.8f), 9f),
+            (new Vector3(-24, 0, 23), 7f), (new Vector3(23, 0, 27), 7f),
+            (new Vector3(-27, 0, 8), 6f), (new Vector3(26, 0, 10), 6f),
+            (new Vector3(-8.7f, 0, -3), 4.2f), (new Vector3(8.7f, 0, -3), 4.2f),
+            (new Vector3(-20, 0, 14), 4.2f), (new Vector3(20, 0, 16), 4.2f)
+        };
+        public IReadOnlyList<Vector3> PondPositions => pondPositions;
+        public float PondRouteClearance => PondFootprintRadius + pathEdgeRadius + PondPathMargin;
+        private float pathEdgeRadius;
         private Transform scenery;
         private Transform buildSpots;
         private Material sceneMaterial;
@@ -33,9 +48,11 @@ namespace CatsVsDemons.Visuals
             public Color Ground, DeepGreen, Leaves, Blossom, Stone, Wood, Roof, Paper, Gold, Water, Fog, Sky;
         }
 
-        public void Schedule(int sceneIndex, int seasonIndex, IReadOnlyList<Vector3[]> worldRoutes, Transform spots)
+        public void Schedule(int sceneIndex, int seasonIndex, IReadOnlyList<Vector3[]> worldRoutes, Transform spots,
+            float pathBorderWidth = 2.85f)
         {
             scenario = sceneIndex; season = seasonIndex; buildSpots = spots;
+            pathEdgeRadius = pathBorderWidth * 0.5f / GardenPathGeometry.MinimumMiterDot;
             routes.Clear();
             foreach (Vector3[] route in worldRoutes) routes.Add(route);
             pending = true;
@@ -117,6 +134,7 @@ namespace CatsVsDemons.Visuals
             }
             buildPositions.Clear();
             if (buildSpots != null) foreach (Transform spot in buildSpots) buildPositions.Add(spot.position);
+            SelectPondLocations();
             ApplyPathMaterials();
             BuildTerrain();
             BuildMountains();
@@ -193,6 +211,10 @@ namespace CatsVsDemons.Visuals
                 float road = GardenPathGeometry.DistanceToRoutes(new Vector3(px, 0, pz), routes);
                 // Leave full grid triangles beneath even the outer path edges.
                 height *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((road - 6.5f) / 4f));
+                // The terrain grid needs a flat apron, including whole cells at the shore.
+                foreach (Vector3 pond in pondPositions)
+                    height *= Mathf.SmoothStep(0f, 1f,
+                        Mathf.Clamp01((Vector3.Distance(new Vector3(px, 0, pz), pond) - PondFootprintRadius - 4.6f) / 3f));
                 return new Vector3(px, height + 0.015f, pz);
             }
             for (int z = 0; z < rows; z++)
@@ -239,8 +261,8 @@ namespace CatsVsDemons.Visuals
             if (Mathf.Abs(point.x) < 6.2f && point.z > -4.5f && point.z < 8f) return false;
             if (GardenPathGeometry.DistanceToRoutes(point, routes) < radius) return false;
             foreach (Vector3 spot in buildPositions) if ((point - spot).sqrMagnitude < 7f) return false;
-            foreach (Vector3 pond in new[] { new Vector3(-15f, 0, -9.5f), new Vector3(15f, 0, 9.5f) })
-                if ((point - pond).sqrMagnitude < 12f) return false;
+            foreach (Vector3 pond in pondPositions)
+                if (Vector3.Distance(point, pond) < PondFootprintRadius + (radius > 3f ? 2.7f : 0.75f)) return false;
             return true;
         }
 
@@ -508,10 +530,49 @@ namespace CatsVsDemons.Visuals
             roof.Roof(at + Vector3.up * 1.59f, 0.82f, 0.82f, 0.35f, palette.Roof);
         }
 
+        private void SelectPondLocations()
+        {
+            pondPositions.Clear();
+            foreach (Vector3 preferred in new[] { new Vector3(-15f, 0, -9.5f), new Vector3(15f, 0, 9.5f) })
+            {
+                bool found = false;
+                float bestScore = float.PositiveInfinity;
+                Vector3 best = Vector3.zero;
+                for (int z = -18; z <= 18; z++)
+                for (int x = -25; x <= 25; x++)
+                {
+                    if (preferred.x < 0 ? x > -9 : x < 9) continue;
+                    Vector3 candidate = new(x, 0, z);
+                    if (!ClearForPond(candidate)) continue;
+                    float score = (candidate - preferred).sqrMagnitude;
+                    if (score >= bestScore) continue;
+                    found = true; best = candidate; bestScore = score;
+                }
+                // A crowded/custom layout may omit a pond instead of covering gameplay.
+                if (found) pondPositions.Add(best);
+            }
+        }
+
+        private bool ClearForPond(Vector3 point)
+        {
+            if (GardenPathGeometry.DistanceToRoutes(point, routes) < PondRouteClearance) return false;
+            foreach (Vector3 spot in buildPositions)
+            {
+                Vector3 flat = new(spot.x, 0, spot.z);
+                if (Vector3.Distance(point, flat) < PondFootprintRadius + 2f) return false;
+            }
+            foreach (Vector3 pond in pondPositions)
+                if (Vector3.Distance(point, pond) < PondFootprintRadius * 2f + 1.5f) return false;
+            // Keep clear of the central house, pavilions, gates and stone lanterns.
+            foreach (var landmark in PondLandmarkClearances)
+                if (Vector3.Distance(point, landmark.Center) < landmark.Radius) return false;
+            return true;
+        }
+
         private void BuildPonds()
         {
             GardenMeshBuilder shore = new(), water = new(), deck = new(), rails = new(), koi = new();
-            foreach (Vector3 at in new[] { new Vector3(-15f, 0, -9.5f), new Vector3(15f, 0, 9.5f) })
+            foreach (Vector3 at in pondPositions)
             {
                 for (int side = 0; side < 24; side++)
                 {

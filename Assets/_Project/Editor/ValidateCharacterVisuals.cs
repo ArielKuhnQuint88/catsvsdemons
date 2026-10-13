@@ -21,6 +21,9 @@ namespace CatsVsDemons.Editor
                 GameObject holder = new("Rig Check " + name);
                 holder.transform.position = new Vector3(1000, 0, 1000);
                 bool loaded = RuntimeModelVisuals.Attach(holder.transform, "Models/" + name, 2f, 0, Color.white, false);
+                // Verify the final equipment palette, not only the material before the shop changes it.
+                if (loaded && name == "Kin")
+                    holder.AddComponent<CatsVsDemons.Player.KinShopLoadout>().Apply("samurai_vermelho", "");
                 SkinnedMeshRenderer renderer = holder.GetComponentInChildren<SkinnedMeshRenderer>();
                 MeshFilter source = holder.GetComponentInChildren<MeshFilter>();
                 MeshRenderer original = source != null ? source.GetComponent<MeshRenderer>() : null;
@@ -58,6 +61,7 @@ namespace CatsVsDemons.Editor
                     }
                     if (mesh.subMeshCount < 4)
                         Debug.LogWarning("[Visual] Kin: paleta reduzida na importação. Reimporte Resources/Models/Kin.obj para recuperar quatro superfícies.");
+                    else if (!KinPaletteValid(surface)) valid = false;
                 }
                 if (valid)
                 {
@@ -85,6 +89,36 @@ namespace CatsVsDemons.Editor
                 return false;
             }
             return true;
+        }
+
+        private static bool KinPaletteValid(Renderer renderer)
+        {
+            bool furFound = false;
+            foreach (Material material in renderer.sharedMaterials)
+            {
+                if (material == null || !KinSurfacePalette.IsKnownPart(material.name) ||
+                    !material.HasProperty("_UseHeightPalette") || material.GetFloat("_UseHeightPalette") > 0.001f)
+                {
+                    Debug.LogError("[Visual] Kin: superfície sem identidade ou ainda usando faixas de cor por altura.");
+                    return false;
+                }
+                Color color = material.GetColor("_BaseColor");
+                Color accent = material.GetColor("_AccentColor");
+                if (Mathf.Abs(color.r - accent.r) + Mathf.Abs(color.g - accent.g) + Mathf.Abs(color.b - accent.b) > 0.01f)
+                {
+                    Debug.LogError("[Visual] Kin: equipamento recolorindo a superfície com outra cor de destaque.");
+                    return false;
+                }
+                if (!material.name.ToLowerInvariant().Contains("ded1cf")) continue;
+                furFound = true;
+                if (color.r + color.g + color.b < 2.7f)
+                {
+                    Debug.LogError("[Visual] Kin: a pelagem perdeu a cor clara após aplicar a roupa.");
+                    return false;
+                }
+            }
+            if (!furFound) Debug.LogError("[Visual] Kin: material da pelagem não encontrado.");
+            return furFound;
         }
 
         [MenuItem("Tools/Cats vs Demons/Restaurar modelos originais (Play Mode)")]

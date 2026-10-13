@@ -115,7 +115,7 @@ namespace CatsVsDemons.Player
         private void ApplyOutfitPalette(string outfitId)
         {
             GetPalette(outfitId, out Color primary, out Color secondary,
-                out Color dark, out Color accent);
+                out Color dark, out _);
             Color fur = new(0.98f, 0.94f, 0.86f);
 
             foreach (PaletteEntry entry in palette)
@@ -130,11 +130,11 @@ namespace CatsVsDemons.Player
                 if (entry.WholeModel)
                 {
                     // A missing imported palette must not repaint Kin's head as clothing.
-                    SetMaterialColors(entry.Material, secondary, accent);
+                    SetMaterialColors(entry.Material, secondary, true);
                     entry.Material.SetColor("_SecondaryColor", fur);
                     entry.Material.SetColor("_AccentColor", primary);
                 }
-                else SetMaterialColors(entry.Material, color, accent);
+                else SetMaterialColors(entry.Material, color, false);
             }
         }
 
@@ -188,7 +188,7 @@ namespace CatsVsDemons.Player
         private static void SetMaterialColors(
             Material material,
             Color baseColor,
-            Color accent)
+            bool wholeModel)
         {
             if (material == null) return;
             if (material.HasProperty("_BaseColor"))
@@ -196,13 +196,14 @@ namespace CatsVsDemons.Player
             if (material.HasProperty("_Color"))
                 material.SetColor("_Color", baseColor);
             if (material.HasProperty("_SecondaryColor"))
-                material.SetColor("_SecondaryColor",
-                    Color.Lerp(baseColor, Color.white, 0.22f));
+                material.SetColor("_SecondaryColor", baseColor);
             if (material.HasProperty("_AccentColor"))
-                material.SetColor("_AccentColor", accent);
+                material.SetColor("_AccentColor", baseColor);
             if (material.HasProperty("_RimColor"))
                 material.SetColor("_RimColor",
-                    Color.Lerp(accent, Color.white, 0.35f));
+                    Color.Lerp(baseColor, Color.white, 0.35f));
+            if (material.HasProperty("_UseHeightPalette"))
+                material.SetFloat("_UseHeightPalette", wholeModel ? 1f : 0f);
         }
 
         private void RebuildAccessory(string accessoryId)

@@ -5,6 +5,9 @@ namespace CatsVsDemons.Visuals
 {
     public static class GardenPathGeometry
     {
+        // The widest corner must also be reserved by scenery placement.
+        public const float MinimumMiterDot = 0.6f;
+
         public static Vector3[] Smooth(Vector3[] source, int subdivisions = 3)
         {
             List<Vector3> clean = new();
@@ -61,7 +64,7 @@ namespace CatsVsDemons.Visuals
                 Vector3 miter = normalBefore + normalAfter;
                 if (miter.sqrMagnitude < 0.00001f) miter = normalAfter;
                 miter.Normalize();
-                float denominator = Mathf.Max(0.6f, Mathf.Abs(Vector3.Dot(miter, normalAfter)));
+                float denominator = Mathf.Max(MinimumMiterDot, Mathf.Abs(Vector3.Dot(miter, normalAfter)));
                 Vector3 side = miter * (width * 0.5f / denominator);
                 Vector3 center = new(points[index].x, height, points[index].z);
                 vertices[index * 2] = center - side;

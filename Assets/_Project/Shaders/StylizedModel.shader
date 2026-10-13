@@ -5,6 +5,7 @@ Shader "CatsVsDemons/StylizedModel"
         [MainColor] _BaseColor ("Base Color", Color) = (0.3, 0.5, 0.7, 1)
         [MainTexture] _BaseMap ("Albedo Texture", 2D) = "white" {}
         _UseBaseMap ("Use Albedo Texture", Range(0, 1)) = 0
+        _UseHeightPalette ("Use Height Color Bands", Range(0, 1)) = 1
         _DetailMap ("Fur and Fabric Detail", 2D) = "gray" {}
         _DetailStrength ("Surface Detail", Range(0, 1)) = 0
         _DetailTiling ("Detail Tiling", Float) = 4
@@ -48,6 +49,7 @@ Shader "CatsVsDemons/StylizedModel"
             float _AccentWidth;
             float _RimStrength;
             float _UseBaseMap;
+            float _UseHeightPalette;
             float _SpecularStrength;
             float _DetailStrength;
             float _DetailTiling;
@@ -129,15 +131,15 @@ Shader "CatsVsDemons/StylizedModel"
                     _TopStart,
                     max(_TopEnd, _TopStart + 0.0001),
                     normalizedHeight
-                );
+                ) * _UseHeightPalette;
                 float accentDistance = abs(
                     normalizedHeight - _AccentCenter
                 );
-                float accentMask = 1.0 - smoothstep(
+                float accentMask = (1.0 - smoothstep(
                     _AccentWidth * 0.45,
                     _AccentWidth,
                     accentDistance
-                );
+                )) * _UseHeightPalette;
 
                 half3 color = lerp(
                     _BaseColor.rgb,
