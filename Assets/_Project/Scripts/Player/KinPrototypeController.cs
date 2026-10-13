@@ -1,4 +1,5 @@
 using CatsVsDemons.Visuals;
+using CatsVsDemons.House;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -40,6 +41,10 @@ namespace CatsVsDemons.Player
                 -1f,
                 new Color(0.95f, 0.92f, 0.88f)
             );
+            KinShopLoadout loadout = GetComponent<KinShopLoadout>();
+            if (loadout == null) loadout = gameObject.AddComponent<KinShopLoadout>();
+            loadout.Apply(HouseShopSave.GetEquipped(HouseShopCategory.Clothes),
+                HouseShopSave.GetEquipped(HouseShopCategory.Accessories));
         }
 
         private void Update()

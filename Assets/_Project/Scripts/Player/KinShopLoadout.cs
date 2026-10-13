@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 
 namespace CatsVsDemons.Player
@@ -22,7 +23,7 @@ namespace CatsVsDemons.Player
 
         private readonly List<PaletteEntry> palette = new();
         private readonly List<Material> ownedMaterials = new();
-        private Transform accessoryRoot;
+        private KinEquipmentView equipment;
         private string appliedOutfit;
         private string appliedAccessory;
 
@@ -35,14 +36,16 @@ namespace CatsVsDemons.Player
 
             if (appliedOutfit == outfitId &&
                 appliedAccessory == accessoryId &&
-                accessoryRoot != null)
+                equipment != null && equipment.HasEquipment)
             {
                 return;
             }
 
             EnsurePaletteMaterials();
             ApplyOutfitPalette(outfitId);
-            RebuildAccessory(accessoryId);
+            if (equipment == null) equipment = GetComponent<KinEquipmentView>();
+            if (equipment == null) equipment = gameObject.AddComponent<KinEquipmentView>();
+            if (!equipment.Apply(outfitId, accessoryId)) return;
             appliedOutfit = outfitId;
             appliedAccessory = accessoryId;
         }
@@ -138,52 +141,9 @@ namespace CatsVsDemons.Player
             }
         }
 
-        private static void GetPalette(
-            string outfitId,
-            out Color primary,
-            out Color secondary,
-            out Color dark,
-            out Color accent)
-        {
-            primary = new Color(0.72f, 0.055f, 0.04f);
-            secondary = new Color(0.06f, 0.23f, 0.24f);
-            dark = new Color(0.035f, 0.10f, 0.12f);
-            accent = new Color(1f, 0.63f, 0.12f);
-
-            switch (outfitId)
-            {
-                case "ninja_meia_noite":
-                    primary = new Color(0.18f, 0.08f, 0.42f);
-                    secondary = new Color(0.035f, 0.09f, 0.24f);
-                    dark = new Color(0.018f, 0.018f, 0.055f);
-                    accent = new Color(0.22f, 0.48f, 1f);
-                    break;
-                case "guardiao_bonsai":
-                    primary = new Color(0.12f, 0.38f, 0.14f);
-                    secondary = new Color(0.78f, 0.72f, 0.48f);
-                    dark = new Color(0.035f, 0.14f, 0.065f);
-                    accent = new Color(0.72f, 0.88f, 0.24f);
-                    break;
-                case "mestre_lanternas":
-                    primary = new Color(0.88f, 0.18f, 0.025f);
-                    secondary = new Color(0.18f, 0.055f, 0.025f);
-                    dark = new Color(0.055f, 0.025f, 0.02f);
-                    accent = new Color(1f, 0.55f, 0.05f);
-                    break;
-                case "gato_domestico":
-                    primary = new Color(0.86f, 0.76f, 0.58f);
-                    secondary = new Color(0.10f, 0.34f, 0.58f);
-                    dark = new Color(0.06f, 0.16f, 0.28f);
-                    accent = new Color(0.88f, 0.10f, 0.08f);
-                    break;
-                case "ronin_espiritual":
-                    primary = new Color(0.025f, 0.11f, 0.28f);
-                    secondary = new Color(0.05f, 0.32f, 0.68f);
-                    dark = new Color(0.01f, 0.025f, 0.08f);
-                    accent = new Color(0.22f, 0.72f, 1f);
-                    break;
-            }
-        }
+        private static void GetPalette(string outfitId, out Color primary, out Color secondary,
+            out Color dark, out Color accent) => KinEquipmentModels.GetPalette(outfitId,
+                out primary, out secondary, out dark, out accent);
 
         private static void SetMaterialColors(
             Material material,
@@ -204,190 +164,6 @@ namespace CatsVsDemons.Player
                     Color.Lerp(baseColor, Color.white, 0.35f));
             if (material.HasProperty("_UseHeightPalette"))
                 material.SetFloat("_UseHeightPalette", wholeModel ? 1f : 0f);
-        }
-
-        private void RebuildAccessory(string accessoryId)
-        {
-            if (accessoryRoot != null)
-            {
-                Destroy(accessoryRoot.gameObject);
-            }
-
-            GameObject root = new("Equipped Shop Accessory");
-            root.transform.SetParent(transform, false);
-            accessoryRoot = root.transform;
-
-            switch (accessoryId)
-            {
-                case "faixa_samurai":
-                    BuildHeadband();
-                    break;
-                case "oculos":
-                    BuildGlasses();
-                    break;
-                case "coleira_sino":
-                    BuildCollar();
-                    break;
-                case "mochila_peixe":
-                    BuildFishBackpack();
-                    break;
-                case "amuleto_protecao":
-                    BuildAmulet();
-                    break;
-                case "asas_espirituais":
-                    BuildWings();
-                    break;
-                case "passos_magicos":
-                    BuildMagicSteps();
-                    break;
-            }
-        }
-
-        private void BuildHeadband()
-        {
-            Color red = new(0.72f, 0.045f, 0.035f);
-            Part("Samurai Headband", PrimitiveType.Cube,
-                new Vector3(0f, 0.66f, 0.02f),
-                new Vector3(0.78f, 0.10f, 0.62f), red);
-            Part("Headband Knot", PrimitiveType.Sphere,
-                new Vector3(-0.43f, 0.66f, -0.28f),
-                new Vector3(0.18f, 0.18f, 0.18f), red);
-            Part("Headband Tail", PrimitiveType.Cube,
-                new Vector3(-0.56f, 0.48f, -0.31f),
-                new Vector3(0.12f, 0.48f, 0.08f), red,
-                false, new Vector3(0f, 0f, -24f));
-        }
-
-        private void BuildGlasses()
-        {
-            Color lens = new(0.16f, 0.62f, 1f);
-            Color gold = new(0.95f, 0.58f, 0.10f);
-            Part("Left Lens", PrimitiveType.Sphere,
-                new Vector3(-0.22f, 0.54f, 0.48f),
-                new Vector3(0.30f, 0.27f, 0.055f), lens, true);
-            Part("Right Lens", PrimitiveType.Sphere,
-                new Vector3(0.22f, 0.54f, 0.48f),
-                new Vector3(0.30f, 0.27f, 0.055f), lens, true);
-            Part("Glasses Bridge", PrimitiveType.Cube,
-                new Vector3(0f, 0.54f, 0.48f),
-                new Vector3(0.18f, 0.035f, 0.035f), gold);
-        }
-
-        private void BuildCollar()
-        {
-            Color blue = new(0.04f, 0.26f, 0.74f);
-            for (int index = 0; index < 10; index++)
-            {
-                float angle = index / 10f * Mathf.PI * 2f;
-                Part("Collar Bead", PrimitiveType.Sphere,
-                    new Vector3(Mathf.Cos(angle) * 0.35f, 0.12f,
-                        Mathf.Sin(angle) * 0.35f),
-                    new Vector3(0.14f, 0.12f, 0.14f), blue);
-            }
-            Part("Golden Bell", PrimitiveType.Sphere,
-                new Vector3(0f, -0.08f, 0.39f),
-                new Vector3(0.24f, 0.24f, 0.18f),
-                new Color(1f, 0.62f, 0.08f), true);
-        }
-
-        private void BuildFishBackpack()
-        {
-            Color white = new(0.92f, 0.82f, 0.62f);
-            Color red = new(0.72f, 0.055f, 0.035f);
-            Part("Fish Backpack", PrimitiveType.Sphere,
-                new Vector3(0f, 0.05f, -0.52f),
-                new Vector3(0.58f, 0.82f, 0.30f), white,
-                false, new Vector3(0f, 0f, 12f));
-            Part("Fish Patch", PrimitiveType.Sphere,
-                new Vector3(0f, 0.12f, -0.70f),
-                new Vector3(0.30f, 0.42f, 0.06f), red);
-            Part("Fish Tail", PrimitiveType.Cube,
-                new Vector3(0f, -0.52f, -0.50f),
-                new Vector3(0.48f, 0.42f, 0.16f), red,
-                false, new Vector3(0f, 0f, 45f));
-        }
-
-        private void BuildAmulet()
-        {
-            Color jade = new(0.06f, 0.58f, 0.28f);
-            Color gold = new(1f, 0.62f, 0.08f);
-            Part("Protection Amulet", PrimitiveType.Cylinder,
-                new Vector3(0f, 0.05f, 0.46f),
-                new Vector3(0.27f, 0.055f, 0.27f), jade, true,
-                new Vector3(90f, 0f, 0f));
-            Part("Amulet Paw", PrimitiveType.Sphere,
-                new Vector3(0f, 0.05f, 0.53f),
-                new Vector3(0.11f, 0.11f, 0.035f), gold, true);
-        }
-
-        private void BuildWings()
-        {
-            Color glow = new(0.18f, 0.68f, 1f);
-            for (int side = -1; side <= 1; side += 2)
-            for (int feather = 0; feather < 3; feather++)
-            {
-                Part("Spirit Wing", PrimitiveType.Capsule,
-                    new Vector3(side * (0.53f + feather * 0.16f),
-                        0.13f - feather * 0.12f, -0.42f),
-                    new Vector3(0.16f, 0.52f - feather * 0.08f, 0.09f),
-                    glow, true,
-                    new Vector3(0f, 0f, side * (35f + feather * 9f)));
-            }
-        }
-
-        private void BuildMagicSteps()
-        {
-            Color gold = new(1f, 0.56f, 0.05f);
-            Part("Left Magic Step", PrimitiveType.Cylinder,
-                new Vector3(-0.27f, -0.96f, 0f),
-                new Vector3(0.40f, 0.025f, 0.52f), gold, true);
-            Part("Right Magic Step", PrimitiveType.Cylinder,
-                new Vector3(0.27f, -0.95f, 0.12f),
-                new Vector3(0.40f, 0.025f, 0.52f), gold, true);
-        }
-
-        private GameObject Part(
-            string label,
-            PrimitiveType primitive,
-            Vector3 position,
-            Vector3 scale,
-            Color color,
-            bool emissive = false,
-            Vector3 rotation = default)
-        {
-            GameObject part = GameObject.CreatePrimitive(primitive);
-            part.name = label;
-            part.transform.SetParent(accessoryRoot, false);
-            part.transform.localPosition = position;
-            part.transform.localRotation = Quaternion.Euler(rotation);
-            part.transform.localScale = scale;
-            Collider collider = part.GetComponent<Collider>();
-            if (collider != null) Destroy(collider);
-            part.GetComponent<Renderer>().sharedMaterial =
-                CreateMaterial(label, color, emissive);
-            return part;
-        }
-
-        private Material CreateMaterial(string label, Color color, bool emissive)
-        {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            shader ??= Shader.Find("Standard");
-            shader ??= Shader.Find("Sprites/Default");
-            Material material = new(shader)
-            {
-                name = $"Kin Accessory {label}",
-                color = color,
-                hideFlags = HideFlags.HideAndDontSave
-            };
-            if (material.HasProperty("_BaseColor"))
-                material.SetColor("_BaseColor", color);
-            if (emissive && material.HasProperty("_EmissionColor"))
-            {
-                material.EnableKeyword("_EMISSION");
-                material.SetColor("_EmissionColor", color * 2.2f);
-            }
-            ownedMaterials.Add(material);
-            return material;
         }
 
         private void OnDestroy()

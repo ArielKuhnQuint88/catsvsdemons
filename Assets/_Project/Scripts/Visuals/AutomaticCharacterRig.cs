@@ -47,6 +47,15 @@ namespace CatsVsDemons.Visuals
                 return;
             }
             originalRenderer = sourceRenderer;
+            // House previews clone a configured model. Reuse that skeleton rather than
+            // building a second rig on top of the copied renderer and equipment.
+            Transform existingRig = filter.transform.Find("RiggedModel");
+            if (existingRig != null && existingRig.TryGetComponent(out SkinnedMeshRenderer existing) &&
+                existing.sharedMesh != null && existing.bones.Length > 0 && existing.bones.Length == existing.sharedMesh.bindposes.Length)
+            {
+                rigRenderer = existing;
+                return;
+            }
             if (simpleAnimationForSession)
             {
                 FallbackReason = "Animação simples selecionada para esta sessão.";
@@ -71,22 +80,26 @@ namespace CatsVsDemons.Visuals
             float height = Mathf.Max(bounds.size.z, 0.001f);
             float width = Mathf.Max(bounds.size.x, 0.001f);
             float bottom = bounds.min.z;
+            bool kinProfile = false;
+            foreach (Material material in sourceRenderer.sharedMaterials)
+                if (material != null && material.name.IndexOf("_Kin", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    kinProfile = true;
 
             Transform pelvis = CreateBone(
                 "Rig_Pelvis", meshRoot, meshRoot,
-                new Vector3(center.x, center.y, bottom + height * 0.4f)
+                new Vector3(center.x, center.y, bottom + height * (kinProfile ? 0.235f : 0.4f))
             );
             Transform spine = CreateBone(
                 "Rig_Spine", pelvis, meshRoot,
-                new Vector3(center.x, center.y, bottom + height * 0.53f)
+                new Vector3(center.x, center.y, bottom + height * (kinProfile ? 0.33f : 0.53f))
             );
             Transform chest = CreateBone(
                 "Rig_Chest", spine, meshRoot,
-                new Vector3(center.x, center.y, bottom + height * 0.67f)
+                new Vector3(center.x, center.y, bottom + height * (kinProfile ? 0.407f : 0.67f))
             );
             Transform head = CreateBone(
                 "Rig_Head", chest, meshRoot,
-                new Vector3(center.x, center.y, bottom + height * 0.82f)
+                new Vector3(center.x, center.y, bottom + height * (kinProfile ? 0.69f : 0.82f))
             );
 
             Transform leftUpperArm = CreateBone(
@@ -94,7 +107,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x - width * 0.24f,
                     center.y,
-                    bottom + height * 0.66f
+                    bottom + height * (kinProfile ? 0.40f : 0.66f)
                 )
             );
             Transform leftForearm = CreateBone(
@@ -102,7 +115,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x - width * 0.4f,
                     center.y,
-                    bottom + height * 0.57f
+                    bottom + height * (kinProfile ? 0.29f : 0.57f)
                 )
             );
             Transform rightUpperArm = CreateBone(
@@ -110,7 +123,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x + width * 0.24f,
                     center.y,
-                    bottom + height * 0.66f
+                    bottom + height * (kinProfile ? 0.40f : 0.66f)
                 )
             );
             Transform rightForearm = CreateBone(
@@ -118,7 +131,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x + width * 0.4f,
                     center.y,
-                    bottom + height * 0.57f
+                    bottom + height * (kinProfile ? 0.29f : 0.57f)
                 )
             );
 
@@ -127,7 +140,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x - width * 0.13f,
                     center.y,
-                    bottom + height * 0.36f
+                    bottom + height * (kinProfile ? 0.16f : 0.36f)
                 )
             );
             Transform leftShin = CreateBone(
@@ -135,7 +148,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x - width * 0.13f,
                     center.y,
-                    bottom + height * 0.17f
+                    bottom + height * (kinProfile ? 0.07f : 0.17f)
                 )
             );
             Transform rightThigh = CreateBone(
@@ -143,7 +156,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x + width * 0.13f,
                     center.y,
-                    bottom + height * 0.36f
+                    bottom + height * (kinProfile ? 0.16f : 0.36f)
                 )
             );
             Transform rightShin = CreateBone(
@@ -151,7 +164,7 @@ namespace CatsVsDemons.Visuals
                 new Vector3(
                     center.x + width * 0.13f,
                     center.y,
-                    bottom + height * 0.17f
+                    bottom + height * (kinProfile ? 0.07f : 0.17f)
                 )
             );
 
@@ -179,7 +192,7 @@ namespace CatsVsDemons.Visuals
                 riggedMesh = CreateRigMesh(source);
 
                 BoneWeight[] weights =
-                    CreateWeights(source.vertices, bounds);
+                    CreateWeights(source.vertices, bounds, kinProfile);
                 Matrix4x4[] bindPoses = new Matrix4x4[bones.Length];
 
                 for (int index = 0; index < bones.Length; index++)
@@ -369,7 +382,8 @@ namespace CatsVsDemons.Visuals
 
         private static BoneWeight[] CreateWeights(
             Vector3[] vertices,
-            Bounds bounds)
+            Bounds bounds,
+            bool kinProfile = false)
         {
             BoneWeight[] weights = new BoneWeight[vertices.Length];
             float width = Mathf.Max(bounds.size.x, 0.001f);
@@ -385,6 +399,25 @@ namespace CatsVsDemons.Visuals
                 float absoluteX = Mathf.Abs(x);
 
                 BoneWeight weight = new BoneWeight();
+
+                if (kinProfile)
+                {
+                    // Kin's head occupies the upper half; his torso and limbs are short.
+                    // Human proportions would bind his cheeks to arm bones.
+                    if (z > 0.455f) SetWeight(ref weight, 3, 2, 0.97f);
+                    else if (z > 0.22f && absoluteX > 0.225f)
+                    {
+                        bool left = x < 0, hand = absoluteX > 0.35f || z < 0.30f;
+                        SetWeight(ref weight, left ? (hand ? 5 : 4) : (hand ? 7 : 6), 2, 0.9f);
+                    }
+                    else if (z < 0.245f)
+                        SetWeight(ref weight, x < 0 ? (z < 0.11f ? 9 : 8) : (z < 0.11f ? 11 : 10), 0, 0.9f);
+                    else if (z > 0.37f) SetWeight(ref weight, 2, 1, 0.82f);
+                    else if (z > 0.28f) SetWeight(ref weight, 1, 0, 0.8f);
+                    else SetWeight(ref weight, 0, 1, 0.85f);
+                    weights[index] = weight;
+                    continue;
+                }
 
                 if (z > 0.76f)
                 {

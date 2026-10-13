@@ -6,6 +6,9 @@ Shader "CatsVsDemons/StylizedModel"
         [MainTexture] _BaseMap ("Albedo Texture", 2D) = "white" {}
         _UseBaseMap ("Use Albedo Texture", Range(0, 1)) = 0
         _UseHeightPalette ("Use Height Color Bands", Range(0, 1)) = 1
+        _UseVertexColor ("Use Equipment Vertex Colors", Range(0, 1)) = 0
+        _UseHeadColor ("Preserve Authored Kin Face", Range(0, 1)) = 0
+        _HeadColor ("Authored Head Surface Color", Color) = (1, 1, 1, 1)
         _DetailMap ("Fur and Fabric Detail", 2D) = "gray" {}
         _DetailStrength ("Surface Detail", Range(0, 1)) = 0
         _DetailTiling ("Detail Tiling", Float) = 4
@@ -50,6 +53,9 @@ Shader "CatsVsDemons/StylizedModel"
             float _RimStrength;
             float _UseBaseMap;
             float _UseHeightPalette;
+            float _UseVertexColor;
+            float _UseHeadColor;
+            half4 _HeadColor;
             float _SpecularStrength;
             float _DetailStrength;
             float _DetailTiling;
@@ -65,6 +71,7 @@ Shader "CatsVsDemons/StylizedModel"
             HLSLPROGRAM
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma target 3.0
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_fog
@@ -80,6 +87,9 @@ Shader "CatsVsDemons/StylizedModel"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
+                float2 surface : TEXCOORD1;
+                float2 headMask : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -93,6 +103,8 @@ Shader "CatsVsDemons/StylizedModel"
                 float2 uv : TEXCOORD4;
                 float3 positionWS : TEXCOORD5;
                 half fog : TEXCOORD6;
+                half4 color : TEXCOORD7;
+                half2 surface : TEXCOORD8;
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
@@ -115,6 +127,9 @@ Shader "CatsVsDemons/StylizedModel"
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.positionWS = positions.positionWS;
                 output.fog = ComputeFogFactor(positions.positionCS.z);
+                output.color = input.color;
+                output.color.a = input.headMask.x;
+                output.surface = input.surface;
                 return output;
             }
 
@@ -158,6 +173,8 @@ Shader "CatsVsDemons/StylizedModel"
                     input.uv
                 ).rgb;
                 color = lerp(color, albedo, _UseBaseMap);
+                color = lerp(color, input.color.rgb * _BaseColor.rgb, _UseVertexColor);
+                color = lerp(color, _HeadColor.rgb, input.color.a * _UseHeadColor);
                 half detail = SAMPLE_TEXTURE2D(_DetailMap, sampler_DetailMap, input.uv * _DetailTiling).r;
                 color *= lerp(1.0, 0.78 + detail * 0.55, _DetailStrength);
 
@@ -192,7 +209,9 @@ Shader "CatsVsDemons/StylizedModel"
                     _RimColor.rgb * rim * _RimStrength;
                 half3 halfDirection = SafeNormalize(mainLight.direction + viewDirection);
                 half specular = pow(saturate(dot(normal, halfDirection)), 24.0);
-                litColor += specular * _SpecularStrength * mainLight.color * shadow;
+                half surfaceSpecular = lerp(_SpecularStrength, 0.06 + input.surface.x * 0.48, _UseVertexColor);
+                litColor += specular * surfaceSpecular * mainLight.color * shadow;
+                litColor += color * input.surface.y * _UseVertexColor;
 
                 return half4(MixFog(litColor, input.fog), 1.0);
             }

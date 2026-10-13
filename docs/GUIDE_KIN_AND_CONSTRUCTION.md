@@ -18,7 +18,7 @@ moedas extras. O guia de consulta continua acessível na loja e no menu. Para
 rearmar o tutorial inicial da próxima partida, continua existindo
 **Configurações → REPETIR TUTORIAL**.
 
-## Aparência do Kin
+## Aparência do Kin e equipamentos
 
 O OBJ tem quatro superfícies: pelo, roupa vermelha, tecido azul esverdeado e
 partes escuras. O código passa a resolver essa paleta pelo nome da superfície,
@@ -39,6 +39,12 @@ confere UVs, a textura de detalhe e a paleta após aplicar a roupa padrão,
 incluindo a pelagem clara e a ausência de recoloração por altura nas partes. Uma importação
 com menos de quatro superfícies recebe aviso para reimportar
 `Assets/_Project/Resources/Models/Kin.obj`.
+
+As seis roupas recebem agora peças 3D próprias e os sete acessórios usam
+modelos ou efeitos baseados nas artes da loja. A escolha salva é aplicada já
+no início do gameplay. As peças ficam no modelo animado e aparecem também
+na prévia da loja. O rosto preserva as cores originais, independentemente do
+traje. Detalhes, orçamento e checagens: [modelos de equipamento](KIN_EQUIPMENT_MODELS.md).
 
 ## Construção evidente
 
@@ -72,7 +78,7 @@ além de personagens, caminhos, torres, efeitos e anéis de construção.
 
 ## Atualizar e conferir
 
-Feche a Unity, extraia `Cats_vs_Demons_Lagos_Kin_Corrigidos.zip` e copie sua pasta
+Feche a Unity, extraia `Cats_vs_Demons_Roupas_Acessorios_3D.zip` e copie sua pasta
 `Assets` para a raiz do projeto, substituindo os arquivos correspondentes.
 Reabra com Unity **6000.5.4f1** e aguarde a importação. O pacote inclui as
 correções e o cenário da revisão anterior.

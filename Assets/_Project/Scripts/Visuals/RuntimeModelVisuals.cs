@@ -6,6 +6,36 @@ namespace CatsVsDemons.Visuals
     public static class RuntimeModelVisuals
     {
         private static readonly Dictionary<string, Material> Materials = new();
+        private static readonly Dictionary<Mesh, Mesh> KinFaceMeshes = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetFaceMeshes()
+        {
+            foreach (Mesh mesh in KinFaceMeshes.Values) if (mesh != null) Object.Destroy(mesh);
+            KinFaceMeshes.Clear();
+        }
+
+        private static void PreserveKinFace(GameObject visual)
+        {
+            foreach (MeshFilter filter in visual.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Mesh source = filter.sharedMesh;
+                if (source == null || !source.isReadable) continue;
+                if (!KinFaceMeshes.TryGetValue(source, out Mesh copy) || copy == null)
+                {
+                    copy = Object.Instantiate(source); copy.name = source.name + "_KinFaceMasked";
+                    Bounds bounds = source.bounds; float height = Mathf.Max(bounds.size.z, 0.001f);
+                    List<Vector2> mask = new();
+                    foreach (Vector3 vertex in source.vertices)
+                    {
+                        float h = (vertex.z - bounds.min.z) / height;
+                        mask.Add(new Vector2(Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.435f, 0.48f, h)), 0));
+                    }
+                    copy.SetUVs(2, mask); KinFaceMeshes[source] = copy;
+                }
+                filter.sharedMesh = copy;
+            }
+        }
 
         public static bool Attach(
             Transform parent,
@@ -41,6 +71,7 @@ namespace CatsVsDemons.Visuals
             {
                 Object.Destroy(collider);
             }
+            if (resourcePath == "Models/Kin") PreserveKinFace(visual);
 
             Bounds bounds = CalculateBounds(visual);
             if (bounds.size.y > 0.001f)
@@ -341,6 +372,11 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_UseBaseMap", 0f);
             // Imported surfaces carry their own color; animated vertex height is irrelevant.
             material.SetFloat("_UseHeightPalette", 0f);
+            if (modelKey == "Models/Kin")
+            {
+                material.SetFloat("_UseHeadColor", 1);
+                material.SetColor("_HeadColor", partColor);
+            }
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", 1f);

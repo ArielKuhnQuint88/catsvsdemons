@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CatsVsDemons.CameraSystem;
 using CatsVsDemons.Economy;
 using CatsVsDemons.Player;
@@ -863,6 +864,21 @@ namespace CatsVsDemons.House
             clone.transform.localPosition = source.localPosition;
             clone.transform.localRotation = source.localRotation;
             clone.transform.localScale = source.localScale;
+            // This is a snapshot of the equipped gameplay model, including its gear.
+            // Preview cameras must not run movement, rig setup or equipment effects.
+            foreach (MonoBehaviour behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))
+                behaviour.enabled = false;
+            Transform wardrobe = clone.transform.GetComponentsInChildren<Transform>(true).
+                FirstOrDefault(t => t.name == "Equipped Kin Wardrobe");
+            if (wardrobe != null)
+                foreach (Renderer renderer in wardrobe.GetComponentsInChildren<Renderer>(true)) renderer.enabled = true;
+            MeshFilter body = clone.GetComponentInChildren<MeshFilter>(true);
+            SkinnedMeshRenderer bodyRig = clone.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (body != null && (bodyRig == null || !bodyRig.enabled))
+            {
+                MeshRenderer bodyRenderer = body.GetComponent<MeshRenderer>();
+                if (bodyRenderer != null) bodyRenderer.enabled = true;
+            }
         }
 
         private static Transform FindLatestChild(Transform parent,
