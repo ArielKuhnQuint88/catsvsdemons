@@ -13,9 +13,9 @@ namespace CatsVsDemons.UI
         private static Sprite circle;
         private static Sprite ring;
 
-        public static readonly Color Ink = new(0.075f, 0.03f, 0.025f, 0.97f);
-        public static readonly Color Gold = new(0.95f, 0.61f, 0.12f, 1f);
-        public static readonly Color Paper = new(0.92f, 0.84f, 0.66f, 0.98f);
+        public static readonly Color Ink = new(0.12f, 0.22f, 0.21f, 0.98f);
+        public static readonly Color Gold = new(0.79f, 0.65f, 0.38f, 1f);
+        public static readonly Color Paper = new(0.94f, 0.9f, 0.79f, 0.97f);
 
         public Canvas CreateCanvas(Transform parent)
         {

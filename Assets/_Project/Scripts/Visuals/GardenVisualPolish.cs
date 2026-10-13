@@ -80,16 +80,16 @@ namespace CatsVsDemons.Visuals
             Tonemapping tonemapping = profile.Add<Tonemapping>(true);
             tonemapping.mode.Override(TonemappingMode.ACES);
             ColorAdjustments color = profile.Add<ColorAdjustments>(true);
-            color.contrast.Override(8f);
-            color.saturation.Override(6f);
+            color.contrast.Override(5f);
+            color.saturation.Override(-5f);
             Bloom bloom = profile.Add<Bloom>(true);
             bloom.active = !lowMemory;
-            bloom.intensity.Override(Application.isMobilePlatform ? 0.18f : 0.32f);
+            bloom.intensity.Override(Application.isMobilePlatform ? 0.12f : 0.22f);
             bloom.threshold.Override(1.1f);
             bloom.scatter.Override(0.55f);
             bloom.highQualityFiltering.Override(false);
             Vignette vignette = profile.Add<Vignette>(true);
-            vignette.intensity.Override(0.1f);
+            vignette.intensity.Override(0.065f);
             vignette.smoothness.Override(0.45f);
         }
 
@@ -170,8 +170,8 @@ namespace CatsVsDemons.Visuals
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.startColor = season == 3 ? new Color(0.9f, 0.96f, 1f, 0.8f)
                 : scenario == 2 ? new Color(0.58f, 0.76f, 1f, 0.65f)
-                : season == 2 ? new Color(1f, 0.62f, 0.2f, 0.85f)
-                : new Color(1f, 0.7f, 0.82f, 0.8f);
+                : season == 2 ? new Color(0.86f, 0.61f, 0.36f, 0.7f)
+                : new Color(0.93f, 0.76f, 0.82f, 0.72f);
             var emission = atmosphere.emission;
             emission.rateOverTime = lowMemory ? 3f : Application.isMobilePlatform ? 6f : 12f;
             var shape = atmosphere.shape;

@@ -12,6 +12,10 @@ Versão em preparação para Android: campanha de 12 fases, loja, HUD animado e
 exportador AAB. A compilação na Unity e a validação em dispositivo ainda são
 necessárias antes da publicação. Veja o [guia de exportação para o Play Console](docs/PLAY_CONSOLE_RELEASE.md).
 
+A revisão visual inclui caminhos contínuos, jardim japonês com construções e
+vegetação variadas, montanhas, paleta integrada e HUD compacto. Veja as
+[mudanças e instruções para atualizar no PC](docs/ART_DIRECTION_POLISH.md).
+
 ## Loop principal
 
 1. Demônios surgem nas entradas do mapa.

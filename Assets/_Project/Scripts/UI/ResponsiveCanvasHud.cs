@@ -222,65 +222,39 @@ namespace CatsVsDemons.UI
 
         private void BuildTopPanel()
         {
-            // A dark lacquer frame gives the washi card a stronger silhouette
-            // against bright maps without making the HUD heavier.
             RectTransform frame = ui.Panel("Status Frame", safeArea,
-                new Color(0.15f, 0.055f, 0.025f, 0.96f),
-                new Vector2(792, 322));
-            frame.anchorMin = frame.anchorMax = new Vector2(0.5f, 1f);
-            frame.pivot = new Vector2(0.5f, 1f);
-            frame.anchoredPosition = new Vector2(0, -14);
+                new Color(0.12f, 0.22f, 0.21f, 0.93f), new Vector2(550, 188));
+            Position(frame, new Vector2(0, 1), new Vector2(0, 1), new Vector2(20, -18));
             frame.GetComponent<Image>().raycastTarget = false;
-
-            RectTransform panel = ui.Panel("Status", safeArea,
-                RuntimeUiFactory.Paper, new Vector2(760, 310));
-            panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 1f);
-            panel.pivot = new Vector2(0.5f, 1f);
-            panel.anchoredPosition = new Vector2(0, -18);
-
-            RectTransform accent = ui.Panel("Status Gold Accent", panel,
-                RuntimeUiFactory.Gold, new Vector2(704, 5));
-            accent.anchorMin = accent.anchorMax = new Vector2(0.5f, 1f);
-            accent.pivot = new Vector2(0.5f, 1f);
-            accent.anchoredPosition = new Vector2(0, -9);
-            accent.GetComponent<Image>().raycastTarget = false;
-
-            AddBarRow(panel, "CASA", -20, out houseBar,
-                new Color(0.88f, 0.12f, 0.08f), 20);
-            AddBarRow(panel, "KIN", -54, out kinBar,
-                new Color(0.12f, 0.72f, 0.25f), 16);
-            AddBarRow(panel, "ENERGIA", -86, out energyBar,
-                RuntimeUiFactory.Gold, 13);
+            RectTransform panel = ui.Panel("Status", frame, RuntimeUiFactory.Paper, new Vector2(540, 178));
             panel.GetComponent<Image>().raycastTarget = false;
-            coinsLabel = ui.Label("Coins", "MOEDAS  0", panel, 20,
-                RuntimeUiFactory.Ink, new Vector2(180, 38), TextAnchor.MiddleLeft);
+            RectTransform accent = ui.Panel("Status Gold Accent", panel, RuntimeUiFactory.Gold, new Vector2(496, 3));
+            Position(accent, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2(0, -12));
+            accent.GetComponent<Image>().raycastTarget = false;
+            AddBarRow(panel, "CASA", -23, out houseBar, new Color(0.76f, 0.29f, 0.24f), 14);
+            AddBarRow(panel, "KIN", -50, out kinBar, new Color(0.33f, 0.61f, 0.47f), 14);
+            AddBarRow(panel, "ENERGIA", -77, out energyBar, RuntimeUiFactory.Gold, 10);
+            coinsLabel = ui.Label("Coins", "MOEDAS  0", panel, 20, RuntimeUiFactory.Ink,
+                new Vector2(170, 30), TextAnchor.MiddleLeft);
             RectTransform coinsRect = (RectTransform)coinsLabel.transform;
-            Position(coinsRect, new Vector2(0, 1), new Vector2(0, 1),
-                new Vector2(22, -116));
+            Position(coinsRect, new Vector2(0, 1), new Vector2(0, 1), new Vector2(22, -106));
             coinMotion = coinsRect.gameObject.AddComponent<HudMotion>();
-            coinDelta = ui.Label("Coin Reward", "", coinsRect, 18,
-                new Color(0.25f, 0.45f, 0.08f), new Vector2(180, 26),
-                TextAnchor.MiddleLeft);
+            coinDelta = ui.Label("Coin Reward", "", coinsRect, 18, new Color(0.3f, 0.5f, 0.37f),
+                new Vector2(170, 26), TextAnchor.MiddleLeft);
             coinDelta.gameObject.SetActive(false);
-            stats = ui.Label("Stats", "", panel, 18, RuntimeUiFactory.Ink,
-                new Vector2(520, 38), TextAnchor.MiddleCenter);
-            RectTransform statsRect = (RectTransform)stats.transform;
-            statsRect.anchorMin = statsRect.anchorMax = new Vector2(0.5f, 1f);
-            statsRect.pivot = new Vector2(0.5f, 1f);
-            statsRect.anchoredPosition = new Vector2(90, -116);
+            stats = ui.Label("Stats", "", panel, 19, RuntimeUiFactory.Ink,
+                new Vector2(496, 27), TextAnchor.MiddleLeft);
+            Position((RectTransform)stats.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(22, -143));
 
+            RectTransform dock = ui.Panel("Defense Dock", safeArea, new Color(0.12f, 0.22f, 0.21f, 0.94f),
+                new Vector2(472, 134));
+            Position(dock, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 24));
+            dock.GetComponent<Image>().raycastTarget = false;
             string[] labels = { "PORTAL  10", "BONSAI  15", "LANTERNA  10" };
             string[] artwork = { "TowerPortal", "TowerBonsai", "TowerLantern" };
-            Color[] colors =
-            {
-                new(0.04f, 0.38f, 0.78f), new(0.05f, 0.55f, 0.2f),
-                new(0.55f, 0.24f, 0.72f)
-            };
+            Color[] colors = { new(0.82f, 0.87f, 0.89f), new(0.82f, 0.88f, 0.8f), new(0.87f, 0.83f, 0.89f) };
             for (int index = 0; index < defenseButtons.Length; index++)
-            {
-                AddDefenseButton(panel, index, labels[index], artwork[index],
-                    colors[index]);
-            }
+                AddDefenseButton(dock, index, labels[index], artwork[index], colors[index]);
         }
 
         private void AddDefenseButton(RectTransform panel, int index,
@@ -289,23 +263,24 @@ namespace CatsVsDemons.UI
             int captured = index;
             Button button = ui.Button($"Defense {index}", label, panel,
                 new Color(color.r, color.g, color.b, 0.92f),
-                new Vector2(206, 116));
+                new Vector2(144, 116));
             defenseButtons[index] = button;
             defenseMotions[index] = button.GetComponent<HudMotion>();
             RectTransform buttonRect = (RectTransform)button.transform;
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(0.5f, 1f);
             buttonRect.pivot = new Vector2(0.5f, 1f);
-            buttonRect.anchoredPosition = new Vector2((index - 1) * 226, -174);
+            buttonRect.anchoredPosition = new Vector2((index - 1) * 152, -9);
 
             Text labelText = button.GetComponentInChildren<Text>();
             RectTransform labelRect = (RectTransform)labelText.transform;
-            labelRect.sizeDelta = new Vector2(194, 30);
+            labelRect.sizeDelta = new Vector2(136, 28);
             labelRect.anchoredPosition = new Vector2(0, -39);
-            labelText.fontSize = 19;
+            labelText.fontSize = 20;
+            labelText.resizeTextMaxSize = 20;
             labelText.color = RuntimeUiFactory.Ink;
 
             RectTransform border = ui.Rect("Golden Circle", button.transform);
-            border.sizeDelta = new Vector2(82, 82);
+            border.sizeDelta = new Vector2(74, 74);
             border.anchoredPosition = new Vector2(0, 15);
             Image borderImage = border.gameObject.AddComponent<Image>();
             borderImage.sprite = RuntimeUiFactory.CircleSprite;
@@ -313,7 +288,7 @@ namespace CatsVsDemons.UI
             borderImage.raycastTarget = false;
 
             RectTransform maskRect = ui.Rect("Artwork Mask", border);
-            maskRect.sizeDelta = new Vector2(72, 72);
+            maskRect.sizeDelta = new Vector2(66, 66);
             Image maskImage = maskRect.gameObject.AddComponent<Image>();
             maskImage.sprite = RuntimeUiFactory.CircleSprite;
             maskImage.color = Color.white;
@@ -346,17 +321,17 @@ namespace CatsVsDemons.UI
             out Image bar, Color color, float height)
         {
             Text label = ui.Label(name, name, panel, 19, RuntimeUiFactory.Ink,
-                new Vector2(96, 28), TextAnchor.MiddleLeft);
+                new Vector2(90, 25), TextAnchor.MiddleLeft);
             RectTransform labelRect = (RectTransform)label.transform;
             labelRect.anchorMin = labelRect.anchorMax = new Vector2(0f, 1f);
             labelRect.pivot = new Vector2(0f, 1f);
             labelRect.anchoredPosition = new Vector2(22, y);
-            bar = ui.Bar($"{name} Bar", panel, new Vector2(568, height));
+            bar = ui.Bar($"{name} Bar", panel, new Vector2(384, height));
             bar.color = color;
             RectTransform barRect = (RectTransform)bar.transform.parent;
             barRect.anchorMin = barRect.anchorMax = new Vector2(0f, 1f);
             barRect.pivot = new Vector2(0f, 1f);
-            barRect.anchoredPosition = new Vector2(124, y - 4);
+            barRect.anchoredPosition = new Vector2(126, y - 4);
         }
 
         private void BuildActions()
@@ -368,13 +343,13 @@ namespace CatsVsDemons.UI
             Vector2 specialPivot = new Vector2(0.5f, 0f);
             Vector2 specialPosition = new Vector2(0f, 34f);
             CreateCircleLayer("Special Shadow", safeArea, specialAnchor,
-                specialPivot, specialPosition, new Vector2(202, 202),
+                specialPivot, specialPosition, new Vector2(174, 174),
                 new Color(0.02f, 0.012f, 0.01f, 0.78f));
             CreateCircleLayer("Special Gold Rim", safeArea, specialAnchor,
-                specialPivot, specialPosition, new Vector2(194, 194),
+                specialPivot, specialPosition, new Vector2(166, 166),
                 new Color(0.24f, 0.14f, 0.06f));
             energyRing = CreateCircleLayer("Energy Charge Ring", safeArea,
-                specialAnchor, specialPivot, specialPosition, new Vector2(198, 198),
+                specialAnchor, specialPivot, specialPosition, new Vector2(170, 170),
                 RuntimeUiFactory.Gold);
             energyRing.sprite = RuntimeUiFactory.RingSprite;
             energyRing.type = Image.Type.Filled;
@@ -384,7 +359,7 @@ namespace CatsVsDemons.UI
             energyRing.fillAmount = 0f;
 
             specialButton = ui.Button("Special", "GOLPE\n0%", safeArea,
-                RuntimeUiFactory.Paper, new Vector2(174, 174));
+                RuntimeUiFactory.Paper, new Vector2(150, 150));
             RectTransform specialRect = (RectTransform)specialButton.transform;
             Position(specialRect, specialAnchor, specialPivot, specialPosition);
             Image specialImage = specialButton.GetComponent<Image>();
@@ -459,9 +434,9 @@ namespace CatsVsDemons.UI
                 new Color(0.06f, 0.025f, 0.015f, 0.95f);
 
             RectTransform banner = ui.Panel("Phase Banner", safeArea,
-                new Color(0.06f, 0.025f, 0.015f, 0.92f), new Vector2(860, 68));
-            Position(banner, new Vector2(0.5f, 1), new Vector2(0.5f, 1),
-                new Vector2(0, -346));
+                new Color(0.12f, 0.22f, 0.21f, 0.93f), new Vector2(760, 52));
+            Position(banner, new Vector2(0.63f, 1), new Vector2(0.5f, 1),
+                new Vector2(0, -24));
             banner.GetComponent<Image>().raycastTarget = false;
             phaseBannerGroup = banner.gameObject.AddComponent<CanvasGroup>();
             phaseBannerGroup.blocksRaycasts = false;

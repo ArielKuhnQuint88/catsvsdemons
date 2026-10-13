@@ -21,7 +21,7 @@ namespace CatsVsDemons.Editor
         };
         private static readonly string[] RuntimeShaders =
         {
-            "CatsVsDemons/StylizedModel", "CatsVsDemons/GardenWater",
+            "CatsVsDemons/StylizedModel", "CatsVsDemons/GardenWater", "CatsVsDemons/GardenScenery", "Skybox/Procedural",
             "Universal Render Pipeline/Lit", "Universal Render Pipeline/Unlit",
             "Universal Render Pipeline/Particles/Unlit"
         };
@@ -30,7 +30,8 @@ namespace CatsVsDemons.Editor
             "Models/Kin", "Models/DemonSono", "Models/DemonPoerix", "Models/DemonFlamurk",
             "Models/Bonsai", "Models/StoneLantern", "UI/TowerPortalData", "UI/TowerBonsaiData",
             "UI/TowerLanternData", "UI/EndingVictoryData", "UI/EndingDefeatData",
-            "UI/HouseInterior", "UI/HouseShopClothes", "UI/HouseShopAccessories", "UI/KinTutorialPortrait"
+            "UI/HouseInterior", "UI/HouseShopClothes", "UI/HouseShopAccessories", "UI/KinTutorialPortrait",
+            "Textures/Environment/PaintedMoss"
         };
 
         [MenuItem("Tools/Cats vs Demons/Verificar prontidao para Play Console")]

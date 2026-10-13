@@ -110,7 +110,7 @@ namespace CatsVsDemons.CameraSystem
             }
 
             gameCamera.orthographic = false;
-            gameCamera.fieldOfView = Application.isMobilePlatform ? 40f : 42f;
+            gameCamera.fieldOfView = Application.isMobilePlatform ? 44f : 46f;
             gameCamera.nearClipPlane = 0.3f;
             gameCamera.farClipPlane = 300f;
 
