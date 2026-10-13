@@ -5,6 +5,10 @@ Shader "CatsVsDemons/StylizedModel"
         [MainColor] _BaseColor ("Base Color", Color) = (0.3, 0.5, 0.7, 1)
         [MainTexture] _BaseMap ("Albedo Texture", 2D) = "white" {}
         _UseBaseMap ("Use Albedo Texture", Range(0, 1)) = 0
+        _DetailMap ("Fur and Fabric Detail", 2D) = "gray" {}
+        _DetailStrength ("Surface Detail", Range(0, 1)) = 0
+        _DetailTiling ("Detail Tiling", Float) = 4
+        _AmbientFloor ("Minimum Ambient Light", Range(0, 1)) = 0.04
         _SecondaryColor ("Secondary Color", Color) = (0.9, 0.9, 0.9, 1)
         _AccentColor ("Accent Color", Color) = (0.8, 0.1, 0.1, 1)
         _RimColor ("Rim Color", Color) = (1, 0.8, 0.45, 1)
@@ -45,6 +49,9 @@ Shader "CatsVsDemons/StylizedModel"
             float _RimStrength;
             float _UseBaseMap;
             float _SpecularStrength;
+            float _DetailStrength;
+            float _DetailTiling;
+            float _AmbientFloor;
         CBUFFER_END
         ENDHLSL
 
@@ -63,6 +70,8 @@ Shader "CatsVsDemons/StylizedModel"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
+            TEXTURE2D(_DetailMap);
+            SAMPLER(sampler_DetailMap);
 
             struct Attributes
             {
@@ -147,6 +156,8 @@ Shader "CatsVsDemons/StylizedModel"
                     input.uv
                 ).rgb;
                 color = lerp(color, albedo, _UseBaseMap);
+                half detail = SAMPLE_TEXTURE2D(_DetailMap, sampler_DetailMap, input.uv * _DetailTiling).r;
+                color *= lerp(1.0, 0.78 + detail * 0.55, _DetailStrength);
 
                 #if defined(_MAIN_LIGHT_SHADOWS_SCREEN)
                     float4 shadowCoord = input.shadowCoord;
@@ -166,7 +177,8 @@ Shader "CatsVsDemons/StylizedModel"
                 half shadow =
                     lerp(0.42, 1.0, mainLight.shadowAttenuation);
                 half3 litColor =
-                    color * (SampleSH(normal) * 0.55 + bands * shadow * mainLight.color);
+                    color * (max(SampleSH(normal) * 0.55, half3(_AmbientFloor, _AmbientFloor, _AmbientFloor)) +
+                        bands * shadow * mainLight.color);
 
                 half3 viewDirection =
                     normalize(input.viewDirectionWS);

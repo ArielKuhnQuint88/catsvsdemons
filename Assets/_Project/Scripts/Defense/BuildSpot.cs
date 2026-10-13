@@ -4,27 +4,37 @@ using UnityEngine;
 
 namespace CatsVsDemons.Defense
 {
+    public enum BuildFailure { ChooseDefense, Occupied, NotEnoughCoins }
+
     public sealed class BuildSpot : MonoBehaviour
     {
         public static event System.Action<DefenseType, GameObject> DefenseBuilt;
+        public static event System.Action<BuildSpot, DefenseType, BuildFailure> BuildFailed;
         [SerializeField] private bool isOccupied;
 
         private Wallet wallet;
+        private int lastAttemptFrame = -1;
         public bool IsOccupied => isOccupied;
 
         private void Awake()
         {
             wallet = Object.FindFirstObjectByType<Wallet>();
             BuildSpotPointerInput.Ensure();
+            if (GetComponent<BuildSpotHint>() == null) gameObject.AddComponent<BuildSpotHint>();
         }
-
-        private void OnMouseDown() => TryBuild();
 
         public void TryBuild()
         {
+            if (Time.timeScale <= 0f || CatsVsDemons.UI.KinGuideOverlay.ConsumedInputThisFrame || lastAttemptFrame == Time.frameCount) return;
+            lastAttemptFrame = Time.frameCount;
+            if (!TowerBuildSelection.AwaitingPlacement)
+            {
+                BuildFailed?.Invoke(this, TowerBuildSelection.Selected, BuildFailure.ChooseDefense);
+                return;
+            }
             if (isOccupied)
             {
-                Debug.Log("Este ponto já possui uma defesa.");
+                BuildFailed?.Invoke(this, TowerBuildSelection.Selected, BuildFailure.Occupied);
                 return;
             }
 
@@ -37,7 +47,7 @@ namespace CatsVsDemons.Defense
 
             if (wallet == null || !wallet.TrySpend(cost))
             {
-                Debug.Log("Moedas insuficientes para construir.");
+                BuildFailed?.Invoke(this, TowerBuildSelection.Selected, BuildFailure.NotEnoughCoins);
                 return;
             }
 
@@ -63,6 +73,8 @@ namespace CatsVsDemons.Defense
             GameObject built = transform.childCount > 0
                 ? transform.GetChild(transform.childCount - 1).gameObject
                 : null;
+            TowerBuildSelection.CompletePlacement();
+            GetComponent<BuildSpotHint>()?.PlayBuildPulse();
             DefenseBuilt?.Invoke(TowerBuildSelection.Selected, built);
 
             Renderer spotRenderer = GetComponent<Renderer>();

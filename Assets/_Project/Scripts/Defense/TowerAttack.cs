@@ -36,6 +36,7 @@ namespace CatsVsDemons.Defense
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             UpdateBeam();
             UpdateKinPower();
             slowRefreshTimer -= Time.deltaTime;

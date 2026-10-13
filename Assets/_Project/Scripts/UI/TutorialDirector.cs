@@ -24,6 +24,7 @@ namespace CatsVsDemons.UI
         private Transform enemyTarget;
         private Step step;
         private bool initialized;
+        private bool replay;
         private float nextTargetRefresh;
         private float finishedTime;
         private int progressValue = -1;
@@ -41,6 +42,7 @@ namespace CatsVsDemons.UI
 
         private void Start()
         {
+            if (replay) return;
             if (PlayerPrefs.GetInt(CompletedKey, 0) == 1)
             {
                 wavesReleased = true;
@@ -50,6 +52,21 @@ namespace CatsVsDemons.UI
             wavesReleased = false;
             hud = GetComponent<ResponsiveCanvasHud>();
             cameraController = Object.FindFirstObjectByType<CameraModeController>();
+            TryInitialize();
+        }
+
+        public void Replay()
+        {
+            Unsubscribe();
+            TowerBuildSelection.CancelPlacement();
+            hud = GetComponent<ResponsiveCanvasHud>();
+            cameraController = Object.FindFirstObjectByType<CameraModeController>();
+            initialized = false;
+            tutorialLantern = null;
+            buildSpot = null;
+            enemyTarget = null;
+            replay = true;
+            enabled = true;
             TryInitialize();
         }
 
@@ -217,14 +234,20 @@ namespace CatsVsDemons.UI
                     Focus(TutorialFocus.LanternButton, null, "ESCOLHA LANTERNA");
                     break;
                 case Step.Build:
-                    if (TowerBuildSelection.Selected != DefenseType.Lantern)
+                    if (TowerBuildSelection.Selected != DefenseType.Lantern || !TowerBuildSelection.AwaitingPlacement)
                         TowerBuildSelection.Select(DefenseType.Lantern);
                     Wallet wallet = Object.FindFirstObjectByType<Wallet>();
                     int cost = TowerBuildSelection.GetCost();
-                    if (wallet != null && wallet.Coins < cost) wallet.AddCoins(cost - wallet.Coins);
-                    Show("3/6 • CONSTRUA COMIGO", "As bases douradas são os lugares onde posso instalar nossas defesas.",
-                        "Clique ou toque na base marcada. Você já tem as moedas!");
+                    if (!replay && wallet != null && wallet.Coins < cost) wallet.AddCoins(cost - wallet.Coins);
+                    Show("3/6 • CONSTRUA COMIGO", "As bases iluminadas são os lugares onde posso instalar nossas defesas.",
+                        replay ? "Clique na base marcada. Se faltarem moedas, derrote demônios para juntar o custo."
+                            : "Clique ou toque na base marcada. Você já tem as moedas!");
                     buildSpot = FindBuildSpot();
+                    if (replay && buildSpot == null)
+                    {
+                        tutorialLantern = Object.FindFirstObjectByType<TowerAttack>();
+                        if (tutorialLantern != null) { SetStep(Step.PowerLantern); return; }
+                    }
                     Focus(TutorialFocus.BuildSpot, buildSpot != null ? buildSpot.transform : null, "CONSTRUA AQUI");
                     break;
                 case Step.PowerLantern:

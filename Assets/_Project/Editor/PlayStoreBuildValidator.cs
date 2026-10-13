@@ -31,7 +31,7 @@ namespace CatsVsDemons.Editor
             "Models/Bonsai", "Models/StoneLantern", "UI/TowerPortalData", "UI/TowerBonsaiData",
             "UI/TowerLanternData", "UI/EndingVictoryData", "UI/EndingDefeatData",
             "UI/HouseInterior", "UI/HouseShopClothes", "UI/HouseShopAccessories", "UI/KinTutorialPortrait",
-            "Textures/Environment/PaintedMoss"
+            "Textures/Environment/PaintedMoss", "Textures/Characters/Kin_SurfaceDetail"
         };
 
         [MenuItem("Tools/Cats vs Demons/Verificar prontidao para Play Console")]

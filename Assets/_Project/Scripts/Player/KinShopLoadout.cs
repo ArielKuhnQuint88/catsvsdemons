@@ -17,6 +17,7 @@ namespace CatsVsDemons.Player
         {
             public Material Material;
             public PaletteSlot Slot;
+            public bool WholeModel;
         }
 
         private readonly List<PaletteEntry> palette = new();
@@ -82,7 +83,8 @@ namespace CatsVsDemons.Player
                     palette.Add(new PaletteEntry
                     {
                         Material = instance,
-                        Slot = DetectSlot(original)
+                        Slot = DetectSlot(original),
+                        WholeModel = original.name == "Runtime_Models_Kin"
                     });
                 }
                 modelRenderer.sharedMaterials = instances;
@@ -125,7 +127,14 @@ namespace CatsVsDemons.Player
                     PaletteSlot.Secondary => secondary,
                     _ => dark
                 };
-                SetMaterialColors(entry.Material, color, accent);
+                if (entry.WholeModel)
+                {
+                    // A missing imported palette must not repaint Kin's head as clothing.
+                    SetMaterialColors(entry.Material, secondary, accent);
+                    entry.Material.SetColor("_SecondaryColor", fur);
+                    entry.Material.SetColor("_AccentColor", primary);
+                }
+                else SetMaterialColors(entry.Material, color, accent);
             }
         }
 

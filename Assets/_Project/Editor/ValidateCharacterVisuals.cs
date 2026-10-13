@@ -43,6 +43,22 @@ namespace CatsVsDemons.Editor
                     rigValid &= source != null && AutomaticCharacterRig.ValidateRestPose(renderer, source.sharedMesh, out _);
                 }
                 bool valid = originalValid || rigValid;
+                if (valid && name == "Kin")
+                {
+                    Mesh mesh = rigValid ? renderer.sharedMesh : source.sharedMesh;
+                    Renderer surface = rigValid ? renderer : original;
+                    bool textured = mesh.uv.Length == mesh.vertexCount;
+                    foreach (Material material in surface.sharedMaterials)
+                        textured &= material != null && material.HasProperty("_DetailMap") && material.GetTexture("_DetailMap") != null &&
+                            material.GetFloat("_DetailStrength") > 0f;
+                    if (!textured)
+                    {
+                        Debug.LogError("[Visual] Kin: UVs ou textura de detalhe ausentes.");
+                        valid = false;
+                    }
+                    if (mesh.subMeshCount < 4)
+                        Debug.LogWarning("[Visual] Kin: paleta reduzida na importação. Reimporte Resources/Models/Kin.obj para recuperar quatro superfícies.");
+                }
                 if (valid)
                 {
                     passed++;

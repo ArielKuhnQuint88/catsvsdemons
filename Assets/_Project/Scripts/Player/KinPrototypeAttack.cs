@@ -33,6 +33,7 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             EnemyHealth target = FindNearestTarget();
             if (target == null)
             {

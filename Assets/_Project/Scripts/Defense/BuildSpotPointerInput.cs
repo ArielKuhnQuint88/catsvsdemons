@@ -19,9 +19,19 @@ namespace CatsVsDemons.Defense
 
         private void Update()
         {
-            if (Time.timeScale <= 0 || !TryReadPress(out Vector2 position)) return;
+            if (Time.timeScale <= 0 || CatsVsDemons.UI.KinGuideOverlay.ConsumedInputThisFrame)
+            { BuildSpotHint.SetHovered(null); return; }
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.rightButton.wasPressedThisFrame) TowerBuildSelection.CancelPlacement();
+            Camera camera = Camera.main;
+            if (mouse != null && camera != null && TowerBuildSelection.AwaitingPlacement &&
+                (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject()) &&
+                Physics.Raycast(camera.ScreenPointToRay(mouse.position.ReadValue()), out RaycastHit hover, 300f, ~0, QueryTriggerInteraction.Ignore))
+                BuildSpotHint.SetHovered(hover.collider.GetComponentInParent<BuildSpot>());
+            else BuildSpotHint.SetHovered(null);
+            if (!TryReadPress(out Vector2 position)) return;
             // This region belongs to Kin's floating joystick.
-            if (Application.isMobilePlatform && position.x < Screen.width * 0.42f &&
+            if (!TowerBuildSelection.AwaitingPlacement && Application.isMobilePlatform && position.x < Screen.width * 0.42f &&
                 position.y < Screen.height * 0.55f) return;
             EventSystem events = EventSystem.current;
             if (events != null)
@@ -30,7 +40,6 @@ namespace CatsVsDemons.Defense
                 events.RaycastAll(new PointerEventData(events) { position = position }, uiHits);
                 if (uiHits.Count > 0) return;
             }
-            Camera camera = Camera.main;
             if (camera == null) return;
             if (Physics.Raycast(camera.ScreenPointToRay(position), out RaycastHit hit, 300f,
                 ~0, QueryTriggerInteraction.Ignore))

@@ -1,0 +1,234 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
+namespace CatsVsDemons.UI
+{
+    /// <summary>Scene-owned reference guide, available independently of the battle or shop HUD.</summary>
+    [DefaultExecutionOrder(-200)]
+    public sealed class KinGuideOverlay : MonoBehaviour
+    {
+        private static KinGuideOverlay instance;
+        private RectTransform safeArea;
+        private GameObject overlay;
+        private RectTransform portrait;
+        private Sprite portraitSprite;
+        private Text heading, dialogue, objective, pageCount;
+        private readonly Image[] tabs = new Image[6];
+        private Button previous, next, practice;
+        private Rect lastSafeArea;
+        private bool open;
+        private int page;
+        private int consumedFrame = -1;
+        private float resumeScale;
+
+        public static bool IsOpen => instance != null && instance.open;
+        public static bool ConsumedInputThisFrame => instance != null && instance.consumedFrame == Time.frameCount;
+
+        private static readonly string[] Topics = { "ANDAR", "CONSTRUIR", "PODERES", "COMBATE", "LOJA", "CÂMERA" };
+        private static readonly string[] Titles =
+        {
+            "VAMOS CONHECER O JARDIM", "ESCOLHA, DEPOIS CONSTRUA", "PERTO DE MIM, ELAS FICAM MAIS FORTES",
+            "EU CUIDO DA ESPADA; VOCÊ CUIDA DO CAMINHO", "UMA PAUSA PARA NOS PREPARAR", "ENCONTRE O MELHOR ÂNGULO"
+        };
+
+        public static KinGuideOverlay Ensure()
+        {
+            if (instance != null) return instance;
+            instance = Object.FindFirstObjectByType<KinGuideOverlay>();
+            if (instance == null) instance = new GameObject("Kin Guide Access").AddComponent<KinGuideOverlay>();
+            return instance;
+        }
+
+        public static void OpenGuide(int topic = 0) => Ensure().Open(topic);
+
+        private void Awake()
+        {
+            instance = this;
+            RuntimeUiFactory ui = new();
+            Canvas canvas = ui.CreateCanvas(transform);
+            canvas.name = "Kin Guide Canvas";
+            canvas.sortingOrder = 950;
+            safeArea = ui.Rect("Safe Area", canvas.transform);
+            safeArea.anchorMin = Vector2.zero; safeArea.anchorMax = Vector2.one;
+            safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
+
+            Button access = ui.Button("Guide Anytime", "GUIA  ?", safeArea, RuntimeUiFactory.Paper,
+                Application.isMobilePlatform ? new Vector2(176, 82) : new Vector2(154, 62));
+            RectTransform accessRect = (RectTransform)access.transform;
+            accessRect.anchorMin = accessRect.anchorMax = accessRect.pivot = new Vector2(1, 1);
+            accessRect.anchoredPosition = new Vector2(-32, -108);
+            access.GetComponentInChildren<Text>().color = RuntimeUiFactory.Ink;
+            access.onClick.AddListener(() => Open(0));
+
+            RectTransform shade = ui.Panel("Guide Backdrop", safeArea, new Color(0.035f, 0.08f, 0.09f, 0.9f), Vector2.zero);
+            shade.anchorMin = Vector2.zero; shade.anchorMax = Vector2.one;
+            shade.offsetMin = shade.offsetMax = Vector2.zero;
+            overlay = shade.gameObject;
+            RectTransform card = ui.Panel("Kin Guide Book", shade, RuntimeUiFactory.Paper, new Vector2(1130, 660));
+            card.gameObject.AddComponent<Outline>().effectColor = RuntimeUiFactory.Gold;
+            heading = ui.Label("Guide Title", "", card, 30, RuntimeUiFactory.Ink,
+                new Vector2(890, 64), TextAnchor.MiddleLeft);
+            ((RectTransform)heading.transform).anchoredPosition = new Vector2(-65, 258);
+            Button close = ui.Button("Close Guide", "FECHAR", card, RuntimeUiFactory.Ink, new Vector2(142, 56));
+            ((RectTransform)close.transform).anchoredPosition = new Vector2(463, 260);
+            close.onClick.AddListener(Close);
+
+            for (int i = 0; i < Topics.Length; i++)
+            {
+                int topic = i;
+                Button tab = ui.Button("Guide " + Topics[i], Topics[i], card, RuntimeUiFactory.Ink,
+                    new Vector2(166, Application.isMobilePlatform ? 64 : 48));
+                ((RectTransform)tab.transform).anchoredPosition = new Vector2(-447 + i * 179, 177);
+                tab.GetComponentInChildren<Text>().fontSize = 18;
+                tabs[i] = tab.GetComponent<Image>();
+                tab.onClick.AddListener(() => SetPage(topic));
+            }
+            portrait = ui.Rect("Kin Speaking", card);
+            portrait.sizeDelta = new Vector2(228, 254);
+            portrait.anchoredPosition = new Vector2(-404, -5);
+            Image avatar = portrait.gameObject.AddComponent<Image>();
+            Texture2D texture = Resources.Load<Texture2D>("UI/KinTutorialPortrait");
+            if (texture != null)
+            {
+                portraitSprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+                avatar.sprite = portraitSprite;
+            }
+            avatar.preserveAspect = true; avatar.raycastTarget = false;
+            Text name = ui.Label("Speaker", "KIN • SEU GUIA", card, 22, RuntimeUiFactory.Ink, new Vector2(250, 38), TextAnchor.MiddleCenter);
+            ((RectTransform)name.transform).anchoredPosition = new Vector2(-404, -153);
+            dialogue = ui.Label("Guide Dialogue", "", card, 26, RuntimeUiFactory.Ink,
+                new Vector2(748, 238), TextAnchor.UpperLeft);
+            ((RectTransform)dialogue.transform).anchoredPosition = new Vector2(145, -4);
+            objective = ui.Label("Guide Action", "", card, 23, new Color(0.19f, 0.39f, 0.29f),
+                new Vector2(1040, 72), TextAnchor.MiddleCenter);
+            ((RectTransform)objective.transform).anchoredPosition = new Vector2(0, -205);
+            pageCount = ui.Label("Guide Page", "", card, 18, RuntimeUiFactory.Ink, new Vector2(300, 34), TextAnchor.MiddleCenter);
+            ((RectTransform)pageCount.transform).anchoredPosition = new Vector2(0, -280);
+            practice = ui.Button("Practice Tutorial", "PRATICAR NO JARDIM", card, RuntimeUiFactory.Gold, new Vector2(282, 52));
+            ((RectTransform)practice.transform).anchoredPosition = new Vector2(0, -270);
+            practice.GetComponentInChildren<Text>().color = RuntimeUiFactory.Ink;
+            practice.onClick.AddListener(() =>
+            {
+                ResponsiveCanvasHud hud = Object.FindFirstObjectByType<ResponsiveCanvasHud>();
+                if (hud == null || !hud.CanReplayTutorial) return;
+                Close();
+                hud.GetComponent<TutorialDirector>()?.Replay();
+            });
+            previous = ui.Button("Previous Lesson", "VOLTAR", card, RuntimeUiFactory.Ink, new Vector2(230, 58));
+            ((RectTransform)previous.transform).anchoredPosition = new Vector2(-381, -279);
+            previous.onClick.AddListener(() => SetPage(page - 1));
+            next = ui.Button("Next Lesson", "PRÓXIMO", card, RuntimeUiFactory.Ink, new Vector2(230, 58));
+            ((RectTransform)next.transform).anchoredPosition = new Vector2(381, -279);
+            next.onClick.AddListener(() => { if (page == 5) Close(); else SetPage(page + 1); });
+            overlay.SetActive(false);
+            ApplySafeArea();
+        }
+
+        private void Open(int topic)
+        {
+            if (!open) { resumeScale = Time.timeScale; Time.timeScale = 0f; }
+            open = true;
+            consumedFrame = Time.frameCount;
+            overlay.SetActive(true);
+            ResponsiveCanvasHud hud = Object.FindFirstObjectByType<ResponsiveCanvasHud>();
+            bool canPractice = hud != null && hud.CanReplayTutorial;
+            practice.gameObject.SetActive(canPractice);
+            pageCount.gameObject.SetActive(!canPractice);
+            SetPage(topic);
+        }
+
+        public void Close()
+        {
+            if (!open) return;
+            open = false;
+            consumedFrame = Time.frameCount;
+            overlay.SetActive(false);
+            Time.timeScale = resumeScale;
+        }
+
+        private void SetPage(int topic)
+        {
+            page = Mathf.Clamp(topic, 0, 5);
+            heading.text = Titles[page];
+            switch (page)
+            {
+                case 0:
+                    dialogue.text = "Sou Kin, o guardião desta casa! Leve-me pelo jardim e fique de olho nas três trilhas. Os demônios chegam por elas.\n\n" +
+                        (Application.isMobilePlatform ? "Use o joystick na região inferior esquerda para andar." : "Use WASD ou as setas para andar.") +
+                        "\n\nAbra este GUIA quando precisar. A partida fica pausada enquanto conversamos.";
+                    objective.text = "Feche o guia e experimente se mover pelo jardim.";
+                    break;
+                case 1:
+                    dialogue.text = "1. Escolha PORTAL, BONSAI ou LANTERNA na faixa inferior. A defesa escolhida ganha uma borda dourada.\n\n" +
+                        "2. Clique ou toque numa base iluminada. Você só paga quando a defesa é construída.\n\n" +
+                        "Confira o preço e suas moedas. Se faltar dinheiro, derrote demônios. CANCELAR sai da escolha sem gastar.";
+                    objective.text = "Escolha uma defesa e procure os anéis nas bases livres.";
+                    break;
+                case 2:
+                    dialogue.text = "LANTERNA • Desacelera demônios próximos. Quando estou por perto, ela lança fogo.\n\n" +
+                        "BONSAI • Recupera minha vida. Perto de mim, também ajuda a reparar defesas.\n\n" +
+                        "PORTAL • Construa pelo menos dois e aproxime-me de um deles para viajar até o próximo.\n\nAs torres têm vida própria: proteja-as!";
+                    objective.text = "Aproxime Kin da defesa que precisa de apoio.";
+                    break;
+                case 3:
+                    dialogue.text = "Eu ataco automaticamente quando me aproximo de um demônio. Cada golpe carrega a barra de energia.\n\n" +
+                        "Quando ela fica cheia, o botão GOLPE PRONTO brilha. " +
+                        (Application.isMobilePlatform ? "Toque nele para atingir os inimigos próximos." : "Clique nele ou pressione Espaço para atingir os inimigos próximos.") +
+                        "\n\nProteja a casa central. Cada demônio derrotado rende moedas para nossas defesas.";
+                    objective.text = "Fique perto dos inimigos e guarde o golpe para um grupo.";
+                    break;
+                case 4:
+                    dialogue.text = "O botão PAUSAR leva você à minha casa. Entre as fases também voltamos para lá.\n\n" +
+                        "Toque no computador para abrir a LOJA: roupas, acessórios e melhorias usam as moedas da partida.\n\n" +
+                        "Confira meu equipamento no perfil e use CONTINUAR ou PRÓXIMA FASE para voltar ao jardim. Este guia também funciona dentro da loja.";
+                    objective.text = "Na casa, procure o computador com ABRIR LOJA.";
+                    break;
+                default:
+                    dialogue.text = (Application.isMobilePlatform
+                        ? "Use dois dedos para aproximar, afastar ou deslocar a câmera. A região do joystick continua reservada ao movimento."
+                        : "Na visão isométrica, veja Kin, as rotas e as defesas. A primeira pessoa pode ser escolhida no menu; nesse modo meu corpo fica fora da câmera.") +
+                        "\n\nNo tutorial inicial, a câmera destaca a ação e as setas indicam o alvo.\n\nGUIA fica disponível o tempo todo. No PC, F1 abre ou fecha e Esc fecha esta conversa.";
+                    objective.text = "Pode voltar a qualquer capítulo. Vamos proteger a casa!";
+                    break;
+            }
+            previous.interactable = page > 0;
+            next.GetComponentInChildren<Text>().text = page == 5 ? "VOLTAR AO JOGO" : "PRÓXIMO";
+            pageCount.text = (page + 1) + "/6 • GUIA DO KIN";
+            for (int i = 0; i < tabs.Length; i++) tabs[i].color = i == page ? RuntimeUiFactory.Gold : RuntimeUiFactory.Ink;
+        }
+
+        private void Update()
+        {
+            if (lastSafeArea != Screen.safeArea) ApplySafeArea();
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
+            {
+                if (keyboard.f1Key.wasPressedThisFrame) { if (open) Close(); else Open(0); }
+                else if (open && keyboard.escapeKey.wasPressedThisFrame) Close();
+            }
+            if (open) portrait.localScale = Vector3.one * (1f + Mathf.Sin(Time.unscaledTime * 2.6f) * 0.012f);
+        }
+
+        private void ApplySafeArea()
+        {
+            lastSafeArea = Screen.safeArea;
+            if (Screen.width <= 0 || Screen.height <= 0) return;
+            safeArea.anchorMin = new Vector2(lastSafeArea.xMin / Screen.width, lastSafeArea.yMin / Screen.height);
+            safeArea.anchorMax = new Vector2(lastSafeArea.xMax / Screen.width, lastSafeArea.yMax / Screen.height);
+            safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && open) resumeScale = 0f;
+        }
+
+        private void OnDestroy()
+        {
+            if (open) Time.timeScale = resumeScale;
+            if (portraitSprite != null) Destroy(portraitSprite);
+            if (instance == this) instance = null;
+        }
+    }
+}

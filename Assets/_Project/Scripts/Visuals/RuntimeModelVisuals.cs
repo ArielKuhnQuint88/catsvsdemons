@@ -65,14 +65,19 @@ namespace CatsVsDemons.Visuals
             foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = true;
-                if (UsesPartPalette(resourcePath) &&
-                    renderer.sharedMaterials.Length > 1)
+                Material[] sourceMaterials = renderer.sharedMaterials;
+                MeshFilter partMesh = renderer.GetComponent<MeshFilter>();
+                int surfaceCount = partMesh != null && partMesh.sharedMesh != null
+                    ? partMesh.sharedMesh.subMeshCount : sourceMaterials.Length;
+                bool kinPalette = resourcePath == "Models/Kin" &&
+                    (surfaceCount > 1 || (sourceMaterials.Length == 1 && sourceMaterials[0] != null &&
+                        KinSurfacePalette.IsKnownPart(sourceMaterials[0].name)));
+                if (kinPalette || (UsesPartPalette(resourcePath) && sourceMaterials.Length > 1))
                 {
-                    Material[] sourceMaterials = renderer.sharedMaterials;
-                    Material[] palette = new Material[sourceMaterials.Length];
-                    for (int index = 0; index < sourceMaterials.Length; index++)
+                    Material[] palette = new Material[Mathf.Max(1, surfaceCount)];
+                    for (int index = 0; index < palette.Length; index++)
                     {
-                        Material source = sourceMaterials[index];
+                        Material source = index < sourceMaterials.Length ? sourceMaterials[index] : null;
                         Color partColor = color;
                         if (source != null)
                         {
@@ -85,9 +90,15 @@ namespace CatsVsDemons.Visuals
                                 partColor = source.color;
                             }
                         }
+                        string partName = source != null ? source.name : index.ToString();
+                        if (kinPalette)
+                        {
+                            partName = KinSurfacePalette.ResolvePart(partName, index);
+                            partColor = KinSurfacePalette.GetColor(partName);
+                        }
                         palette[index] = GetPartMaterial(
                             resourcePath,
-                            source != null ? source.name : index.ToString(),
+                            partName,
                             partColor,
                             modelBounds
                         );
@@ -285,6 +296,7 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_AccentCenter", accentCenter);
             material.SetFloat("_AccentWidth", accentWidth);
             material.SetFloat("_RimStrength", 0.3f);
+            if (key == "Models/Kin") KinSurfacePalette.ApplySurfaceDetail(material, "WholeModel");
 
             Materials[key] = material;
             return material;
@@ -333,8 +345,9 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_AccentCenter", 0f);
             material.SetFloat("_AccentWidth", 0.01f);
             material.SetFloat("_RimStrength", 0.18f);
+            if (modelKey == "Models/Kin") KinSurfacePalette.ApplySurfaceDetail(material, partName);
 
-            Materials.Add(cacheKey, material);
+            Materials[cacheKey] = material;
             return material;
         }
     }

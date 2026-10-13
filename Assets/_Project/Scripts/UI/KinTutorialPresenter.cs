@@ -50,7 +50,7 @@ namespace CatsVsDemons.UI
             card = ui.Panel("Speech Bubble", root, RuntimeUiFactory.Paper, new Vector2(850, 228));
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
             card.pivot = new Vector2(0.5f, 0);
-            card.anchoredPosition = new Vector2(0, 178);
+            card.anchoredPosition = new Vector2(0, 300);
             card.GetComponent<Image>().raycastTarget = false;
             Outline outline = card.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0.17f, 0.065f, 0.025f, 0.9f);
@@ -197,7 +197,7 @@ namespace CatsVsDemons.UI
             Rect rect = safeArea.rect;
             Vector2 original = point;
             point.x = Mathf.Clamp(point.x, rect.xMin + 154, rect.xMax - 154);
-            point.y = Mathf.Clamp(point.y, rect.yMin + 470, Mathf.Max(rect.yMin + 470, rect.yMax - 250));
+            point.y = Mathf.Clamp(point.y, rect.yMin + 580, Mathf.Max(rect.yMin + 580, rect.yMax - 250));
             Vector2 direction = original - point;
             targetArrow.transform.localRotation = direction.sqrMagnitude > 1f
                 ? Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg + 90f)

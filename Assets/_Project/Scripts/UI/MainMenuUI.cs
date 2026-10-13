@@ -42,6 +42,7 @@ namespace CatsVsDemons.UI
 
         private void Awake()
         {
+            KinGuideOverlay.Ensure();
             if (backgroundTexture == null)
             {
                 backgroundTexture =
@@ -85,6 +86,7 @@ namespace CatsVsDemons.UI
 
         private void OnGUI()
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             if (showingIntro)
             {
                 DrawComicIntro();

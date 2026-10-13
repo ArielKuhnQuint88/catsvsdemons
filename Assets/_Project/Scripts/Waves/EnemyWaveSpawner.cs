@@ -119,7 +119,7 @@ namespace CatsVsDemons.Waves
 
         private IEnumerator RunPhases()
         {
-            yield return new WaitUntil(() => !TutorialDirector.BlockWaves);
+            yield return new WaitUntil(() => !TutorialDirector.BlockWaves && Time.timeScale > 0f);
 
             for (int phase = sceneFirstPhase; phase <= sceneLastPhase; phase++)
             {
@@ -136,6 +136,8 @@ namespace CatsVsDemons.Waves
                     yield return null;
                 }
 
+                yield return new WaitUntil(() => Time.timeScale > 0f || HouseWasDestroyed());
+                if (HouseWasDestroyed()) yield break;
                 PhaseStarted?.Invoke(CurrentPhase, totalPhases);
 
                 float phaseMultiplier = 1f + (phase - 1) * 0.22f;
@@ -224,7 +226,7 @@ namespace CatsVsDemons.Waves
             IntermissionStarted.Invoke(completedPhase, totalPhases);
 
             yield return new WaitUntil(
-                () => continueFromIntermission || HouseWasDestroyed()
+                () => (continueFromIntermission && Time.timeScale > 0f) || HouseWasDestroyed()
             );
 
             IsInIntermission = false;
@@ -280,7 +282,7 @@ namespace CatsVsDemons.Waves
                 }
 
                 yield return new WaitUntil(
-                    () => HouseWasDestroyed() || CountActiveEnemies() == 0
+                    () => HouseWasDestroyed() || (CountActiveEnemies() == 0 && Time.timeScale > 0f)
                 );
             }
         }

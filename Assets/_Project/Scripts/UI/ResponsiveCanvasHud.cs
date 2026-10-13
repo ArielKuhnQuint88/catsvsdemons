@@ -59,6 +59,17 @@ namespace CatsVsDemons.UI
         private Button pauseButton;
         private readonly Button[] defenseButtons = new Button[3];
         private readonly HudMotion[] defenseMotions = new HudMotion[3];
+        private readonly Image[] defenseFrames = new Image[3];
+        private readonly Image[] defenseArtwork = new Image[3];
+        private readonly Text[] defensePrices = new Text[3];
+        private readonly Text[] defenseBadges = new Text[3];
+        private Text constructionTitle, constructionTip, buildFeedback;
+        private Button cancelConstruction;
+        private CanvasGroup buildFeedbackGroup;
+        private float buildFeedbackTime;
+        private int constructionCoins = int.MinValue;
+        private DefenseType constructionType = (DefenseType)(-1);
+        private bool constructionPending;
         private readonly DefenseType[] defenseTypes =
         {
             DefenseType.Portal, DefenseType.Bonsai, DefenseType.Lantern
@@ -100,6 +111,7 @@ namespace CatsVsDemons.UI
 
         private void Start()
         {
+            KinGuideOverlay.Ensure();
             FindSystems();
             Subscribe();
             if (GetComponent<TutorialDirector>() == null)
@@ -117,9 +129,20 @@ namespace CatsVsDemons.UI
                 FindSystems();
                 Subscribe();
             }
-            if (rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null &&
+            if (!KinGuideOverlay.IsOpen && !KinGuideOverlay.ConsumedInputThisFrame &&
+                rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null &&
                 Keyboard.current.escapeKey.wasPressedThisFrame)
-                TogglePause();
+            {
+                if (TowerBuildSelection.AwaitingPlacement) TowerBuildSelection.CancelPlacement();
+                else TogglePause();
+            }
+            if (!paused && !ended && !KinGuideOverlay.IsOpen && Time.timeScale > 0f &&
+                rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null)
+            {
+                if (Keyboard.current.digit1Key.wasPressedThisFrame) SelectDefense(0);
+                else if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectDefense(1);
+                else if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectDefense(2);
+            }
             Refresh();
             AnimateAnnouncements();
             tutorial.SetSuspended(!CanGuideTutorial);
@@ -150,7 +173,8 @@ namespace CatsVsDemons.UI
         }
 
         public void SetTutorialProgress(string text) => tutorial.SetProgress(text);
-        public bool CanGuideTutorial => !paused && !ended && rootCanvas.gameObject.activeInHierarchy;
+        public bool CanGuideTutorial => !paused && !ended && !KinGuideOverlay.IsOpen && rootCanvas.gameObject.activeInHierarchy;
+        public bool CanReplayTutorial => !paused && !ended && rootCanvas.gameObject.activeInHierarchy;
 
         public void SetHudVisible(bool visible)
         {
@@ -194,6 +218,8 @@ namespace CatsVsDemons.UI
 
         private void Subscribe()
         {
+            BuildSpot.DefenseBuilt += OnDefenseBuilt;
+            BuildSpot.BuildFailed += OnBuildFailed;
             if (house != null) house.Destroyed += OnHouseDestroyed;
             if (kin != null) kin.Downed += OnKinDown;
             if (waves == null) return;
@@ -210,6 +236,8 @@ namespace CatsVsDemons.UI
 
         private void Unsubscribe()
         {
+            BuildSpot.DefenseBuilt -= OnDefenseBuilt;
+            BuildSpot.BuildFailed -= OnBuildFailed;
             if (house != null) house.Destroyed -= OnHouseDestroyed;
             if (kin != null) kin.Downed -= OnKinDown;
             if (waves == null) return;
@@ -247,48 +275,85 @@ namespace CatsVsDemons.UI
             Position((RectTransform)stats.transform, new Vector2(0, 1), new Vector2(0, 1), new Vector2(22, -143));
 
             RectTransform dock = ui.Panel("Defense Dock", safeArea, new Color(0.12f, 0.22f, 0.21f, 0.94f),
-                new Vector2(472, 134));
+                new Vector2(620, 202));
             Position(dock, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 24));
             dock.GetComponent<Image>().raycastTarget = false;
-            string[] labels = { "PORTAL  10", "BONSAI  15", "LANTERNA  10" };
+            constructionTitle = ui.Label("Construction Step", "1 • ESCOLHA UMA DEFESA", dock, 21,
+                RuntimeUiFactory.Gold, new Vector2(474, 32), TextAnchor.MiddleLeft);
+            ((RectTransform)constructionTitle.transform).anchoredPosition = new Vector2(-50, 77);
+            constructionTip = ui.Label("Defense Description", "Depois, toque em uma base livre.", dock, 17,
+                Color.white, new Vector2(580, 30), TextAnchor.MiddleLeft);
+            ((RectTransform)constructionTip.transform).anchoredPosition = new Vector2(0, 48);
+            cancelConstruction = ui.Button("Cancel Construction", "CANCELAR", dock,
+                new Color(0.37f, 0.25f, 0.2f), new Vector2(122, 34));
+            ((RectTransform)cancelConstruction.transform).anchoredPosition = new Vector2(231, 77);
+            cancelConstruction.GetComponentInChildren<Text>().fontSize = 16;
+            cancelConstruction.onClick.AddListener(TowerBuildSelection.CancelPlacement);
+            cancelConstruction.gameObject.SetActive(false);
+            string[] labels = { "PORTAL", "BONSAI", "LANTERNA" };
             string[] artwork = { "TowerPortal", "TowerBonsai", "TowerLantern" };
             Color[] colors = { new(0.82f, 0.87f, 0.89f), new(0.82f, 0.88f, 0.8f), new(0.87f, 0.83f, 0.89f) };
             for (int index = 0; index < defenseButtons.Length; index++)
                 AddDefenseButton(dock, index, labels[index], artwork[index], colors[index]);
+
+            RectTransform feedbackPanel = ui.Panel("Construction Feedback", safeArea, RuntimeUiFactory.Paper, new Vector2(760, 56));
+            Position(feedbackPanel, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 235));
+            feedbackPanel.GetComponent<Image>().raycastTarget = false;
+            buildFeedbackGroup = feedbackPanel.gameObject.AddComponent<CanvasGroup>();
+            buildFeedbackGroup.blocksRaycasts = false;
+            buildFeedbackGroup.interactable = false;
+            buildFeedbackGroup.alpha = 0f;
+            buildFeedback = ui.Label("Build Result", "", feedbackPanel, 23, RuntimeUiFactory.Ink,
+                new Vector2(720, 50), TextAnchor.MiddleCenter);
         }
 
         private void AddDefenseButton(RectTransform panel, int index,
             string label, string artwork, Color color)
         {
             int captured = index;
+            RectTransform frame = ui.Panel("Selected " + label, panel, RuntimeUiFactory.Gold, new Vector2(200, 128));
+            Position(frame, new Vector2(0.5f, 1), new Vector2(0.5f, 1), new Vector2((index - 1) * 200, -68));
+            defenseFrames[index] = frame.GetComponent<Image>();
+            defenseFrames[index].raycastTarget = false;
             Button button = ui.Button($"Defense {index}", label, panel,
                 new Color(color.r, color.g, color.b, 0.92f),
-                new Vector2(144, 116));
+                new Vector2(188, 118));
             defenseButtons[index] = button;
             defenseMotions[index] = button.GetComponent<HudMotion>();
             RectTransform buttonRect = (RectTransform)button.transform;
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(0.5f, 1f);
             buttonRect.pivot = new Vector2(0.5f, 1f);
-            buttonRect.anchoredPosition = new Vector2((index - 1) * 152, -9);
+            buttonRect.anchoredPosition = new Vector2((index - 1) * 200, -73);
 
             Text labelText = button.GetComponentInChildren<Text>();
             RectTransform labelRect = (RectTransform)labelText.transform;
-            labelRect.sizeDelta = new Vector2(136, 28);
-            labelRect.anchoredPosition = new Vector2(0, -39);
+            labelRect.sizeDelta = new Vector2(180, 26);
+            labelRect.anchoredPosition = new Vector2(0, -27);
             labelText.fontSize = 20;
             labelText.resizeTextMaxSize = 20;
             labelText.color = RuntimeUiFactory.Ink;
 
+            defensePrices[index] = ui.Label("Cost", "", button.transform, 19, RuntimeUiFactory.Ink,
+                new Vector2(176, 22), TextAnchor.MiddleCenter);
+            ((RectTransform)defensePrices[index].transform).anchoredPosition = new Vector2(0, -48);
+            Text key = ui.Label("Shortcut", (index + 1).ToString(), button.transform, 19, RuntimeUiFactory.Ink,
+                new Vector2(28, 28), TextAnchor.MiddleCenter);
+            ((RectTransform)key.transform).anchoredPosition = new Vector2(-74, 42);
+            key.gameObject.SetActive(!Application.isMobilePlatform);
+            defenseBadges[index] = ui.Label("Selected State", "OK", button.transform, 18,
+                RuntimeUiFactory.Ink, new Vector2(30, 26), TextAnchor.MiddleCenter);
+            ((RectTransform)defenseBadges[index].transform).anchoredPosition = new Vector2(74, 42);
+
             RectTransform border = ui.Rect("Golden Circle", button.transform);
-            border.sizeDelta = new Vector2(74, 74);
-            border.anchoredPosition = new Vector2(0, 15);
+            border.sizeDelta = new Vector2(72, 72);
+            border.anchoredPosition = new Vector2(0, 24);
             Image borderImage = border.gameObject.AddComponent<Image>();
             borderImage.sprite = RuntimeUiFactory.CircleSprite;
             borderImage.color = RuntimeUiFactory.Gold;
             borderImage.raycastTarget = false;
 
             RectTransform maskRect = ui.Rect("Artwork Mask", border);
-            maskRect.sizeDelta = new Vector2(66, 66);
+            maskRect.sizeDelta = new Vector2(64, 64);
             Image maskImage = maskRect.gameObject.AddComponent<Image>();
             maskImage.sprite = RuntimeUiFactory.CircleSprite;
             maskImage.color = Color.white;
@@ -309,12 +374,88 @@ namespace CatsVsDemons.UI
                     new Vector2(0.5f, 0.5f), 100f);
                 icon.preserveAspect = false;
                 icon.raycastTarget = false;
+                defenseArtwork[index] = icon;
                 ownedArtwork.Add(icon.sprite);
                 if (texture.name == $"{artwork}_Hud") ownedArtwork.Add(texture);
             }
 
-            button.onClick.AddListener(() =>
-                TowerBuildSelection.Select(defenseTypes[captured]));
+            button.onClick.AddListener(() => SelectDefense(captured));
+        }
+
+        private void SelectDefense(int index)
+        {
+            if (paused || ended || KinGuideOverlay.IsOpen || Time.timeScale <= 0f) return;
+            TowerBuildSelection.Select(defenseTypes[index]);
+            defenseMotions[index].Punch();
+        }
+
+        private void RefreshConstruction(int coins)
+        {
+            bool choosing = TowerBuildSelection.AwaitingPlacement;
+            DefenseType type = TowerBuildSelection.Selected;
+            if (constructionCoins != coins || constructionType != type || constructionPending != choosing)
+            {
+                constructionCoins = coins; constructionType = type; constructionPending = choosing;
+                cancelConstruction.gameObject.SetActive(choosing);
+                int missing = Mathf.Max(0, TowerBuildSelection.GetCost(type) - coins);
+                constructionTitle.text = choosing ? "2 • TOQUE EM UMA BASE ILUMINADA" : "1 • ESCOLHA UMA DEFESA";
+                constructionTip.text = choosing
+                    ? missing > 0 ? TowerBuildSelection.GetDisplayName(type) + ": faltam " + missing + " moedas. Derrote demônios."
+                        : TowerBuildSelection.GetDisplayName(type) + " • " + TowerBuildSelection.GetDescription(type)
+                    : "Escolha abaixo para ver as bases e o poder de cada defesa.";
+                for (int index = 0; index < 3; index++)
+                {
+                    int price = TowerBuildSelection.GetCost(defenseTypes[index]);
+                    bool affordable = coins >= price;
+                    defensePrices[index].text = affordable ? price + " MOEDAS" : "FALTAM " + (price - coins);
+                    defensePrices[index].color = affordable ? RuntimeUiFactory.Ink : new Color(0.69f, 0.17f, 0.1f);
+                    if (defenseArtwork[index] != null) defenseArtwork[index].color = new Color(1, 1, 1, affordable ? 1f : 0.52f);
+                }
+            }
+            for (int index = 0; index < 3; index++)
+            {
+                bool selected = choosing && type == defenseTypes[index];
+                defenseMotions[index].SetSelected(selected);
+                defenseMotions[index].SetReady(selected && coins >= TowerBuildSelection.GetCost(type) && !paused && !ended);
+                defenseFrames[index].transform.localScale = defenseButtons[index].transform.localScale;
+                defenseFrames[index].color = selected
+                    ? Color.Lerp(RuntimeUiFactory.Gold, Color.white, 0.12f + Mathf.Sin(Time.unscaledTime * 4f) * 0.08f)
+                    : new Color(0.27f, 0.36f, 0.33f, 0.8f);
+                defenseBadges[index].gameObject.SetActive(selected);
+                defenseButtons[index].interactable = !ended && !paused && !KinGuideOverlay.IsOpen;
+            }
+        }
+
+        private void OnDefenseBuilt(DefenseType type, GameObject defense)
+        {
+            if (defense == null) return;
+            string message = type == DefenseType.Portal
+                ? Object.FindObjectsByType<PortalTransport>(FindObjectsSortMode.None).Length < 2
+                    ? "Portal construído • crie outro para conectar o caminho."
+                    : "Portais conectados • aproxime Kin para viajar."
+                : TowerBuildSelection.GetDisplayName(type) + (type == DefenseType.Lantern ? " construída" : " construído") +
+                    " • aproxime Kin para usar seu poder.";
+            ShowBuildFeedback(message, false);
+        }
+
+        private void OnBuildFailed(BuildSpot spot, DefenseType type, BuildFailure reason)
+        {
+            string message = reason switch
+            {
+                BuildFailure.ChooseDefense => "Primeiro, escolha uma defesa na faixa inferior.",
+                BuildFailure.Occupied => "Esta base já tem uma defesa. Escolha um anel livre.",
+                _ => "Faltam " + Mathf.Max(0, TowerBuildSelection.GetCost(type) - (wallet != null ? wallet.Coins : 0)) + " moedas para construir."
+            };
+            spot.GetComponent<BuildSpotHint>()?.PlayErrorPulse();
+            ShowBuildFeedback(message, true);
+        }
+
+        private void ShowBuildFeedback(string message, bool error)
+        {
+            buildFeedback.text = message;
+            buildFeedback.color = error ? new Color(0.69f, 0.17f, 0.1f) : new Color(0.15f, 0.37f, 0.25f);
+            buildFeedbackTime = 2.4f;
+            buildFeedbackGroup.alpha = 1f;
         }
 
         private void AddBarRow(RectTransform panel, string name, float y,
@@ -559,16 +700,16 @@ namespace CatsVsDemons.UI
                 countdownMotion.Punch();
             }
 
-            for (int index = 0; index < 3; index++)
-            {
-                defenseMotions[index].SetSelected(
-                    TowerBuildSelection.Selected == defenseTypes[index]);
-                defenseButtons[index].interactable = !ended && !paused;
-            }
+            RefreshConstruction(coins);
         }
 
         private void AnimateAnnouncements()
         {
+            if (buildFeedbackTime > 0f)
+            {
+                buildFeedbackTime = Mathf.Max(0f, buildFeedbackTime - Time.unscaledDeltaTime);
+                buildFeedbackGroup.alpha = Mathf.Clamp01(buildFeedbackTime / 0.35f);
+            }
             if (coinDeltaTime > 0f)
             {
                 coinDeltaTime = Mathf.Max(0, coinDeltaTime - Time.unscaledDeltaTime);
@@ -726,6 +867,7 @@ namespace CatsVsDemons.UI
 
         private void OnPhase(int value, int total)
         {
+            TowerBuildSelection.CancelPlacement();
             phase = value;
             totalPhases = total;
             wave = 0;

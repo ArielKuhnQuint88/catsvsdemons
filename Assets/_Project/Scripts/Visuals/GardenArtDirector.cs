@@ -298,6 +298,24 @@ namespace CatsVsDemons.Visuals
                     }
                 }
             }
+            // Deliberate small flower beds give the garden recognizable planted areas.
+            foreach (Vector3 bed in new[] { new Vector3(-11f, 0, 12f), new Vector3(11f, 0, -11f),
+                new Vector3(-20f, 0, -3f), new Vector3(19f, 0, 2f) })
+            {
+                int flowers = small ? 7 : 12;
+                for (int flower = 0; flower < flowers; flower++)
+                {
+                    float angle = flower * Mathf.PI * 2f / flowers;
+                    Vector3 at = bed + new Vector3(Mathf.Cos(angle) * (0.7f + flower % 2 * 0.55f),
+                        0f, Mathf.Sin(angle) * (0.7f + flower % 2 * 0.55f));
+                    if (!ClearForPlants(at, 2f)) continue;
+                    Vector3 top = at + Vector3.up * (0.33f + flower % 3 * 0.08f);
+                    undergrowth.Stem(at, top, 0.028f, palette.DeepGreen, 0.015f, 4);
+                    undergrowth.Leaf(at + Vector3.up * 0.15f, at + new Vector3(0.3f, 0.28f, 0.14f), 0.08f, palette.Leaves);
+                    undergrowth.Blob(top, new Vector3(0.35f, 0.15f, 0.35f),
+                        flower % 3 == 0 ? palette.Paper : palette.Blossom, flower, 0.65f);
+                }
+            }
             Emit("Bark branches and roots", trunks, timberMaterial);
             Emit("Sakura maple pine and bamboo canopy", crowns);
             Emit("Ferns grasses flowers and shrubs", undergrowth);
@@ -385,6 +403,17 @@ namespace CatsVsDemons.Visuals
             foreach (Vector3 at in new[] { new Vector3(-8.7f, 0f, -3f), new Vector3(8.7f, 0f, -3f),
                 new Vector3(-20f, 0f, 14f), new Vector3(20f, 0f, 16f) })
                 Lantern(stone, roofs, accents, at);
+            // Hanging fabric and ridge trims add detail without extra scenery renderers.
+            foreach (Vector3 at in new[] { new Vector3(-23f, 0, 20f), new Vector3(22f, 0, 24.5f) })
+            {
+                wood.Stem(at, at + Vector3.up * 3.1f, 0.075f, palette.Wood, 0.055f, 6);
+                wood.Stem(at + Vector3.up * 2.95f, at + new Vector3(1.1f, 2.95f, 0), 0.055f, palette.Wood, 0.045f, 6);
+                paper.Quad(at + new Vector3(0.12f, 2.86f, 0), at + new Vector3(0.12f, 1.35f, 0),
+                    at + new Vector3(0.97f, 1.35f, 0), at + new Vector3(0.97f, 2.86f, 0), palette.Paper, 0.7f);
+                paper.Quad(at + new Vector3(0.12f, 2.86f, 0), at + new Vector3(0.97f, 2.86f, 0),
+                    at + new Vector3(0.97f, 1.35f, 0), at + new Vector3(0.12f, 1.35f, 0), palette.Paper, 0.7f);
+                accents.Box(at + new Vector3(0.55f, 2.3f, -0.02f), new Vector3(0.35f, 0.4f, 0.06f), palette.Gold);
+            }
             Emit("Stone podiums steps and garden walls", stone);
             Emit("Timber beams columns and door frames", wood, timberMaterial);
             Emit("Curved tiled roofs and ridge details", roofs, roofMaterial);
@@ -412,6 +441,8 @@ namespace CatsVsDemons.Visuals
             }
             wood.Box(at + new Vector3(0, 3.28f, 0), new Vector3(7.55f, 0.18f, 5.4f), palette.Wood);
             roof.Roof(at + Vector3.up * 3.28f, 9.4f, 7f, 1.55f, palette.Roof);
+            for (int side = -1; side <= 1; side += 2)
+                wood.Box(at + new Vector3(0, 3.38f, side * 3.48f), new Vector3(9.2f, 0.1f, 0.12f), palette.Wood);
             wood.Box(at + Vector3.up * 4.76f, new Vector3(2.35f, 0.55f, 1.65f), palette.Wood);
             roof.Roof(at + Vector3.up * 5f, 4f, 2.5f, 0.7f, palette.Roof);
             trim.Stem(at + new Vector3(-1.25f, 5.82f, 0), at + new Vector3(1.25f, 5.82f, 0),
@@ -505,6 +536,13 @@ namespace CatsVsDemons.Visuals
                 {
                     Vector3 p = at + new Vector3(-1.7f + fish * 1.1f, 0.048f, fish % 2 == 0 ? 0.7f : -0.6f);
                     koi.Blob(p, new Vector3(0.32f, 0.035f, 0.12f), fish % 2 == 0 ? C(0xCC8254) : palette.Paper, fish);
+                }
+                for (int lily = 0; lily < 4; lily++)
+                {
+                    Vector3 p = at + new Vector3(lily < 2 ? -1.8f : 1.8f, 0.065f, (lily % 2) * 1.4f - 0.7f);
+                    koi.Blob(p, new Vector3(0.46f, 0.04f, 0.42f), palette.Leaves, lily);
+                    if (lily % 2 == 0)
+                        koi.Blob(p + Vector3.up * 0.07f, new Vector3(0.24f, 0.14f, 0.24f), palette.Blossom, lily);
                 }
             }
             Emit("Natural pond stone shores", shore);

@@ -16,6 +16,10 @@ A revisão visual inclui caminhos contínuos, jardim japonês com construções 
 vegetação variadas, montanhas, paleta integrada e HUD compacto. Veja as
 [mudanças e instruções para atualizar no PC](docs/ART_DIRECTION_POLISH.md).
 
+O [guia do Kin e os controles de construção](docs/GUIDE_KIN_AND_CONSTRUCTION.md)
+estão acessíveis durante a partida, pausa e loja. A revisão também preserva a
+paleta do personagem e acrescenta textura de detalhe ao pelo e à roupa.
+
 ## Loop principal
 
 1. Demônios surgem nas entradas do mapa.
