@@ -75,6 +75,8 @@ namespace CatsVsDemons.Editor
             {
                 Shader shader = Shader.Find(name);
                 if (shader == null) { errors.Add("Shader ausente: " + name); continue; }
+                if (ShaderUtil.ShaderHasError(shader))
+                    errors.Add("Shader com erro de compilação: " + name + ". Confira o Console antes de exportar.");
                 bool found = false;
                 if (included != null)
                     for (int index = 0; index < included.arraySize; index++)

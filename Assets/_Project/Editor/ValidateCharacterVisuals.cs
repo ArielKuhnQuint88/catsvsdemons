@@ -33,13 +33,22 @@ namespace CatsVsDemons.Editor
                         valid &= weight.boneIndex0 >= 0 && weight.boneIndex0 < count &&
                             weight.boneIndex1 >= 0 && weight.boneIndex1 < count &&
                             Mathf.Abs(weight.weight0 + weight.weight1 - 1f) < 0.001f;
+                    foreach (Material material in renderer.sharedMaterials)
+                    {
+                        bool shaderValid = material != null && material.shader != null &&
+                            material.shader.isSupported && !ShaderUtil.ShaderHasError(material.shader);
+                        valid &= shaderValid;
+                        if (!shaderValid)
+                            Debug.LogError("[Visual] " + name + ": material ausente ou shader com erro. " +
+                                "Confira os erros de shader no Console; eles deixam o modelo rosa.");
+                    }
                 }
-                if (valid) { passed++; Debug.Log("[Rig] " + name + ": ossos, bindposes, pesos e renderer válidos."); }
-                else Debug.LogError("[Rig] Falha em " + name + ". Verifique a importação do modelo.");
+                if (valid) { passed++; Debug.Log("[Visual] " + name + ": rig, renderer e materiais válidos."); }
+                else Debug.LogError("[Visual] Falha em " + name + ". Verifique a importação do modelo e os shaders.");
                 Object.Destroy(holder);
             }
             EditorUtility.DisplayDialog("Verificação de personagens",
-                passed + "/4 rigs válidos. Confira os personagens na Game View e os erros do Console.", "OK");
+                passed + "/4 personagens com rig e materiais válidos. Confira a Game View e os erros do Console.", "OK");
         }
     }
 }

@@ -158,29 +158,29 @@ Shader "CatsVsDemons/StylizedModel"
                 half lightAmount = saturate(
                     dot(normal, mainLight.direction)
                 );
-                half bandWidth = max(fwidth(lightAmount), 0.025h);
-                half bands = 0.35h +
-                    smoothstep(0.34h - bandWidth, 0.34h + bandWidth, lightAmount) * 0.32h +
-                    smoothstep(0.68h - bandWidth, 0.68h + bandWidth, lightAmount) * 0.33h;
+                half bandWidth = max(fwidth(lightAmount), 0.025);
+                half bands = 0.35 +
+                    smoothstep(0.34 - bandWidth, 0.34 + bandWidth, lightAmount) * 0.32 +
+                    smoothstep(0.68 - bandWidth, 0.68 + bandWidth, lightAmount) * 0.33;
 
                 half shadow =
-                    lerp(0.42h, 1.0h, mainLight.shadowAttenuation);
+                    lerp(0.42, 1.0, mainLight.shadowAttenuation);
                 half3 litColor =
-                    color * (SampleSH(normal) * 0.55h + bands * shadow * mainLight.color);
+                    color * (SampleSH(normal) * 0.55 + bands * shadow * mainLight.color);
 
                 half3 viewDirection =
                     normalize(input.viewDirectionWS);
                 half rim = pow(
-                    1.0h - saturate(dot(normal, viewDirection)),
-                    2.2h
+                    1.0 - saturate(dot(normal, viewDirection)),
+                    2.2
                 );
                 litColor +=
                     _RimColor.rgb * rim * _RimStrength;
                 half3 halfDirection = SafeNormalize(mainLight.direction + viewDirection);
-                half specular = pow(saturate(dot(normal, halfDirection)), 24h);
+                half specular = pow(saturate(dot(normal, halfDirection)), 24.0);
                 litColor += specular * _SpecularStrength * mainLight.color * shadow;
 
-                return half4(MixFog(litColor, input.fog), 1.0h);
+                return half4(MixFog(litColor, input.fog), 1.0);
             }
             ENDHLSL
         }
@@ -278,9 +278,9 @@ Shader "CatsVsDemons/StylizedModel"
                 #if defined(_GBUFFER_NORMALS_OCT)
                     float2 octNormal = PackNormalOctQuadEncode(normal);
                     half3 packed = PackFloat2To888(saturate(octNormal * 0.5 + 0.5));
-                    return half4(packed, 0h);
+                    return half4(packed, 0.0);
                 #else
-                    return half4(normal, 0h);
+                    return half4(normal, 0.0);
                 #endif
             }
             ENDHLSL

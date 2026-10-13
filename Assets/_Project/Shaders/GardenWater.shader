@@ -57,15 +57,15 @@ Shader "CatsVsDemons/GardenWater"
                 float t = _Time.y * _WaveSpeed;
                 float waveA = sin(p.x + p.y * 0.7 + t);
                 float waveB = cos(p.y * 1.3 - p.x * 0.4 - t * 0.8);
-                half3 normal = normalize(half3(waveA * 0.12h, 1h, waveB * 0.12h));
+                half3 normal = normalize(half3(waveA * 0.12, 1.0, waveB * 0.12));
                 half3 view = SafeNormalize(GetWorldSpaceViewDir(input.positionWS));
                 Light sun = GetMainLight();
-                half fresnel = pow(1h - saturate(dot(normal, view)), 3h);
-                half specular = pow(saturate(dot(normal, SafeNormalize(sun.direction + view))), 48h);
-                half ripple = smoothstep(0.83h, 1h, (waveA + waveB) * 0.25h + 0.5h);
-                half3 color = lerp(_BaseColor.rgb, _HighlightColor.rgb, fresnel * 0.55h + ripple * 0.1h);
-                color += _HighlightColor.rgb * specular * 0.5h * sun.color;
-                return half4(MixFog(color, input.fog), 1h);
+                half fresnel = pow(1.0 - saturate(dot(normal, view)), 3.0);
+                half specular = pow(saturate(dot(normal, SafeNormalize(sun.direction + view))), 48.0);
+                half ripple = smoothstep(0.83, 1.0, (waveA + waveB) * 0.25 + 0.5);
+                half3 color = lerp(_BaseColor.rgb, _HighlightColor.rgb, fresnel * 0.55 + ripple * 0.1);
+                color += _HighlightColor.rgb * specular * 0.5 * sun.color;
+                return half4(MixFog(color, input.fog), 1.0);
             }
             ENDHLSL
         }
