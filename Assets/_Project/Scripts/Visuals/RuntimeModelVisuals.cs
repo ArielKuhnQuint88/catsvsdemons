@@ -22,23 +22,20 @@ namespace CatsVsDemons.Visuals
                 return false;
             }
 
-            if (hideExisting)
-            {
-                foreach (Renderer renderer in
-                    parent.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (IsPrototypeRenderer(parent, renderer.transform))
-                    {
-                        renderer.enabled = false;
-                    }
-                }
-            }
-
             GameObject visual = Object.Instantiate(model, parent);
             visual.name = "GameplayModel";
+            visual.SetActive(true);
             visual.transform.localPosition = Vector3.zero;
             visual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
             visual.transform.localScale = Vector3.one;
+
+            MeshFilter meshFilter = visual.GetComponentInChildren<MeshFilter>(true);
+            if (meshFilter == null || meshFilter.sharedMesh == null || meshFilter.sharedMesh.vertexCount == 0)
+            {
+                Debug.LogWarning("Modelo sem geometria: " + resourcePath + ". Mantendo o personagem original.", parent);
+                Object.Destroy(visual);
+                return false;
+            }
 
             foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true))
             {
@@ -106,6 +103,13 @@ namespace CatsVsDemons.Visuals
             visual.AddComponent<ProceduralModelAnimator>();
             if (UsesPartPalette(resourcePath))
                 visual.AddComponent<AutomaticCharacterRig>();
+
+            // Hide the scene prototype only after the imported visual is ready.
+            if (hideExisting)
+            {
+                foreach (Renderer renderer in parent.GetComponentsInChildren<Renderer>(true))
+                    if (IsPrototypeRenderer(parent, renderer.transform)) renderer.enabled = false;
+            }
             return true;
         }
 
@@ -155,7 +159,7 @@ namespace CatsVsDemons.Visuals
             Color fallbackColor,
             Bounds bounds)
         {
-            if (Materials.TryGetValue(key, out Material material))
+            if (Materials.TryGetValue(key, out Material material) && material != null)
             {
                 return material;
             }
@@ -174,7 +178,7 @@ namespace CatsVsDemons.Visuals
                     name = $"Runtime_{key.Replace('/', '_')}",
                     color = fallbackColor
                 };
-                Materials.Add(key, material);
+                Materials[key] = material;
                 return material;
             }
 
@@ -282,7 +286,7 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_AccentWidth", accentWidth);
             material.SetFloat("_RimStrength", 0.3f);
 
-            Materials.Add(key, material);
+            Materials[key] = material;
             return material;
         }
 
@@ -301,7 +305,7 @@ namespace CatsVsDemons.Visuals
             Bounds bounds)
         {
             string cacheKey = $"{modelKey}:{partName}";
-            if (Materials.TryGetValue(cacheKey, out Material cached))
+            if (Materials.TryGetValue(cacheKey, out Material cached) && cached != null)
             {
                 return cached;
             }

@@ -10,6 +10,39 @@ o renderer original até o rig estar configurado. Um cache ausente ou inválido
 
 Essa sequência acompanha o exemplo da [documentação de Mesh.bindposes da Unity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh-bindposes.html).
 
+## Visibilidade de Kin e dos demônios
+
+Após a correção do shader, as torres apareceram e os personagens continuaram
+invisíveis no print. Kin e os demônios compartilham a conversão para
+`SkinnedMeshRenderer`; as torres mantêm `MeshRenderer`. A revisão protege essa
+troca sem depender apenas da contagem de ossos e pesos:
+
+- O renderer do rig fica num filho próprio, com transformação local identidade.
+  O renderer original permanece no objeto da malha importada.
+- A malha do rig é reconstruída a partir dos vértices, normais, tangentes,
+  cores, UVs e índices originais, preservando as submalhas e materiais.
+- O `rootBone` usa o espaço da malha, também utilizado pelas suas bounds,
+  evitando aplicar o deslocamento da pelve ao volume de culling.
+- Antes da ativação, `BakeMesh` confere quantidade e posição dos vértices da
+  pose inicial. Geometria ausente, não finita, deslocada, com escala inesperada
+  ou erro nativo mantém o renderer original com animação procedural do modelo.
+- O modelo original só é ocultado quando Unity marca o rig como visível. Se
+  somente o original permanecer visível por seis frames, a troca é cancelada.
+  Essa marcação da Unity também considera outras câmeras e sombras; a aparência
+  ainda precisa ser conferida na Game View.
+- Os protótipos da cena só são ocultados depois que um modelo com geometria
+  foi carregado. Referências de materiais destruídas no cache são recriadas.
+
+Em Play Mode, **Tools > Cats vs Demons > Restaurar modelos originais (Play Mode)**
+restaura os modelos com animação simples, também para os novos inimigos até
+sair do Play Mode. Kin continua oculto
+quando a câmera está em primeira pessoa. O menu de verificação aceita o modelo
+original como fallback e também confere a geometria inicial do rig quando ele
+está disponível. Isso não constitui prova de renderização visual.
+
+O ZIP de correção deve ser extraído e sua pasta `Assets` copiada para a raiz do
+projeto com a Unity fechada, substituindo os arquivos correspondentes.
+
 ## Correção dos personagens rosa
 
 Os prints seguintes mostraram a malha rosa e os erros de `pow` e de token `h`
@@ -51,7 +84,8 @@ variantes de todas as plataformas.
 3. No menu do jogo, abra Configurações e pressione `REPETIR TUTORIAL`. Inicie uma partida.
 4. Em Play Mode, execute **Tools > Cats vs Demons > Verificar personagens (Play Mode)**.
    O diagnóstico instancia Kin e os três tipos de demônio fora do mapa e
-   confere o renderer, ossos, bindposes, pesos e shaders dos materiais.
+   confere o modelo original, renderer do rig, ossos, bindposes, pesos,
+   shaders dos materiais e geometria inicial. Fallback é identificado no Console.
 5. Confira a presença dos personagens na Game View e a ausência do erro de
    bindposes e de erros de shader no Console. Use uma partida em Isométrico
    para ver Kin. Movimente o personagem e observe as animações de ataque.
@@ -73,6 +107,13 @@ teste extrai o HLSL dos passes e usa substitutos mínimos das funções e macros
 da URP; ele verifica a sintaxe, sem validar a integração com os includes reais
 da Unity, a compilação D3D11 ou a aparência do jogo. A sintaxe dos 66 arquivos
 C# foi conferida novamente, sem erros de parser.
+
+Na revisão de visibilidade, 18 checagens C# executaram os métodos reais de
+validação da pose e geração de pesos com substitutos mínimos da API Unity:
+14 casos de geometria/erro/limpeza da malha temporária e pesos dos vértices OBJ
+reais de Kin e dos três demônios. Esses testes não executam o `BakeMesh` nativo,
+o culling ou o renderizador da Unity. Sintaxe C#, metadados e conteúdo do ZIP
+também foram conferidos.
 
 O editor Unity continua indisponível no ambiente de desenvolvimento. A
 compilação na Unity, a execução do diagnóstico em Play Mode e a validação

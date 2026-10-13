@@ -6,10 +6,30 @@ namespace CatsVsDemons.Visuals
     public sealed class AutomaticCharacterRig : MonoBehaviour
     {
         private static readonly Dictionary<Mesh, Mesh> RiggedMeshes = new();
+        private static bool simpleAnimationForSession;
+        private MeshRenderer originalRenderer;
+        private SkinnedMeshRenderer rigRenderer;
+        private ProceduralBoneAnimator boneAnimator;
+        private bool awaitingFirstRender;
+        private int missedVisibleFrames;
+
+        public bool IsUsingRig => rigRenderer != null && rigRenderer.enabled &&
+            originalRenderer != null && !originalRenderer.enabled;
+
+        public string FallbackReason { get; private set; }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSessionMode() => simpleAnimationForSession = false;
+
+        public static void EnableSimpleAnimationForSession() => simpleAnimationForSession = true;
 
         private void Awake()
         {
-            BuildRig();
+            try { BuildRig(); }
+            catch (System.Exception exception)
+            {
+                UseOriginalRenderer("Falha ao configurar o rig: " + exception.Message);
+            }
         }
 
         private void BuildRig()
@@ -26,10 +46,17 @@ namespace CatsVsDemons.Visuals
             {
                 return;
             }
+            originalRenderer = sourceRenderer;
+            if (simpleAnimationForSession)
+            {
+                FallbackReason = "Animação simples selecionada para esta sessão.";
+                return;
+            }
 
             Mesh source = filter.sharedMesh;
             if (!source.isReadable)
             {
+                FallbackReason = "Malha sem Read/Write; usando animação do modelo original.";
                 Debug.LogWarning(
                     $"Mesh {source.name} needs Read/Write enabled. " +
                     "Run Tools > Cats vs Demons > Prepare Automatic Rigs.",
@@ -43,7 +70,6 @@ namespace CatsVsDemons.Visuals
             Vector3 center = bounds.center;
             float height = Mathf.Max(bounds.size.z, 0.001f);
             float width = Mathf.Max(bounds.size.x, 0.001f);
-            float depth = Mathf.Max(bounds.size.y, 0.001f);
             float bottom = bounds.min.z;
 
             Transform pelvis = CreateBone(
@@ -148,8 +174,9 @@ namespace CatsVsDemons.Visuals
             if (!RiggedMeshes.TryGetValue(source, out Mesh riggedMesh) ||
                 riggedMesh == null || riggedMesh.bindposes.Length != bones.Length)
             {
-                riggedMesh = Object.Instantiate(source);
-                riggedMesh.name = source.name + "_AutoRigged";
+                // Rebuild readable vertex streams for skinning instead of reusing
+                // the imported static mesh's compressed/optimized buffer layout.
+                riggedMesh = CreateRigMesh(source);
 
                 BoneWeight[] weights =
                     CreateWeights(source.vertices, bounds);
@@ -172,17 +199,26 @@ namespace CatsVsDemons.Visuals
                 riggedMesh.boneWeights.Length != source.vertexCount)
             {
                 // Keep the original mesh visible if an imported/cached rig is invalid.
-                Debug.LogWarning("Auto-rig inválido; usando a malha original de " + source.name, this);
+                UseOriginalRenderer("Auto-rig inválido; usando a malha original de " + source.name);
+                Object.Destroy(pelvis.gameObject);
                 return;
             }
 
+            GameObject rigObject = new("RiggedModel")
+            {
+                layer = filter.gameObject.layer
+            };
+            rigObject.transform.SetParent(meshRoot, false);
             SkinnedMeshRenderer skinned =
-                filter.gameObject.AddComponent<SkinnedMeshRenderer>();
+                rigObject.AddComponent<SkinnedMeshRenderer>();
+            rigRenderer = skinned;
             skinned.enabled = false;
             // Unity validates bones against bindposes when sharedMesh is assigned.
             // Assign the skeleton first, then publish the fully configured mesh.
             skinned.bones = bones;
-            skinned.rootBone = pelvis;
+            // The mesh and its culling bounds use meshRoot's coordinate space.
+            // A translated pelvis would offset the bounds from the model.
+            skinned.rootBone = meshRoot;
             skinned.sharedMaterials = sourceRenderer.sharedMaterials;
             skinned.sharedMesh = riggedMesh;
             skinned.updateWhenOffscreen = false;
@@ -193,12 +229,127 @@ namespace CatsVsDemons.Visuals
             skinned.shadowCastingMode = sourceRenderer.shadowCastingMode;
             skinned.receiveShadows = sourceRenderer.receiveShadows;
 
-            skinned.enabled = true;
-            sourceRenderer.enabled = false;
+            if (!ValidateRestPose(skinned, source, out string reason))
+            {
+                UseOriginalRenderer(reason);
+                Object.Destroy(rigObject);
+                Object.Destroy(pelvis.gameObject);
+                return;
+            }
 
-            ProceduralBoneAnimator animator =
+            skinned.enabled = true;
+            // Keep the real model visible until Unity marks the rig visible.
+            // Bones/weights alone do not prove the model is ready for rendering.
+            awaitingFirstRender = true;
+
+            boneAnimator =
                 gameObject.AddComponent<ProceduralBoneAnimator>();
-            animator.Initialize(bones);
+            boneAnimator.Initialize(bones);
+            boneAnimator.enabled = false;
+        }
+
+        private void LateUpdate()
+        {
+            if (!awaitingFirstRender || originalRenderer == null || rigRenderer == null)
+                return;
+            // Respect first-person mode and other systems deliberately hiding Kin.
+            if (!originalRenderer.enabled || !rigRenderer.enabled)
+            {
+                awaitingFirstRender = false;
+                return;
+            }
+            if (rigRenderer.isVisible)
+            {
+                originalRenderer.enabled = false;
+                boneAnimator.enabled = true;
+                awaitingFirstRender = false;
+            }
+            else if (originalRenderer.isVisible)
+            {
+                if (++missedVisibleFrames >= 6)
+                    UseOriginalRenderer("O renderer do rig não chegou à câmera; mantendo o modelo original.");
+            }
+            else missedVisibleFrames = 0;
+        }
+
+        public void UseOriginalRenderer(string reason = "Modo de animação simples ativado.")
+        {
+            awaitingFirstRender = false;
+            FallbackReason = reason;
+            if (rigRenderer != null) rigRenderer.enabled = false;
+            if (boneAnimator != null) boneAnimator.enabled = false;
+            if (originalRenderer != null) originalRenderer.enabled = true;
+            Debug.LogWarning("[Visual] " + gameObject.name + ": " + reason, this);
+        }
+
+        private static Mesh CreateRigMesh(Mesh source)
+        {
+            Mesh mesh = new()
+            {
+                name = source.name + "_AutoRigged",
+                indexFormat = source.indexFormat,
+                vertices = source.vertices
+            };
+            Vector3[] normals = source.normals;
+            if (normals.Length == source.vertexCount) mesh.normals = normals;
+            Vector4[] tangents = source.tangents;
+            if (tangents.Length == source.vertexCount) mesh.tangents = tangents;
+            Color32[] colors = source.colors32;
+            if (colors.Length == source.vertexCount) mesh.colors32 = colors;
+            List<Vector4> uv = new();
+            for (int channel = 0; channel < 8; channel++)
+            {
+                uv.Clear();
+                source.GetUVs(channel, uv);
+                if (uv.Count == source.vertexCount) mesh.SetUVs(channel, uv);
+            }
+            mesh.subMeshCount = source.subMeshCount;
+            for (int submesh = 0; submesh < source.subMeshCount; submesh++)
+                mesh.SetIndices(source.GetIndices(submesh), source.GetTopology(submesh), submesh, false);
+            if (normals.Length != source.vertexCount) mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        public static bool ValidateRestPose(SkinnedMeshRenderer renderer, Mesh source, out string reason)
+        {
+            Mesh baked = new();
+            try
+            {
+                renderer.BakeMesh(baked, true);
+                Vector3[] actual = baked.vertices;
+                Vector3[] expected = source.vertices;
+                if (actual.Length != expected.Length || actual.Length == 0)
+                {
+                    reason = "O rig não produziu a geometria do personagem.";
+                    return false;
+                }
+                float tolerance = Mathf.Max(source.bounds.size.magnitude * 0.01f, 0.001f);
+                float toleranceSquared = tolerance * tolerance;
+                for (int index = 0; index < actual.Length; index++)
+                {
+                    Vector3 point = actual[index];
+                    if (float.IsNaN(point.x) || float.IsInfinity(point.x) ||
+                        float.IsNaN(point.y) || float.IsInfinity(point.y) ||
+                        float.IsNaN(point.z) || float.IsInfinity(point.z) ||
+                        (point - expected[index]).sqrMagnitude > toleranceSquared)
+                    {
+                        reason = "A posição inicial do rig deformou ou deslocou a malha; mantendo o modelo original.";
+                        return false;
+                    }
+                }
+                reason = null;
+                return true;
+            }
+            catch (System.Exception exception)
+            {
+                reason = "Falha na geometria do rig: " + exception.Message;
+                return false;
+            }
+            finally
+            {
+                Object.Destroy(baked);
+            }
         }
 
         private static Transform CreateBone(
