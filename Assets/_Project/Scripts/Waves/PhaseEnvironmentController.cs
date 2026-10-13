@@ -22,6 +22,8 @@ namespace CatsVsDemons.Waves
         private readonly Dictionary<Color32, Material> runtimeMaterials = new();
         private readonly Dictionary<MeshFilter, Mesh> pathMeshes = new();
         private readonly List<Vector3[]> worldRoutes = new();
+        public IReadOnlyList<Vector3[]> WorldRoutes => worldRoutes;
+        public int RouteRevision { get; private set; }
 
         private EnemyWaveSpawner spawner;
         private Transform pathsRoot;
@@ -247,6 +249,7 @@ namespace CatsVsDemons.Waves
                 for (int index = 0; index < route.Length; index++) route[index] = entry.Key.TransformPoint(entry.Value[index]);
                 worldRoutes.Add(route);
             }
+            RouteRevision++;
             RebuildPathBorders();
         }
 
@@ -318,7 +321,8 @@ namespace CatsVsDemons.Waves
                 Vector3 candidate = path.TransformPoint(
                     entrance + outwardDirection * extension
                 );
-                Vector3 viewport = gameCamera.WorldToViewportPoint(candidate);
+                CameraModeController controller = gameCamera.GetComponent<CameraModeController>();
+                Vector3 viewport = controller != null ? controller.WorldToIsometricViewport(candidate) : gameCamera.WorldToViewportPoint(candidate);
 
                 bool insidePaddedViewport =
                     viewport.z > 0f &&

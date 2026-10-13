@@ -55,6 +55,7 @@ namespace CatsVsDemons.UI
         private Text resultMessage;
         private Image resultBackground;
         private KinTutorialPresenter tutorial;
+        private BattleMinimap minimap;
         private Button specialButton;
         private Button pauseButton;
         private readonly Button[] defenseButtons = new Button[3];
@@ -101,6 +102,8 @@ namespace CatsVsDemons.UI
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
             BuildTopPanel();
             BuildActions();
+            minimap = gameObject.AddComponent<BattleMinimap>();
+            minimap.Initialize(ui, safeArea);
             BuildOverlays();
             houseBarAnimation = houseBar.gameObject.AddComponent<HudBarAnimator>();
             houseBarAnimation.Initialize(houseBar, true);
@@ -145,6 +148,10 @@ namespace CatsVsDemons.UI
                 else if (Keyboard.current.digit2Key.wasPressedThisFrame) SelectDefense(1);
                 else if (Keyboard.current.digit3Key.wasPressedThisFrame) SelectDefense(2);
             }
+            if (!paused && !ended && !KinGuideOverlay.IsOpen && !KinGuideOverlay.ConsumedInputThisFrame &&
+                rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null && Keyboard.current.vKey.wasPressedThisFrame)
+                minimap.ToggleView();
+            minimap.SetInteractionAllowed(!paused && !ended && rootCanvas.gameObject.activeInHierarchy);
             Refresh();
             AnimateAnnouncements();
             tutorial.SetSuspended(!CanGuideTutorial);

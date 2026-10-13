@@ -159,14 +159,14 @@ namespace CatsVsDemons.UI
             {
                 case 0:
                     dialogue.text = "Sou Kin, o guardião desta casa! Leve-me pelo jardim e fique de olho nas três trilhas. Os demônios chegam por elas.\n\n" +
-                        (Application.isMobilePlatform ? "Use o joystick na região inferior esquerda para andar." : "Use WASD ou as setas para andar.") +
+                        (Application.isMobilePlatform ? "Use o joystick na região inferior esquerda. Puxar para trás faz recuar sem virar." : "Use WASD ou as setas. S/seta para baixo recua sem virar; no combate, A/D desliza para os lados.") +
                         "\n\nAbra este GUIA quando precisar. A partida fica pausada enquanto conversamos.";
                     objective.text = "Feche o guia e experimente se mover pelo jardim.";
                     break;
                 case 1:
                     dialogue.text = "1. Escolha PORTAL, BONSAI ou LANTERNA na faixa inferior. A defesa escolhida ganha uma borda dourada.\n\n" +
                         "2. Clique ou toque numa base iluminada. Você só paga quando a defesa é construída.\n\n" +
-                        "Confira o preço e suas moedas. Se faltar dinheiro, derrote demônios. CANCELAR sai da escolha sem gastar.";
+                        "Confira o preço e suas moedas. Se faltar dinheiro, derrote demônios. CANCELAR sai da escolha sem gastar. O minimapa marca as torres e pisca em vermelho quando recebem dano.";
                     objective.text = "Escolha uma defesa e procure os anéis nas bases livres.";
                     break;
                 case 2:
@@ -190,8 +190,8 @@ namespace CatsVsDemons.UI
                     break;
                 default:
                     dialogue.text = (Application.isMobilePlatform
-                        ? "Use dois dedos para aproximar, afastar ou deslocar a câmera. A região do joystick continua reservada ao movimento."
-                        : "Na visão isométrica, veja Kin, as rotas e as defesas. A primeira pessoa pode ser escolhida no menu; nesse modo meu corpo fica fora da câmera.") +
+                        ? "Use dois dedos para aproximar, afastar ou deslocar a visão isométrica. O botão junto do minimapa troca para PRIMEIRA PESSOA. Nesse modo, use o joystick à esquerda e arraste no lado direito para olhar."
+                        : "Veja Kin e o jardim na visão isométrica. Ao lado do minimapa, o botão PRIMEIRA PESSOA/ISOMÉTRICO troca a visão; V também alterna. Na primeira pessoa, arraste com o botão direito para olhar. Minha pata e espada aparecem ao atacar.") +
                         "\n\nNo tutorial inicial, a câmera destaca a ação e as setas indicam o alvo.\n\nGUIA fica disponível o tempo todo. No PC, F1 abre ou fecha e Esc fecha esta conversa.";
                     objective.text = "Pode voltar a qualquer capítulo. Vamos proteger a casa!";
                     break;

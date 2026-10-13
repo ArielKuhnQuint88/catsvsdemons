@@ -1,4 +1,7 @@
 using CatsVsDemons.Visuals;
+using CatsVsDemons.CameraSystem;
+using CatsVsDemons.Defense;
+using UnityEngine.InputSystem.Controls;
 using CatsVsDemons.House;
 using CatsVsDemons.UI;
 using UnityEngine;
@@ -6,6 +9,7 @@ using UnityEngine.InputSystem;
 
 namespace CatsVsDemons.Player
 {
+    [DefaultExecutionOrder(-30)]
     [RequireComponent(typeof(CharacterController))]
     public sealed class KinPrototypeController : MonoBehaviour
     {
@@ -17,6 +21,12 @@ namespace CatsVsDemons.Player
 
         private CharacterController characterController;
         private Camera mainCamera;
+        private CameraModeController cameraMode;
+        private KinPrototypeAttack attack;
+        private int movementFinger = -1;
+        public Vector3 PlanarVelocity { get; private set; }
+        public Vector3 LocalMotion => transform.InverseTransformDirection(PlanarVelocity) / Mathf.Max(.1f, moveSpeed);
+        public bool IsMovingBackwards => LocalMotion.z < -.12f;
         private bool mobileDragActive;
         private Vector2 mobileDragOrigin;
         private Vector2 mobileDragPosition;
@@ -31,6 +41,7 @@ namespace CatsVsDemons.Player
         {
             characterController = GetComponent<CharacterController>();
             mainCamera = Camera.main;
+            attack = GetComponent<KinPrototypeAttack>();
             joystickCircle = CreateCircleTexture(128);
             lastSafePosition = transform.position;
             EnsureSafetyFloor();
@@ -46,16 +57,21 @@ namespace CatsVsDemons.Player
             if (loadout == null) loadout = gameObject.AddComponent<KinShopLoadout>();
             loadout.Apply(HouseShopSave.GetEquipped(HouseShopCategory.Clothes),
                 HouseShopSave.GetEquipped(HouseShopCategory.Accessories));
+            if (GetComponent<KinCombatVisual>() == null) gameObject.AddComponent<KinCombatVisual>();
         }
 
         private void Update()
         {
+            if (Time.timeScale <= 0 || KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame)
+            { PlanarVelocity = Vector3.zero; mobileDragActive = false; movementFinger = -1; return; }
             if (characterController == null)
                 characterController = GetComponent<CharacterController>();
             if (!characterController.enabled)
                 characterController.enabled = true;
 
             ValidateGroundPosition();
+            if (mainCamera == null) mainCamera = Camera.main;
+            if (cameraMode == null && mainCamera != null) cameraMode = mainCamera.GetComponent<CameraModeController>();
             ReadMobileInput();
             Keyboard keyboard = Keyboard.current;
             Vector2 input = mobileInput;
@@ -87,8 +103,13 @@ namespace CatsVsDemons.Player
                 ? Vector3.ProjectOnPlane(mainCamera.transform.right, Vector3.up).normalized
                 : Vector3.right;
 
-            Vector3 direction = forward * input.y + right * input.x;
-            if (direction.sqrMagnitude > 1f) direction.Normalize();
+            if (cameraMode == null && mainCamera != null) cameraMode = mainCamera.GetComponent<CameraModeController>();
+            if (attack == null) attack = GetComponent<KinPrototypeAttack>();
+            bool firstPerson = cameraMode != null && cameraMode.IsFirstPerson;
+            bool combat = attack != null && attack.HasCombatTarget;
+            Vector3 direction = KinMotionMath.Direction(input, forward, right, transform.forward, transform.right, firstPerson, combat);
+            float speed = moveSpeed * (input.y < -.05f ? .85f : 1f);
+            PlanarVelocity = KinMotionMath.ApproachVelocity(PlanarVelocity, direction, speed, Time.deltaTime);
 
             if (characterController.isGrounded && verticalVelocity < 0f)
                 verticalVelocity = -2f;
@@ -96,7 +117,8 @@ namespace CatsVsDemons.Player
                 verticalVelocity = Mathf.Max(verticalVelocity + gravity * Time.deltaTime,
                     gravity);
 
-            Vector3 motion = direction * moveSpeed;
+            Vector3 beforeMovement = transform.position;
+            Vector3 motion = PlanarVelocity;
             motion.y = verticalVelocity;
             CollisionFlags flags = characterController.Move(motion * Time.deltaTime);
             if ((flags & CollisionFlags.Below) != 0)
@@ -113,15 +135,18 @@ namespace CatsVsDemons.Player
             if (correction.sqrMagnitude > 0.0001f)
                 characterController.Move(correction);
 
-            if (direction.sqrMagnitude > 0.01f)
+            if (KinMotionMath.TurnWithMovement(input, firstPerson, combat) && direction.sqrMagnitude > .01f)
             {
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     Quaternion.LookRotation(direction, Vector3.up),
-                    rotationSpeed * Time.deltaTime
+                    1f - Mathf.Exp(-rotationSpeed * Time.deltaTime)
                 );
             }
 
+            // Animation reads actual displacement, including walls and bounds, instead of input alone.
+            Vector3 actual = transform.position - beforeMovement; actual.y = 0;
+            if (Time.deltaTime > 0) PlanarVelocity = actual / Time.deltaTime;
             if (characterController.isGrounded) RememberSafePosition();
         }
 
@@ -133,6 +158,7 @@ namespace CatsVsDemons.Player
             transform.position = safeDestination;
             characterController.enabled = true;
             verticalVelocity = -2f;
+            PlanarVelocity = Vector3.zero;
             lastSafePosition = safeDestination;
         }
 
@@ -246,46 +272,31 @@ namespace CatsVsDemons.Player
         {
             mobileInput = Vector2.zero;
             Touchscreen touchscreen = Touchscreen.current;
-            if (touchscreen == null)
+            if (touchscreen == null || TowerBuildSelection.AwaitingPlacement)
+            { mobileDragActive = false; movementFinger = -1; return; }
+            if (cameraMode == null && mainCamera != null) cameraMode = mainCamera.GetComponent<CameraModeController>();
+            int fingers = 0;
+            foreach (var touch in touchscreen.touches) if (touch.press.isPressed) fingers++;
+            if (fingers > 1 && (cameraMode == null || !cameraMode.IsFirstPerson))
+            { mobileDragActive = false; movementFinger = -1; return; }
+            TouchControl active = null;
+            foreach (var touch in touchscreen.touches)
+                if (touch.press.isPressed && touch.touchId.ReadValue() == movementFinger) { active = touch; break; }
+            if (active == null)
             {
-                mobileDragActive = false;
-                return;
+                mobileDragActive = false; movementFinger = -1;
+                foreach (var touch in touchscreen.touches)
+                {
+                    if (!touch.press.wasPressedThisFrame) continue;
+                    Vector2 at = touch.position.ReadValue();
+                    if (at.x >= Screen.width * .42f || at.y >= Screen.height * .55f || GameUiInput.IsOverControl(at)) continue;
+                    movementFinger = touch.touchId.ReadValue(); mobileDragOrigin = mobileDragPosition = at;
+                    mobileDragActive = true; active = touch; break;
+                }
             }
-
-            bool secondFingerPressed =
-                touchscreen.touches.Count > 1 &&
-                touchscreen.touches[1].press.isPressed;
-            if (secondFingerPressed)
-            {
-                mobileDragActive = false;
-                mobileInput = Vector2.zero;
-                return;
-            }
-
-            Vector2 position = touchscreen.primaryTouch.position.ReadValue();
-            if (!mobileDragActive && touchscreen.primaryTouch.press.isPressed &&
-                position.x < Screen.width * 0.42f &&
-                position.y < Screen.height * 0.55f)
-            {
-                mobileDragActive = true;
-                mobileDragOrigin = position;
-                mobileDragPosition = position;
-            }
-
-            if (touchscreen.primaryTouch.press.wasReleasedThisFrame)
-            {
-                mobileDragActive = false;
-            }
-
-            if (mobileDragActive && touchscreen.primaryTouch.press.isPressed)
-            {
-                mobileDragPosition = position;
-                float range = Mathf.Max(50f, Screen.height * 0.12f);
-                mobileInput = Vector2.ClampMagnitude(
-                    (position - mobileDragOrigin) / range,
-                    1f
-                );
-            }
+            if (active == null) return;
+            mobileDragPosition = active.position.ReadValue();
+            mobileInput = Vector2.ClampMagnitude((mobileDragPosition - mobileDragOrigin) / Mathf.Max(50, Screen.height * .12f), 1);
         }
 
         private void OnGUI()

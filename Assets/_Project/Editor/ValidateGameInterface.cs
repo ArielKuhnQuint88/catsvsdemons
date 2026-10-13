@@ -48,6 +48,8 @@ namespace CatsVsDemons.Editor
                     errors.Add("O seletor antigo de torres ainda está na cena.");
                 if (children.Count(t => t.name.StartsWith("Defense ") && t.GetComponent<Button>() != null) != 3)
                     errors.Add("As três defesas precisam estar disponíveis.");
+                if (!children.Any(t => t.name == "Switch Camera View" && t.GetComponent<Button>() != null)) errors.Add("Botão de câmera junto do minimapa ausente.");
+                if (!children.Any(t => t.name == "Map Roads") || !children.Any(t => t.name == "Map Actors")) errors.Add("Camadas de caminhos/personagens do minimapa ausentes.");
             }
             if (Object.FindFirstObjectByType<KinGuideOverlay>() == null) errors.Add("Guia permanente do Kin ausente.");
             string result = errors.Count == 0

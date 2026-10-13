@@ -92,3 +92,5 @@ View** e não valida iluminação, animação ou comportamento do motor.
 aspecto final, entrada física de mouse/toque, FPS, Android e AAB assinado
 continuam pendentes. O processo de exportação permanece descrito em
 [PLAY_CONSOLE_RELEASE.md](PLAY_CONSOLE_RELEASE.md).
+
+O HUD agora inclui minimapa e troca de visão durante a partida. Veja [KIN_MOVEMENT_MINIMAP_AND_VIEWS.md](KIN_MOVEMENT_MINIMAP_AND_VIEWS.md).

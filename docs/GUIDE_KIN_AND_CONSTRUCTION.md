@@ -138,3 +138,5 @@ Referência da API utilizada na importação:
 [ModelImporterMaterialImportMode.ImportStandard](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporterMaterialImportMode.ImportStandard.html).
 
 A apresentação atual dos menus está documentada em [INTERFACE_REDESIGN.md](INTERFACE_REDESIGN.md).
+
+O minimapa acompanha demônios e alerta sobre dano em torres; o botão junto dele ou V troca de câmera. Controles em [KIN_MOVEMENT_MINIMAP_AND_VIEWS.md](KIN_MOVEMENT_MINIMAP_AND_VIEWS.md).

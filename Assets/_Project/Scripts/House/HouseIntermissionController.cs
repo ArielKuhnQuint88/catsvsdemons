@@ -873,6 +873,7 @@ namespace CatsVsDemons.House
             clone.transform.localPosition = source.localPosition;
             clone.transform.localRotation = source.localRotation;
             clone.transform.localScale = source.localScale;
+            foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true)) renderer.forceRenderingOff = false;
             // This is a snapshot of the equipped gameplay model, including its gear.
             // Preview cameras must not run movement, rig setup or equipment effects.
             foreach (MonoBehaviour behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))

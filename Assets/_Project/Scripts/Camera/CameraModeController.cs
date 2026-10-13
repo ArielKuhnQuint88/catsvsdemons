@@ -1,11 +1,14 @@
 using CatsVsDemons.Player;
 using CatsVsDemons.Waves;
+using CatsVsDemons.Defense;
+using CatsVsDemons.UI;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace CatsVsDemons.CameraSystem
 {
+    [DefaultExecutionOrder(200)]
     public sealed class CameraModeController : MonoBehaviour
     {
         [SerializeField] private float eyeHeight = 1.45f;
@@ -29,44 +32,103 @@ namespace CatsVsDemons.CameraSystem
         private float tutorialBlend;
         private Vector3 renderedTarget;
         private float renderedDistance;
+        private readonly Dictionary<Renderer, bool> hiddenRenderers = new();
+        private KinCombatVisual combatVisual;
+        private float nextVisibilityCheck;
+        private float lookYaw, lookPitch;
+        private int lookFinger = -1;
+        private Vector2 lookPrevious;
+        public bool IsFirstPerson => firstPerson;
+        public bool CanSwitchView => gameCamera != null && kin != null && gameCamera.isActiveAndEnabled && isActiveAndEnabled && Time.timeScale > 0 &&
+            !KinGuideOverlay.IsOpen && !KinGuideOverlay.ConsumedInputThisFrame;
+        public event System.Action<bool> ViewChanged;
 
         private void Start()
         {
             gameCamera = GetComponent<Camera>();
-            firstPerson = !Application.isMobilePlatform &&
-                PlayerPrefs.GetInt("CameraMode", 0) == 1;
-            gameCamera.enabled = true;
-            gameCamera.cullingMask = ~0;
-            gameCamera.rect = new Rect(0f, 0f, 1f, 1f);
-            gameCamera.targetTexture = null;
-            gameCamera.ResetProjectionMatrix();
-            ConfigureEnvironment();
+            if (gameCamera == null) return;
+            gameCamera.enabled = true; gameCamera.cullingMask = ~0;
+            gameCamera.rect = new Rect(0, 0, 1, 1); gameCamera.targetTexture = null; gameCamera.ResetProjectionMatrix();
+            ConfigureEnvironment(); ConfigureIsometricCamera();
+            KinHealth health = Object.FindFirstObjectByType<KinHealth>();
+            if (health != null) kin = health.transform;
+            firstPerson = false;
+            if (PlayerPrefs.GetInt("CameraMode", 0) == 1 && kin != null) ChangeView(true);
+        }
 
-            if (!firstPerson)
+        public bool ToggleView()
+        {
+            if (!CanSwitchView) return false;
+            ChangeView(!firstPerson); return true;
+        }
+
+        private void ChangeView(bool requested)
+        {
+            if (requested == firstPerson) return;
+            if (kin == null) return;
+            TowerBuildSelection.CancelPlacement();
+            firstPerson = requested; twoFingerGestureActive = false; lookFinger = -1;
+            tutorialTarget = null; tutorialBlend = 0;
+            if (firstPerson)
             {
-                ConfigureIsometricCamera();
-                return;
+                lookYaw = kin.eulerAngles.y; lookPitch = 0;
+                gameCamera.orthographic = false; gameCamera.fieldOfView = 68;
+                gameCamera.nearClipPlane = .045f; gameCamera.farClipPlane = 300;
+                EnsureCombatVisual();
+                RefreshKinVisibility();
+                UpdateFirstPersonPose(true);
             }
-
-            KinHealth kinHealth =
-                Object.FindFirstObjectByType<KinHealth>();
-
-            if (kinHealth == null)
+            else
             {
-                Debug.LogError("Kin was not found for first-person mode.");
-                return;
+                RestoreKinVisibility();
+                gameCamera.orthographic = false;
+                gameCamera.fieldOfView = Application.isMobilePlatform ? 44 : 46;
+                gameCamera.nearClipPlane = .3f; gameCamera.farClipPlane = 300;
+                renderedTarget = mobileTarget; renderedDistance = mobileDistance;
+                transform.position = mobileTarget + mobileViewDirection * mobileDistance;
+                transform.rotation = Quaternion.LookRotation(mobileTarget - transform.position, Vector3.up);
             }
+            EnsureCombatVisual();
+            combatVisual?.SetFirstPerson(firstPerson, gameCamera);
+            PlayerPrefs.SetInt("CameraMode", firstPerson ? 1 : 0); PlayerPrefs.Save();
+            ViewChanged?.Invoke(firstPerson);
+        }
 
-            kin = kinHealth.transform;
-            gameCamera.orthographic = false;
-            gameCamera.fieldOfView = 68f;
-            gameCamera.nearClipPlane = 0.08f;
+        private void EnsureCombatVisual()
+        {
+            if (kin == null || combatVisual != null) return;
+            combatVisual = kin.GetComponent<KinCombatVisual>();
+            if (combatVisual == null) combatVisual = kin.gameObject.AddComponent<KinCombatVisual>();
+        }
 
-            foreach (Renderer renderer in
-                kin.GetComponentsInChildren<Renderer>())
+        private void RefreshKinVisibility()
+        {
+            if (kin == null) return;
+            // Renderer.enabled continues to belong to the rig/fallback and equipment systems.
+            // forceRenderingOff hides the self model without destroying their visibility state.
+            foreach (Renderer renderer in kin.GetComponentsInChildren<Renderer>(true))
             {
-                renderer.enabled = false;
+                if (!hiddenRenderers.ContainsKey(renderer)) hiddenRenderers.Add(renderer, renderer.forceRenderingOff);
+                renderer.forceRenderingOff = true;
             }
+            nextVisibilityCheck = Time.unscaledTime + .2f;
+        }
+
+        private void RestoreKinVisibility()
+        {
+            foreach (var entry in hiddenRenderers)
+                if (entry.Key != null) entry.Key.forceRenderingOff = entry.Value;
+            hiddenRenderers.Clear();
+        }
+
+        public Vector3 WorldToIsometricViewport(Vector3 world)
+        {
+            if (gameCamera == null || mobileDistance <= 0) return gameCamera != null ? gameCamera.WorldToViewportPoint(world) : Vector3.zero;
+            Vector3 at = mobileTarget + mobileViewDirection * mobileDistance;
+            Quaternion orientation = Quaternion.LookRotation(mobileTarget - at, Vector3.up);
+            Vector3 local = Quaternion.Inverse(orientation) * (world - at);
+            float halfHeight = Mathf.Max(.0001f, Mathf.Abs(local.z) * Mathf.Tan((Application.isMobilePlatform ? 44 : 46) * Mathf.Deg2Rad * .5f));
+            return new Vector3(.5f + local.x / (2 * halfHeight * Mathf.Max(.1f, gameCamera.aspect)), .5f + local.y / (2 * halfHeight), local.z);
         }
 
         private void ConfigureEnvironment()
@@ -147,7 +209,7 @@ namespace CatsVsDemons.CameraSystem
 
         public void SetPhaseZoom(int phase)
         {
-            if (gameCamera == null || firstPerson || baseIsometricDistance <= 0f)
+            if (gameCamera == null || baseIsometricDistance <= 0f)
             {
                 return;
             }
@@ -156,6 +218,7 @@ namespace CatsVsDemons.CameraSystem
             int season = CampaignProgress.GetSeasonIndex(phase);
             float multiplier = 1f + scenario * 0.08f + season * 0.04f;
             mobileDistance = baseIsometricDistance * multiplier;
+            if (firstPerson) return;
             transform.position =
                 mobileTarget + mobileViewDirection * mobileDistance;
             transform.rotation = Quaternion.LookRotation(
@@ -166,12 +229,36 @@ namespace CatsVsDemons.CameraSystem
 
         private void Update()
         {
-            if (!Application.isMobilePlatform || firstPerson)
-            {
-                return;
-            }
+            if (Time.timeScale <= 0 || KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame)
+            { twoFingerGestureActive = false; lookFinger = -1; return; }
+            if (firstPerson) ReadFirstPersonLook();
+            else if (Application.isMobilePlatform) ReadTwoFingerCameraGesture();
+        }
 
-            ReadTwoFingerCameraGesture();
+        private void ReadFirstPersonLook()
+        {
+            if (kin == null || TowerBuildSelection.AwaitingPlacement) { lookFinger = -1; return; }
+            Vector2 delta = Vector2.zero;
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.rightButton.isPressed && !mouse.rightButton.wasPressedThisFrame &&
+                !GameUiInput.IsOverControl(mouse.position.ReadValue())) delta = mouse.delta.ReadValue() * .16f;
+            Touchscreen screen = Touchscreen.current;
+            if (screen != null)
+            {
+                bool found = false;
+                foreach (var touch in screen.touches)
+                {
+                    if (!touch.press.isPressed) continue;
+                    Vector2 at = touch.position.ReadValue(); int id = touch.touchId.ReadValue();
+                    if (lookFinger < 0 && touch.press.wasPressedThisFrame && at.x > Screen.width * .52f && !GameUiInput.IsOverControl(at))
+                    { lookFinger = id; lookPrevious = at; }
+                    if (id != lookFinger) continue;
+                    delta += (at - lookPrevious) * (90f / Mathf.Max(360, Screen.height)); lookPrevious = at; found = true; break;
+                }
+                if (!found) lookFinger = -1;
+            }
+            lookYaw += delta.x; lookPitch = Mathf.Clamp(lookPitch - delta.y, -58, 65);
+            kin.rotation = Quaternion.Euler(0, lookYaw, 0);
         }
 
         private void ReadTwoFingerCameraGesture()
@@ -309,6 +396,8 @@ namespace CatsVsDemons.CameraSystem
 
         private void OnDestroy()
         {
+            RestoreKinVisibility();
+            combatVisual?.SetFirstPerson(false, null);
             if (horizonGround != null)
             {
                 Destroy(horizonGround);
@@ -322,32 +411,27 @@ namespace CatsVsDemons.CameraSystem
 
         private void LateUpdate()
         {
-            if (!firstPerson)
-            {
-                UpdateTutorialFraming();
-                return;
-            }
+            if (Time.timeScale <= 0) return;
             if (kin == null)
             {
-                return;
+                KinHealth health = Object.FindFirstObjectByType<KinHealth>();
+                if (health != null) kin = health.transform;
             }
+            if (!firstPerson) { UpdateTutorialFraming(); return; }
+            if (kin == null) return;
+            if (Time.unscaledTime >= nextVisibilityCheck) RefreshKinVisibility();
+            UpdateFirstPersonPose(false);
+        }
 
-            Vector3 targetPosition =
-                kin.position +
-                Vector3.up * eyeHeight +
-                kin.forward * forwardOffset;
-
-            transform.position = Vector3.Lerp(
-                transform.position,
-                targetPosition,
-                followSpeed * Time.deltaTime
-            );
-
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                kin.rotation,
-                followSpeed * Time.deltaTime
-            );
+        private void UpdateFirstPersonPose(bool snap)
+        {
+            EnsureCombatVisual();
+            Vector3 eye = combatVisual != null ? combatVisual.EyePosition : kin.position + Vector3.up * eyeHeight;
+            Vector3 target = eye + kin.forward * Mathf.Min(forwardOffset, .18f);
+            Quaternion rotation = Quaternion.Euler(lookPitch, lookYaw, 0);
+            float amount = snap ? 1 : 1f - Mathf.Exp(-followSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, target, amount);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rotation, amount);
         }
 
         private void UpdateTutorialFraming()
