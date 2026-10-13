@@ -145,7 +145,8 @@ namespace CatsVsDemons.Visuals
                 rightShin
             };
 
-            if (!RiggedMeshes.TryGetValue(source, out Mesh riggedMesh))
+            if (!RiggedMeshes.TryGetValue(source, out Mesh riggedMesh) ||
+                riggedMesh == null || riggedMesh.bindposes.Length != bones.Length)
             {
                 riggedMesh = Object.Instantiate(source);
                 riggedMesh.name = source.name + "_AutoRigged";
@@ -161,18 +162,29 @@ namespace CatsVsDemons.Visuals
                         meshRoot.localToWorldMatrix;
                 }
 
-                riggedMesh.boneWeights = weights;
                 riggedMesh.bindposes = bindPoses;
+                riggedMesh.boneWeights = weights;
                 riggedMesh.RecalculateBounds();
-                RiggedMeshes.Add(source, riggedMesh);
+                RiggedMeshes[source] = riggedMesh;
+            }
+
+            if (riggedMesh.bindposes.Length != bones.Length ||
+                riggedMesh.boneWeights.Length != source.vertexCount)
+            {
+                // Keep the original mesh visible if an imported/cached rig is invalid.
+                Debug.LogWarning("Auto-rig inválido; usando a malha original de " + source.name, this);
+                return;
             }
 
             SkinnedMeshRenderer skinned =
                 filter.gameObject.AddComponent<SkinnedMeshRenderer>();
-            skinned.sharedMesh = riggedMesh;
-            skinned.sharedMaterials = sourceRenderer.sharedMaterials;
+            skinned.enabled = false;
+            // Unity validates bones against bindposes when sharedMesh is assigned.
+            // Assign the skeleton first, then publish the fully configured mesh.
             skinned.bones = bones;
             skinned.rootBone = pelvis;
+            skinned.sharedMaterials = sourceRenderer.sharedMaterials;
+            skinned.sharedMesh = riggedMesh;
             skinned.updateWhenOffscreen = false;
             skinned.localBounds = riggedMesh.bounds;
             Bounds animatedBounds = skinned.localBounds;
@@ -181,6 +193,7 @@ namespace CatsVsDemons.Visuals
             skinned.shadowCastingMode = sourceRenderer.shadowCastingMode;
             skinned.receiveShadows = sourceRenderer.receiveShadows;
 
+            skinned.enabled = true;
             sourceRenderer.enabled = false;
 
             ProceduralBoneAnimator animator =

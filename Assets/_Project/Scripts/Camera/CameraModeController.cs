@@ -24,6 +24,11 @@ namespace CatsVsDemons.CameraSystem
         private float previousPinchDistance;
         private Vector2 previousTouchCenter;
         private bool twoFingerGestureActive;
+        private Transform tutorialTarget;
+        private float tutorialZoom = 0.84f;
+        private float tutorialBlend;
+        private Vector3 renderedTarget;
+        private float renderedDistance;
 
         private void Start()
         {
@@ -127,7 +132,18 @@ namespace CatsVsDemons.CameraSystem
                 mobileTarget
             );
             baseIsometricDistance = mobileDistance;
+            renderedTarget = mobileTarget;
+            renderedDistance = mobileDistance;
         }
+
+        public void FocusTutorial(Transform target, float zoom = 0.84f)
+        {
+            if (firstPerson || target == null) return;
+            tutorialTarget = target;
+            tutorialZoom = Mathf.Clamp(zoom, 0.75f, 1f);
+        }
+
+        public void ClearTutorialFocus() => tutorialTarget = null;
 
         public void SetPhaseZoom(int phase)
         {
@@ -185,6 +201,14 @@ namespace CatsVsDemons.CameraSystem
 
             if (!twoFingerGestureActive)
             {
+                // Continue from the view currently on screen when the player takes over.
+                if (tutorialTarget != null || tutorialBlend > 0.001f)
+                {
+                    mobileTarget = renderedTarget;
+                    mobileDistance = renderedDistance;
+                    tutorialTarget = null;
+                    tutorialBlend = 0f;
+                }
                 twoFingerGestureActive = true;
                 previousPinchDistance = pinchDistance;
                 previousTouchCenter = touchCenter;
@@ -298,7 +322,12 @@ namespace CatsVsDemons.CameraSystem
 
         private void LateUpdate()
         {
-            if (!firstPerson || kin == null)
+            if (!firstPerson)
+            {
+                UpdateTutorialFraming();
+                return;
+            }
+            if (kin == null)
             {
                 return;
             }
@@ -319,6 +348,21 @@ namespace CatsVsDemons.CameraSystem
                 kin.rotation,
                 followSpeed * Time.deltaTime
             );
+        }
+
+        private void UpdateTutorialFraming()
+        {
+            if (gameCamera == null || baseIsometricDistance <= 0 || Time.timeScale <= 0) return;
+            float smoothing = 1f - Mathf.Exp(-4f * Time.unscaledDeltaTime);
+            tutorialBlend = Mathf.Lerp(tutorialBlend, tutorialTarget != null ? 1 : 0, smoothing);
+            Vector3 focus = tutorialTarget != null ? tutorialTarget.position : mobileTarget;
+            focus.y = mobileTarget.y;
+            Vector3 target = Vector3.Lerp(mobileTarget, focus, tutorialBlend);
+            float distance = Mathf.Lerp(mobileDistance, Mathf.Max(22f, mobileDistance * tutorialZoom), tutorialBlend);
+            renderedTarget = Vector3.Lerp(renderedTarget, target, smoothing);
+            renderedDistance = Mathf.Lerp(renderedDistance, distance, smoothing);
+            transform.position = renderedTarget + mobileViewDirection * renderedDistance;
+            transform.rotation = Quaternion.LookRotation(renderedTarget - transform.position, Vector3.up);
         }
     }
 }

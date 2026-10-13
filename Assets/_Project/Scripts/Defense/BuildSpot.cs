@@ -10,13 +10,17 @@ namespace CatsVsDemons.Defense
         [SerializeField] private bool isOccupied;
 
         private Wallet wallet;
+        public bool IsOccupied => isOccupied;
 
         private void Awake()
         {
             wallet = Object.FindFirstObjectByType<Wallet>();
+            BuildSpotPointerInput.Ensure();
         }
 
-        private void OnMouseDown()
+        private void OnMouseDown() => TryBuild();
+
+        public void TryBuild()
         {
             if (isOccupied)
             {

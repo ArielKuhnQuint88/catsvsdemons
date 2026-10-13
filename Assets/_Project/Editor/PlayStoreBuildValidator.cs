@@ -30,7 +30,7 @@ namespace CatsVsDemons.Editor
             "Models/Kin", "Models/DemonSono", "Models/DemonPoerix", "Models/DemonFlamurk",
             "Models/Bonsai", "Models/StoneLantern", "UI/TowerPortalData", "UI/TowerBonsaiData",
             "UI/TowerLanternData", "UI/EndingVictoryData", "UI/EndingDefeatData",
-            "UI/HouseInterior", "UI/HouseShopClothes", "UI/HouseShopAccessories"
+            "UI/HouseInterior", "UI/HouseShopClothes", "UI/HouseShopAccessories", "UI/KinTutorialPortrait"
         };
 
         [MenuItem("Tools/Cats vs Demons/Verificar prontidao para Play Console")]

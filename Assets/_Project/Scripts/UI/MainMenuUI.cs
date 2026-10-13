@@ -22,6 +22,7 @@ namespace CatsVsDemons.UI
         private GUIStyle bodyStyle;
         private GUIStyle comicCaptionStyle;
         private bool showingIntro;
+        private bool tutorialQueued;
         private int comicPanel;
         private int pendingCameraMode;
 
@@ -434,6 +435,15 @@ namespace CatsVsDemons.UI
             {
                 Screen.fullScreen = newFullscreen;
             }
+            if (ResponsiveGuiTheme.Button(new Rect(panel.x + 110f, panel.y + 235f, 360f, 48f),
+                "REPETIR TUTORIAL", ResponsiveGuiTheme.ButtonTone.Gold, 18))
+            {
+                TutorialDirector.ResetTutorial();
+                tutorialQueued = true;
+            }
+            if (tutorialQueued)
+                GUI.Label(new Rect(panel.x + 70f, panel.y + 288f, 440f, 40f),
+                    "Kin vai te guiar na próxima partida.", bodyStyle);
         }
 
         private static void StartGame(int cameraMode)

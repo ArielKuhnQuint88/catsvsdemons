@@ -54,9 +54,7 @@ namespace CatsVsDemons.UI
         private Text resultTitle;
         private Text resultMessage;
         private Image resultBackground;
-        private Text tutorialTitle;
-        private Text tutorialBody;
-        private Text tutorialAction;
+        private KinTutorialPresenter tutorial;
         private Button specialButton;
         private Button pauseButton;
         private readonly Button[] defenseButtons = new Button[3];
@@ -67,7 +65,6 @@ namespace CatsVsDemons.UI
         };
         private GameObject pausePanel;
         private GameObject resultPanel;
-        private GameObject tutorialPanel;
         private Sprite resultBackgroundSprite;
         private Texture2D resultBackgroundTexture;
         private bool ownsResultBackgroundTexture;
@@ -125,6 +122,7 @@ namespace CatsVsDemons.UI
                 TogglePause();
             Refresh();
             AnimateAnnouncements();
+            tutorial.SetSuspended(!CanGuideTutorial);
         }
 
         private void OnDestroy()
@@ -138,15 +136,21 @@ namespace CatsVsDemons.UI
 
         public void ShowTutorial(string title, string body, string action)
         {
-            bool changed = tutorialTitle.text != title;
-            tutorialPanel.SetActive(true);
-            tutorialTitle.text = title;
-            tutorialBody.text = body;
-            tutorialAction.text = action;
-            if (changed) tutorialPanel.GetComponent<HudReveal>().Replay();
+            tutorial.Show(title, body, action, () => GetComponent<TutorialDirector>()?.Skip());
         }
 
-        public void HideTutorial() => tutorialPanel.SetActive(false);
+        public void HideTutorial() => tutorial.Hide();
+
+        public void SetTutorialFocus(TutorialFocus kind, Transform target, string caption)
+        {
+            RectTransform control = kind == TutorialFocus.LanternButton
+                ? (RectTransform)defenseButtons[2].transform
+                : kind == TutorialFocus.SpecialButton ? (RectTransform)specialButton.transform : null;
+            tutorial.SetFocus(kind, control, target, caption);
+        }
+
+        public void SetTutorialProgress(string text) => tutorial.SetProgress(text);
+        public bool CanGuideTutorial => !paused && !ended && rootCanvas.gameObject.activeInHierarchy;
 
         public void SetHudVisible(bool visible)
         {
@@ -512,29 +516,8 @@ namespace CatsVsDemons.UI
             resultRestart.onClick.AddListener(Restart);
             resultPanel.SetActive(false);
 
-            RectTransform tutorial = ui.Panel("Tutorial", safeArea,
-                new Color(0.03f, 0.018f, 0.045f, 0.96f),
-                new Vector2(820, 178));
-            tutorial.anchorMin = tutorial.anchorMax = new Vector2(0.5f, 0);
-            tutorial.pivot = new Vector2(0.5f, 0);
-            tutorial.anchoredPosition = new Vector2(-210, 190);
-            tutorialPanel = tutorial.gameObject;
-            tutorial.gameObject.AddComponent<HudReveal>();
-            tutorialTitle = ui.Label("Tutorial Title", "", tutorial, 25,
-                RuntimeUiFactory.Gold, new Vector2(776, 36),
-                TextAnchor.MiddleLeft);
-            ((RectTransform)tutorialTitle.transform).anchoredPosition =
-                new Vector2(0, 56);
-            tutorialBody = ui.Label("Tutorial Body", "", tutorial, 20,
-                Color.white, new Vector2(776, 62), TextAnchor.UpperLeft);
-            ((RectTransform)tutorialBody.transform).anchoredPosition =
-                new Vector2(0, 5);
-            tutorialAction = ui.Label("Tutorial Action", "", tutorial, 18,
-                new Color(0.55f, 0.9f, 1f), new Vector2(776, 34),
-                TextAnchor.MiddleLeft);
-            ((RectTransform)tutorialAction.transform).anchoredPosition =
-                new Vector2(0, -58);
-            tutorialPanel.SetActive(false);
+            tutorial = gameObject.AddComponent<KinTutorialPresenter>();
+            tutorial.Initialize(ui, safeArea);
         }
 
         private GameObject FullScreenPanel(string name)
