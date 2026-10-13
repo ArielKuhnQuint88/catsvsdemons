@@ -1,5 +1,6 @@
 using CatsVsDemons.Visuals;
 using CatsVsDemons.House;
+using CatsVsDemons.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -289,7 +290,7 @@ namespace CatsVsDemons.Player
 
         private void OnGUI()
         {
-            if (!Application.isMobilePlatform || !mobileDragActive ||
+            if (!Application.isMobilePlatform || Time.timeScale <= 0f || KinGuideOverlay.IsOpen || !mobileDragActive ||
                 joystickCircle == null)
             {
                 return;
@@ -310,9 +311,14 @@ namespace CatsVsDemons.Player
                 outerRadius
             );
             Color previous = GUI.color;
-            GUI.color = new Color(0.05f, 0.08f, 0.1f, 0.42f);
+            GUI.color = new Color(.045f, .13f, .10f, .6f);
             DrawJoystickCircle(guiOrigin, outerRadius);
-            GUI.color = new Color(1f, 0.78f, 0.18f, 0.82f);
+            GUI.color = new Color(RuntimeUiFactory.Gold.r, RuntimeUiFactory.Gold.g, RuntimeUiFactory.Gold.b, .62f);
+            GUI.DrawTexture(new Rect(guiOrigin.x - outerRadius, guiOrigin.y - outerRadius, outerRadius * 2, outerRadius * 2),
+                GameUiArt.Ring.texture, ScaleMode.StretchToFill, true);
+            GUI.color = RuntimeUiFactory.Paper;
+            DrawJoystickCircle(guiOrigin + offset, knobRadius + 2);
+            GUI.color = RuntimeUiFactory.Jade;
             DrawJoystickCircle(guiOrigin + offset, knobRadius);
             GUI.color = previous;
         }

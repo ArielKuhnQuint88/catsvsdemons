@@ -47,14 +47,11 @@ namespace CatsVsDemons.UI
             RectTransform root = ui.Rect("Kin Tutorial", parent);
             root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
             root.offsetMin = root.offsetMax = Vector2.zero;
-            card = ui.Panel("Speech Bubble", root, RuntimeUiFactory.Paper, new Vector2(850, 228));
+            card = ui.Surface("Speech Bubble", root, RuntimeUiFactory.Paper, new Vector2(850, 228));
             card.anchorMin = card.anchorMax = new Vector2(0.5f, 0);
             card.pivot = new Vector2(0.5f, 0);
             card.anchoredPosition = new Vector2(0, 300);
             card.GetComponent<Image>().raycastTarget = false;
-            Outline outline = card.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0.17f, 0.065f, 0.025f, 0.9f);
-            outline.effectDistance = new Vector2(3, -3);
             cardGroup = card.gameObject.AddComponent<CanvasGroup>();
             portrait = ui.Rect("Kin Speaking", card);
             portrait.sizeDelta = new Vector2(164, 164);
@@ -71,19 +68,20 @@ namespace CatsVsDemons.UI
             Text name = ui.Label("Speaker", "KIN", card, 20, RuntimeUiFactory.Ink,
                 new Vector2(160, 26), TextAnchor.MiddleCenter);
             ((RectTransform)name.transform).anchoredPosition = new Vector2(-326, -80);
-            title = ui.Label("Lesson", "", card, 24, new Color(0.54f, 0.12f, 0.04f),
+            title = ui.Label("Lesson", "", card, 24, RuntimeUiFactory.Jade,
                 new Vector2(610, 34), TextAnchor.MiddleLeft);
             ((RectTransform)title.transform).anchoredPosition = new Vector2(90, 68);
             body = ui.Label("Kin Dialogue", "", card, 23, RuntimeUiFactory.Ink,
                 new Vector2(610, 64), TextAnchor.UpperLeft);
             ((RectTransform)body.transform).anchoredPosition = new Vector2(90, 16);
-            action = ui.Label("Your Objective", "", card, 20, new Color(0.12f, 0.32f, 0.22f),
+            body.fontStyle = FontStyle.Normal;
+            action = ui.Label("Your Objective", "", card, 20, RuntimeUiFactory.Jade,
                 new Vector2(610, 42), TextAnchor.MiddleLeft);
             ((RectTransform)action.transform).anchoredPosition = new Vector2(90, -39);
             progress = ui.Label("Objective Progress", "", card, 17, RuntimeUiFactory.Ink,
                 new Vector2(390, 28), TextAnchor.MiddleLeft);
             ((RectTransform)progress.transform).anchoredPosition = new Vector2(-20, -82);
-            skip = ui.Button("Skip Tutorial", "PULAR", card, new Color(0.36f, 0.2f, 0.08f), new Vector2(158, 62));
+            skip = ui.Button("Skip Tutorial", "PULAR", card, RuntimeUiFactory.Ink, new Vector2(158, 62));
             ((RectTransform)skip.transform).anchoredPosition = new Vector2(315, -80);
             skip.onClick.AddListener(() => skipAction?.Invoke());
 

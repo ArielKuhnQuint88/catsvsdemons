@@ -53,34 +53,37 @@ namespace CatsVsDemons.UI
             safeArea.anchorMin = Vector2.zero; safeArea.anchorMax = Vector2.one;
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
 
-            Button access = ui.Button("Guide Anytime", "GUIA  ?", safeArea, RuntimeUiFactory.Paper,
-                Application.isMobilePlatform ? new Vector2(176, 82) : new Vector2(154, 62));
+            Button access = ui.Button("Guide Anytime", "GUIA", safeArea, RuntimeUiFactory.Ink, new Vector2(176, 62));
             RectTransform accessRect = (RectTransform)access.transform;
             accessRect.anchorMin = accessRect.anchorMax = accessRect.pivot = new Vector2(1, 1);
-            accessRect.anchoredPosition = new Vector2(-32, -108);
-            access.GetComponentInChildren<Text>().color = RuntimeUiFactory.Ink;
+            accessRect.anchoredPosition = new Vector2(-30, -106);
+            Text accessLabel = access.GetComponentInChildren<Text>(); accessLabel.color = RuntimeUiFactory.Paper;
+            accessLabel.rectTransform.sizeDelta = new Vector2(115, 46); accessLabel.rectTransform.anchoredPosition = new Vector2(20, 0);
+            accessLabel.fontSize = accessLabel.resizeTextMaxSize = 18;
+            ui.Icon("Guide Symbol", UiIcon.Book, accessRect, new Vector2(29, 29), RuntimeUiFactory.Gold).rectTransform.anchoredPosition = new Vector2(-53, 0);
             access.onClick.AddListener(() => Open(0));
 
-            RectTransform shade = ui.Panel("Guide Backdrop", safeArea, new Color(0.035f, 0.08f, 0.09f, 0.9f), Vector2.zero);
+            RectTransform shade = ui.Panel("Guide Backdrop", safeArea, RuntimeUiFactory.Veil, Vector2.zero);
             shade.anchorMin = Vector2.zero; shade.anchorMax = Vector2.one;
             shade.offsetMin = shade.offsetMax = Vector2.zero;
             overlay = shade.gameObject;
-            RectTransform card = ui.Panel("Kin Guide Book", shade, RuntimeUiFactory.Paper, new Vector2(1130, 660));
-            card.gameObject.AddComponent<Outline>().effectColor = RuntimeUiFactory.Gold;
+            RectTransform card = ui.Surface("Kin Guide Book", shade, RuntimeUiFactory.Paper, new Vector2(1130, 700), true);
+            RuntimeUiFactory.Fit(card, new Vector2(80, 100));
+            overlay.AddComponent<HudReveal>(); ui.Rule(card, 1030, new Vector2(0, 218));
             heading = ui.Label("Guide Title", "", card, 30, RuntimeUiFactory.Ink,
                 new Vector2(890, 64), TextAnchor.MiddleLeft);
-            ((RectTransform)heading.transform).anchoredPosition = new Vector2(-65, 258);
+            ((RectTransform)heading.transform).anchoredPosition = new Vector2(-74, 279);
             Button close = ui.Button("Close Guide", "FECHAR", card, RuntimeUiFactory.Ink, new Vector2(142, 56));
-            ((RectTransform)close.transform).anchoredPosition = new Vector2(463, 260);
+            ((RectTransform)close.transform).anchoredPosition = new Vector2(463, 279);
             close.onClick.AddListener(Close);
 
             for (int i = 0; i < Topics.Length; i++)
             {
                 int topic = i;
                 Button tab = ui.Button("Guide " + Topics[i], Topics[i], card, RuntimeUiFactory.Ink,
-                    new Vector2(166, Application.isMobilePlatform ? 64 : 48));
+                    new Vector2(162, 60));
                 ((RectTransform)tab.transform).anchoredPosition = new Vector2(-447 + i * 179, 177);
-                tab.GetComponentInChildren<Text>().fontSize = 18;
+                Text tabLabel = tab.GetComponentInChildren<Text>(); tabLabel.fontSize = tabLabel.resizeTextMaxSize = 18;
                 tabs[i] = tab.GetComponent<Image>();
                 tab.onClick.AddListener(() => SetPage(topic));
             }
@@ -97,16 +100,17 @@ namespace CatsVsDemons.UI
             avatar.preserveAspect = true; avatar.raycastTarget = false;
             Text name = ui.Label("Speaker", "KIN • SEU GUIA", card, 22, RuntimeUiFactory.Ink, new Vector2(250, 38), TextAnchor.MiddleCenter);
             ((RectTransform)name.transform).anchoredPosition = new Vector2(-404, -153);
-            dialogue = ui.Label("Guide Dialogue", "", card, 26, RuntimeUiFactory.Ink,
+            dialogue = ui.Label("Guide Dialogue", "", card, 25, RuntimeUiFactory.Ink,
                 new Vector2(748, 238), TextAnchor.UpperLeft);
-            ((RectTransform)dialogue.transform).anchoredPosition = new Vector2(145, -4);
-            objective = ui.Label("Guide Action", "", card, 23, new Color(0.19f, 0.39f, 0.29f),
+            ((RectTransform)dialogue.transform).anchoredPosition = new Vector2(145, -10);
+            dialogue.fontStyle = FontStyle.Normal;
+            objective = ui.Label("Guide Action", "", card, 23, RuntimeUiFactory.Jade,
                 new Vector2(1040, 72), TextAnchor.MiddleCenter);
-            ((RectTransform)objective.transform).anchoredPosition = new Vector2(0, -205);
+            ((RectTransform)objective.transform).anchoredPosition = new Vector2(0, -221);
             pageCount = ui.Label("Guide Page", "", card, 18, RuntimeUiFactory.Ink, new Vector2(300, 34), TextAnchor.MiddleCenter);
-            ((RectTransform)pageCount.transform).anchoredPosition = new Vector2(0, -280);
+            ((RectTransform)pageCount.transform).anchoredPosition = new Vector2(0, -306);
             practice = ui.Button("Practice Tutorial", "PRATICAR NO JARDIM", card, RuntimeUiFactory.Gold, new Vector2(282, 52));
-            ((RectTransform)practice.transform).anchoredPosition = new Vector2(0, -270);
+            ((RectTransform)practice.transform).anchoredPosition = new Vector2(0, -299);
             practice.GetComponentInChildren<Text>().color = RuntimeUiFactory.Ink;
             practice.onClick.AddListener(() =>
             {
@@ -116,10 +120,10 @@ namespace CatsVsDemons.UI
                 hud.GetComponent<TutorialDirector>()?.Replay();
             });
             previous = ui.Button("Previous Lesson", "VOLTAR", card, RuntimeUiFactory.Ink, new Vector2(230, 58));
-            ((RectTransform)previous.transform).anchoredPosition = new Vector2(-381, -279);
+            ((RectTransform)previous.transform).anchoredPosition = new Vector2(-381, -299);
             previous.onClick.AddListener(() => SetPage(page - 1));
             next = ui.Button("Next Lesson", "PRÓXIMO", card, RuntimeUiFactory.Ink, new Vector2(230, 58));
-            ((RectTransform)next.transform).anchoredPosition = new Vector2(381, -279);
+            ((RectTransform)next.transform).anchoredPosition = new Vector2(381, -299);
             next.onClick.AddListener(() => { if (page == 5) Close(); else SetPage(page + 1); });
             overlay.SetActive(false);
             ApplySafeArea();
@@ -195,7 +199,12 @@ namespace CatsVsDemons.UI
             previous.interactable = page > 0;
             next.GetComponentInChildren<Text>().text = page == 5 ? "VOLTAR AO JOGO" : "PRÓXIMO";
             pageCount.text = (page + 1) + "/6 • GUIA DO KIN";
-            for (int i = 0; i < tabs.Length; i++) tabs[i].color = i == page ? RuntimeUiFactory.Gold : RuntimeUiFactory.Ink;
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                tabs[i].color = i == page ? RuntimeUiFactory.Gold : RuntimeUiFactory.Ink;
+                tabs[i].GetComponentInChildren<Text>().color = i == page ? RuntimeUiFactory.Ink : RuntimeUiFactory.Paper;
+                tabs[i].GetComponent<HudMotion>().SetSelected(i == page);
+            }
         }
 
         private void Update()

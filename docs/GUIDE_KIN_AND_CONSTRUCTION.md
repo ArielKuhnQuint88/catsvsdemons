@@ -2,7 +2,7 @@
 
 ## Acessar o tutorial durante o jogo
 
-O botão **GUIA ?** fica disponível no menu, na partida, na pausa, na casa e na
+O botão **GUIA** fica disponível no menu, na partida, na pausa, na casa e na
 loja. No PC, **F1** também abre ou fecha o guia. Ele tem seis capítulos com o
 retrato de Kin: movimento, construção, poderes das torres, combate, loja e câmera.
 
@@ -50,9 +50,9 @@ traje. Detalhes, orçamento e checagens: [modelos de equipamento](KIN_EQUIPMENT_
 
 1. Escolha **Portal**, **Bonsai** ou **Lanterna** na faixa inferior. No PC,
    os atalhos são **1**, **2** e **3**, respectivamente.
-2. A escolha ganha moldura dourada, indicação visual e descrição do poder.
+2. A escolha ganha aro dourado e selo. Um aviso breve indica o próximo passo.
    Anéis pulsantes aparecem nas bases livres; no PC, a base sob o cursor fica
-   mais clara. O preço mostra **MOEDAS** ou **FALTAM**, conforme seu saldo.
+   mais clara. O preço usa um ícone de moeda e mostra **FALTAM** quando o saldo é insuficiente.
 3. Clique ou toque numa base iluminada. A moeda é cobrada somente ao construir.
    Um pulso verde e uma mensagem confirmam o resultado. Bases ocupadas e saldo
    insuficiente recebem aviso visível.
@@ -83,7 +83,7 @@ Feche a Unity, extraia `Cats_vs_Demons_Roupas_Acessorios_3D.zip` e copie sua pas
 Reabra com Unity **6000.5.4f1** e aguarde a importação. O pacote inclui as
 correções e o cenário da revisão anterior.
 
-- Abra **GUIA ?** durante combate, pausa e loja. Feche e confira a retomada
+- Abra **GUIA** durante combate, pausa e loja. Feche e confira a retomada
   correta, sem compra nem golpe acidental. Teste também F1 e Esc no PC.
 - Use **PRATICAR NO JARDIM** após concluir o tutorial inicial. Confira falas,
   retrato, objetivos, câmera e conservação das moedas.
@@ -136,3 +136,5 @@ toque, física, FPS em aparelho e AAB assinado ainda precisam ser validados no P
 
 Referência da API utilizada na importação:
 [ModelImporterMaterialImportMode.ImportStandard](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporterMaterialImportMode.ImportStandard.html).
+
+A apresentação atual dos menus está documentada em [INTERFACE_REDESIGN.md](INTERFACE_REDESIGN.md).
