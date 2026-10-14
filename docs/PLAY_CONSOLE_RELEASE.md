@@ -21,6 +21,37 @@ do template e não contém o jogo atualizado. Use **Unity 6000.5.4f1**, indicada
 No Unity Hub, instale Android Build Support, Android SDK & NDK Tools e OpenJDK
 para essa versão. Instale também o SDK Android 36 se a Unity solicitar.
 
+## Exportar no PC com dois cliques
+
+Com o projeto atualizado e a Unity fechada, execute **EXPORTAR_PLAY_CONSOLE.cmd**
+na raiz do projeto. O lançador localiza a versão da Unity indicada no projeto,
+confere o módulo Android/OpenJDK e pede o maior **Bundle Version Code já enviado**
+ao Console (digite 0 se nunca enviou). Ele escolhe um código superior ao enviado,
+sem reduzir o código do projeto.
+
+Selecione a chave de upload existente e digite as senhas nos campos ocultos.
+A chave padrão é buscada em `Documentos/Chaves/catsvsdemons-upload.keystore`, com
+alias `catsvsdemons`. As senhas passam apenas para o processo de build; depois,
+o ambiente original é restaurado. Elas não entram nos argumentos nem em arquivos.
+
+O lançador executa o exportador da Unity, confere o relatório e o SHA-256, verifica
+a assinatura criptográfica com o `jarsigner` do OpenJDK e abre a pasta do AAB.
+Um arquivo anterior com o mesmo nome é preservado. O build nativo e os testes em
+Android continuam necessários; este script não substitui nem simula um AAB.
+
+Se a Unity ou a chave estiverem em outro local:
+
+```powershell
+.\Tools\Android\Export-PlayConsole.ps1 `
+  -UnityPath 'D:\Unity\6000.5.4f1\Editor\Unity.exe' `
+  -KeystorePath 'C:\minhas-chaves\catsvsdemons-upload.keystore' `
+  -KeyAlias 'catsvsdemons' -LastUploadedVersionCode 2
+```
+
+A saída fica em `Builds/CatsVsDemons-PlayStore`. Envie o **.aab** para **Teste interno**
+no Play Console e valide no aparelho. O lançador não envia nem publica uma versão
+no Console automaticamente.
+
 ## Exportar na Unity
 
 1. Aguarde a importação e confirme que o Console não tem erros de compilação.
@@ -30,7 +61,7 @@ para essa versão. Instale também o SDK Android 36 se a Unity solicitar.
    arquivo local era `C:\Users\Qip\Documents\Chaves\catsvsdemons-upload.keystore`
    e o alias era `catsvsdemons`. Não crie outra chave para atualizar o mesmo app.
 4. Em **Player > Android > Other Settings**, confira `Bundle Version Code`:
-   esta revisão usa **2**, que precisa ser maior que todo código já enviado.
+   a configuração base usa **2**, que precisa ser maior que todo código já enviado.
    Aumente-o se necessário. O identificador permanece
    **com.qipgames.catsvsdemons**, e a versão é **1.0.1**.
 5. Execute **Tools > Cats vs Demons > Exportar para Play Store (AAB)**.
@@ -48,10 +79,11 @@ A saída fica em `Builds/CatsVsDemons-PlayStore/CatsVsDemons-v1-0-1-2.aab`
 SHA-256, cenas, versão e verificações realizadas. Um AAB existente com o mesmo
 nome é preservado; mova-o ou aumente o código para uma nova exportação.
 
-O exportador verifica a estrutura do bundle, a presença da assinatura de upload,
+O exportador na Unity verifica a estrutura do bundle, a presença da assinatura de upload,
 o formato ELF64 ARM64 e o alinhamento de 16 KB dos segmentos LOAD de **todas as
 bibliotecas nativas incluídas**, inclusive plugins. Isso não verifica a validade
-criptográfica da assinatura, não valida o manifest protobuf e não confirma se a
+criptográfica da assinatura por si só (o lançador do PC usa `jarsigner` para isso),
+não valida o manifest protobuf e não confirma se a
 chave corresponde à cadastrada no Play Console. Se uma biblioteca falhar no
 alinhamento, atualize a Unity ou o plugin apontado e refaça o build.
 
@@ -72,8 +104,9 @@ alinhamento, atualize a Unity ou o plugin apontado e refaça o build.
 ## Exportação por linha de comando
 
 O método também funciona em batch mode, em uma máquina com Unity licenciada e
-Android Build Support. As variáveis abaixo são opcionais quando a assinatura já
-foi informada no Editor. Use variáveis locais ou segredos do CI e não grave senhas
+Android Build Support. As variáveis de assinatura abaixo são opcionais quando a chave já
+foi informada no Editor. `CVD_VERSION_CODE` permite escolher o código da versão
+no batch mode e rejeita números inválidos ou inferiores ao projeto. Use variáveis locais ou segredos do CI e não grave senhas
 em scripts, logs ou arquivos versionados:
 
 ```text
@@ -81,6 +114,7 @@ CVD_KEYSTORE_PATH
 CVD_KEY_ALIAS
 CVD_KEYSTORE_PASSWORD
 CVD_KEY_PASSWORD
+CVD_VERSION_CODE
 ```
 
 ```powershell
@@ -111,4 +145,6 @@ dotnet run --project Tools/Validation/BundleInspectorChecks.csproj -- caminho/do
 - [API alvo exigida pelo Google Play](https://support.google.com/googleplay/android-developer/answer/11926878)
 - [Bibliotecas Android e páginas de 16 KB](https://developer.android.com/guide/practices/page-sizes)
 
-Consulte o Console para exigências atuais da conta, testes e publicação.
+Política de API consultada em 14/10/2026: novas submissões e atualizações
+de apps Android comuns exigem API 36 ou superior desde 31/08/2026.
+Consulte o Console para exigências da conta, testes e publicação.

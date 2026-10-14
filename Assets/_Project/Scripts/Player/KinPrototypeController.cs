@@ -107,7 +107,7 @@ namespace CatsVsDemons.Player
             if (attack == null) attack = GetComponent<KinPrototypeAttack>();
             bool firstPerson = cameraMode != null && cameraMode.IsFirstPerson;
             bool combat = attack != null && attack.HasCombatTarget;
-            Vector3 direction = KinMotionMath.Direction(input, forward, right, transform.forward, transform.right, firstPerson, combat);
+            Vector3 direction = KinMotionMath.Direction(input, forward, right, transform.forward, transform.right, firstPerson);
             float speed = moveSpeed * (input.y < -.05f ? .85f : 1f);
             PlanarVelocity = KinMotionMath.ApproachVelocity(PlanarVelocity, direction, speed, Time.deltaTime);
 

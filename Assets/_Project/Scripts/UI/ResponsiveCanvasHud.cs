@@ -1,3 +1,4 @@
+using CatsVsDemons.CameraSystem;
 using CatsVsDemons.Defense;
 using CatsVsDemons.Economy;
 using CatsVsDemons.Enemies;
@@ -102,8 +103,9 @@ namespace CatsVsDemons.UI
             safeArea.offsetMin = safeArea.offsetMax = Vector2.zero;
             BuildTopPanel();
             BuildActions();
-            minimap = gameObject.AddComponent<BattleMinimap>();
-            minimap.Initialize(ui, safeArea);
+            // Reserve the draw order now, but finish the essential HUD first.
+            RectTransform minimapLayer = ui.Rect("Minimap Layer", safeArea);
+            RuntimeUiFactory.Stretch(minimapLayer, Vector2.zero);
             BuildOverlays();
             houseBarAnimation = houseBar.gameObject.AddComponent<HudBarAnimator>();
             houseBarAnimation.Initialize(houseBar, true);
@@ -112,6 +114,25 @@ namespace CatsVsDemons.UI
             energyBarAnimation = energyBar.gameObject.AddComponent<HudBarAnimator>();
             energyBarAnimation.Initialize(energyBar, false);
             ApplySafeArea();
+            InitializeMinimap(minimapLayer);
+        }
+
+        private void InitializeMinimap(RectTransform layer)
+        {
+            try
+            {
+                minimap = gameObject.AddComponent<BattleMinimap>();
+                minimap.Initialize(ui, layer);
+            }
+            catch (System.Exception exception)
+            {
+                // An optional map must never disable health, defenses, pause or tutorial.
+                layer.gameObject.SetActive(false);
+                Destroy(layer.gameObject);
+                if (minimap != null) { minimap.enabled = false; Destroy(minimap); }
+                minimap = null;
+                Debug.LogError("[HUD] Falha ao criar o minimapa. A interface principal continua disponível.\n" + exception, this);
+            }
         }
 
         private void Start()
@@ -150,8 +171,11 @@ namespace CatsVsDemons.UI
             }
             if (!paused && !ended && !KinGuideOverlay.IsOpen && !KinGuideOverlay.ConsumedInputThisFrame &&
                 rootCanvas.gameObject.activeInHierarchy && Keyboard.current != null && Keyboard.current.vKey.wasPressedThisFrame)
-                minimap.ToggleView();
-            minimap.SetInteractionAllowed(!paused && !ended && rootCanvas.gameObject.activeInHierarchy);
+            {
+                if (minimap != null) minimap.ToggleView();
+                else Camera.main?.GetComponent<CameraModeController>()?.ToggleView();
+            }
+            minimap?.SetInteractionAllowed(!paused && !ended && rootCanvas.gameObject.activeInHierarchy);
             Refresh();
             AnimateAnnouncements();
             tutorial.SetSuspended(!CanGuideTutorial);

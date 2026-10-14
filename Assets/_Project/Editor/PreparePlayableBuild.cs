@@ -153,6 +153,7 @@ namespace CatsVsDemons.Editor
         public static void ExportPlayStoreBundle()
         {
             ConfigureScenes();
+            ApplyVersionCodeFromEnvironment();
             ConfigurePlayStorePlayer();
             ApplySigningFromEnvironment();
             System.Collections.Generic.List<string> errors =
@@ -166,6 +167,17 @@ namespace CatsVsDemons.Editor
                 return;
             }
             BuildPlayStoreBundle();
+        }
+
+        private static void ApplyVersionCodeFromEnvironment()
+        {
+            string configured = Environment.GetEnvironmentVariable("CVD_VERSION_CODE");
+            if (string.IsNullOrWhiteSpace(configured)) return;
+            if (!int.TryParse(configured, out int code) || code < 1 || code > 2100000000 ||
+                code < PlayerSettings.Android.bundleVersionCode)
+                throw new BuildFailedException("CVD_VERSION_CODE precisa ser um inteiro positivo, " +
+                    "ate 2100000000, sem reduzir o codigo atual do projeto.");
+            PlayerSettings.Android.bundleVersionCode = code;
         }
 
         private static void BuildPlayStoreBundle()

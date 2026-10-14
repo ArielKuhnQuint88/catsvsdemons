@@ -40,6 +40,14 @@ namespace CatsVsDemons.UI
             return rect;
         }
 
+        public RectTransform GraphicRect(string name, Transform parent)
+        {
+            // Native UGUI needs its renderer before a custom Graphic is enabled.
+            RectTransform rect = Rect(name, parent);
+            rect.gameObject.AddComponent<CanvasRenderer>();
+            return rect;
+        }
+
         public RectTransform Panel(string name, Transform parent, Color color, Vector2 size)
         {
             RectTransform rect = Rect(name, parent); rect.sizeDelta = size;

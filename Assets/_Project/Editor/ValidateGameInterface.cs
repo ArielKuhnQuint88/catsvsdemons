@@ -25,6 +25,8 @@ namespace CatsVsDemons.Editor
             {
                 if (canvas.GetComponent<CanvasScaler>() == null) errors.Add(canvas.name + ": escala responsiva ausente.");
                 if (canvas.GetComponent<GraphicRaycaster>() == null) errors.Add(canvas.name + ": entrada de mouse/toque ausente.");
+                foreach (Graphic graphic in canvas.GetComponentsInChildren<Graphic>(true))
+                    if (graphic.GetComponent<CanvasRenderer>() == null) errors.Add(graphic.name + ": CanvasRenderer ausente; este elemento não pode ser desenhado.");
                 foreach (Text text in canvas.GetComponentsInChildren<Text>(true))
                     if (text.raycastTarget) errors.Add(text.name + ": texto intercepta o toque.");
                 foreach (Button button in canvas.GetComponentsInChildren<Button>().Where(b => b.IsActive()))
@@ -50,10 +52,12 @@ namespace CatsVsDemons.Editor
                     errors.Add("As três defesas precisam estar disponíveis.");
                 if (!children.Any(t => t.name == "Switch Camera View" && t.GetComponent<Button>() != null)) errors.Add("Botão de câmera junto do minimapa ausente.");
                 if (!children.Any(t => t.name == "Map Roads") || !children.Any(t => t.name == "Map Actors")) errors.Add("Camadas de caminhos/personagens do minimapa ausentes.");
+                if (!children.Any(t => t.name == "Map Zoom In" && t.GetComponent<Button>() != null) ||
+                    !children.Any(t => t.name == "Map Zoom Out" && t.GetComponent<Button>() != null)) errors.Add("Controles de zoom do minimapa ausentes.");
             }
             if (Object.FindFirstObjectByType<KinGuideOverlay>() == null) errors.Add("Guia permanente do Kin ausente.");
             string result = errors.Count == 0
-                ? "Interface responsiva, três defesas sem cartões antigos, textos sem bloqueio de toque e guia disponíveis. Confira leitura, seleção, animações, joystick, compras e pausa na Game View e no Android."
+                ? "CanvasRenderer presente nos elementos gráficos, interface responsiva, três defesas, textos sem bloqueio de toque e guia disponíveis. Confira leitura, seleção, animações, joystick, compras e pausa na Game View e no Android."
                 : string.Join("\n", errors.Distinct());
             if (errors.Count == 0) Debug.Log("[Interface] " + result); else Debug.LogError("[Interface] " + result);
             EditorUtility.DisplayDialog("Interface do jogo", result, "OK");

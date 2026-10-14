@@ -5,13 +5,19 @@ namespace CatsVsDemons.Player
     internal static class KinMotionMath
     {
         public static Vector3 Direction(Vector2 input, Vector3 viewForward, Vector3 viewRight,
-            Vector3 facingForward, Vector3 facingRight, bool firstPerson, bool combat)
+            Vector3 facingForward, Vector3 facingRight, bool firstPerson)
         {
-            // A backward command retreats along Kin's facing, without a 180-degree turn.
-            bool relativeToKin = firstPerson || combat || input.y < -.05f;
-            Vector3 direction = (relativeToKin ? facingForward : viewForward) * input.y +
-                (relativeToKin ? facingRight : viewRight) * input.x;
-            direction.y = 0;
+            // Isometric input always follows the camera, even when Kin faces an enemy.
+            Vector3 forward = Vector3.ProjectOnPlane(firstPerson ? facingForward : viewForward, Vector3.up);
+            if (forward.sqrMagnitude < .0001f)
+            {
+                Vector3 fallbackRight = Vector3.ProjectOnPlane(firstPerson ? facingRight : viewRight, Vector3.up);
+                forward = Vector3.Cross(fallbackRight, Vector3.up);
+            }
+            if (forward.sqrMagnitude < .0001f) forward = Vector3.forward;
+            forward = forward.normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, forward);
+            Vector3 direction = forward * input.y + right * input.x;
             return Vector3.ClampMagnitude(direction, 1);
         }
         public static Vector3 ApproachVelocity(Vector3 current, Vector3 direction, float speed, float dt)

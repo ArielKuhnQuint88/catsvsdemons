@@ -4,7 +4,8 @@ using UnityEngine.UI;
 
 namespace CatsVsDemons.UI
 {
-    /// <summary>Flat native UI geometry: roads only redraw on layout changes; actor dots update without a second camera.</summary>
+    /// <summary>Native UI geometry: roads redraw on phase, zoom or focus changes; markers need no second camera.</summary>
+    [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class BattleMinimapGraphic : MaskableGraphic
     {
         public bool Terrain;
@@ -36,7 +37,11 @@ namespace CatsVsDemons.UI
                 }
                 foreach (Vector3[] route in roads)
                     for (int i = 1; i < route.Length; i++)
-                        Line(vh, projection.Project(route[i - 1], size), projection.Project(route[i], size), 2.4f, new Color(.79f, .78f, .59f, .78f));
+                        if (projection.ClipRoad(route[i - 1], route[i], size, out Vector2 a, out Vector2 b))
+                        {
+                            Line(vh, a, b, 5.8f, new Color(.035f, .09f, .06f, .75f));
+                            Line(vh, a, b, 3.2f, new Color(.88f, .82f, .57f, .94f));
+                        }
                 return;
             }
             foreach (MinimapMarker mark in markers)
@@ -47,25 +52,25 @@ namespace CatsVsDemons.UI
                     Vector2 direction = new(mark.Forward.x, mark.Forward.z);
                     if (direction.sqrMagnitude < .001f) direction = Vector2.up;
                     direction.Normalize(); Vector2 side = new(-direction.y, direction.x);
-                    Disc(vh, p, 7.4f, new Color(.035f, .08f, .055f, .9f));
-                    Triangle(vh, p + direction * 6.8f, p - direction * 4.5f + side * 4.8f, p - direction * 4.5f - side * 4.8f, RuntimeUiFactory.Paper);
+                    Disc(vh, p, 10.5f, new Color(.035f, .08f, .055f, .9f));
+                    Triangle(vh, p + direction * 9.5f, p - direction * 6.3f + side * 6.7f, p - direction * 6.3f - side * 6.7f, RuntimeUiFactory.Paper);
                 }
                 else if (mark.Kind == MinimapKind.Demon)
-                { Disc(vh, p, 3.4f, RuntimeUiFactory.Ink); Disc(vh, p, 2.7f, RuntimeUiFactory.Coral); }
+                { Disc(vh, p, 5.3f, RuntimeUiFactory.Ink); Disc(vh, p, 4.3f, new Color(.94f, .39f, .29f)); }
                 else if (mark.Kind == MinimapKind.Home)
                 {
-                    Quad(vh, p + new Vector2(-5,-4), p + new Vector2(-5,4), p + new Vector2(5,4), p + new Vector2(5,-4), RuntimeUiFactory.Paper);
-                    Triangle(vh, p + new Vector2(-7,4), p + new Vector2(0,9), p + new Vector2(7,4), RuntimeUiFactory.Gold);
+                    Quad(vh, p + new Vector2(-7,-5.6f), p + new Vector2(-7,5.6f), p + new Vector2(7,5.6f), p + new Vector2(7,-5.6f), RuntimeUiFactory.Paper);
+                    Triangle(vh, p + new Vector2(-9.8f,5.6f), p + new Vector2(0,12.6f), p + new Vector2(9.8f,5.6f), RuntimeUiFactory.Gold);
                 }
                 else
                 {
                     if (mark.UnderAttack)
                     {
                         float pulse = .5f + Mathf.Sin(clock * 9) * .5f;
-                        Ring(vh, p, 7 + pulse * 3, 1.5f, new Color(1, .35f, .23f, .7f + pulse * .3f));
+                        Ring(vh, p, 9.5f + pulse * 4, 2f, new Color(1, .35f, .23f, .7f + pulse * .3f));
                     }
                     Color tint = mark.UnderAttack ? new Color(1, .39f, .23f) : mark.Color;
-                    Quad(vh, p + Vector2.up * 4.7f, p + Vector2.right * 4.7f, p - Vector2.up * 4.7f, p - Vector2.right * 4.7f, tint);
+                    Quad(vh, p + Vector2.up * 6.5f, p + Vector2.right * 6.5f, p - Vector2.up * 6.5f, p - Vector2.right * 6.5f, tint);
                 }
             }
         }

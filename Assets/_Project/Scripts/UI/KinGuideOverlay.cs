@@ -159,7 +159,7 @@ namespace CatsVsDemons.UI
             {
                 case 0:
                     dialogue.text = "Sou Kin, o guardião desta casa! Leve-me pelo jardim e fique de olho nas três trilhas. Os demônios chegam por elas.\n\n" +
-                        (Application.isMobilePlatform ? "Use o joystick na região inferior esquerda. Puxar para trás faz recuar sem virar." : "Use WASD ou as setas. S/seta para baixo recua sem virar; no combate, A/D desliza para os lados.") +
+                        (Application.isMobilePlatform ? "Use o joystick na região inferior esquerda. Na visão isométrica, as direções seguem a câmera, inclusive durante o combate." : "Use WASD ou as setas. Na visão isométrica, W vai para cima, S para baixo e A/D para os lados da tela. As direções continuam iguais durante o combate.") +
                         "\n\nAbra este GUIA quando precisar. A partida fica pausada enquanto conversamos.";
                     objective.text = "Feche o guia e experimente se mover pelo jardim.";
                     break;
@@ -192,7 +192,7 @@ namespace CatsVsDemons.UI
                     dialogue.text = (Application.isMobilePlatform
                         ? "Use dois dedos para aproximar, afastar ou deslocar a visão isométrica. O botão junto do minimapa troca para PRIMEIRA PESSOA. Nesse modo, use o joystick à esquerda e arraste no lado direito para olhar."
                         : "Veja Kin e o jardim na visão isométrica. Ao lado do minimapa, o botão PRIMEIRA PESSOA/ISOMÉTRICO troca a visão; V também alterna. Na primeira pessoa, arraste com o botão direito para olhar. Minha pata e espada aparecem ao atacar.") +
-                        "\n\nNo tutorial inicial, a câmera destaca a ação e as setas indicam o alvo.\n\nGUIA fica disponível o tempo todo. No PC, F1 abre ou fecha e Esc fecha esta conversa.";
+                        "\n\nNo minimapa, + aproxima e − afasta. Em 1× você vê as trilhas completas; em 2× ou 3× fica mais fácil acompanhar Kin e as torres.\n\nNo tutorial inicial, a câmera destaca a ação e as setas indicam o alvo. GUIA fica disponível o tempo todo; F1 abre ou fecha no PC.";
                     objective.text = "Pode voltar a qualquer capítulo. Vamos proteger a casa!";
                     break;
             }
