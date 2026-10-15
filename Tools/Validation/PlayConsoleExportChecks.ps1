@@ -84,20 +84,20 @@ try {
     $jarsigner = Join-Path $javaRoot 'bin\jarsigner.exe'
     $testKeystore = Join-Path $private 'throwaway-test.jks'
     # Synthetic credentials only. These are never used for a game or account.
-    $storePass = 'test-only-' + [Guid]::NewGuid().ToString('N')
+    $storePass = 'test-only-' + [char]0xE1 + '-' + [Guid]::NewGuid().ToString('N')
     $keyPass = 'test-key-' + [Guid]::NewGuid().ToString('N')
     $storePassFile = Join-Path $private 'fixture-store-password'
     $keyPassFile = Join-Path $private 'fixture-key-password'
     [IO.File]::WriteAllText($storePassFile, $storePass)
     [IO.File]::WriteAllText($keyPassFile, $keyPass)
-    $arguments = @('-genkeypair', '-keystore', ('"{0}"' -f $testKeystore), '-storetype', 'JKS',
+    $arguments = @('-J-Dfile.encoding=UTF-8', '-genkeypair', '-keystore', ('"{0}"' -f $testKeystore), '-storetype', 'JKS',
         '-storepass:file', ('"{0}"' -f $storePassFile), '-keypass:file', ('"{0}"' -f $keyPassFile),
         '-alias', 'test-upload', '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000', '-dname', '"CN=Throwaway Test"')
     $generation = Start-Process -FilePath $keytool -ArgumentList $arguments -Wait -PassThru `
         -RedirectStandardOutput (Join-Path $private 'fixture-output.log') -RedirectStandardError (Join-Path $private 'fixture-error.log')
     Assert-ExportCheck ($generation.ExitCode -eq 0) "Create throwaway Java key for real signing checks."
     Assert-UploadKeySigns $jarsigner $testKeystore 'test-upload' $storePass $keyPass $private
-    Assert-ExportCheck $true "Accept correct keystore, alias, and distinct key password."
+    Assert-ExportCheck $true "Accept JKS with Unicode store password and distinct key password."
     Assert-ExportRejects { Assert-UploadKeySigns $jarsigner $testKeystore 'test-upload' 'incorrect-test-password' $keyPass $private } "Reject wrong store password before Unity."
     Assert-ExportRejects { Assert-UploadKeySigns $jarsigner $testKeystore 'test-upload' $storePass 'incorrect-test-password' $private } "Reject wrong private-key password before Unity."
     Assert-ExportRejects { Assert-UploadKeySigns $jarsigner $testKeystore 'missing-alias' $storePass $keyPass $private } "Reject missing alias before Unity."
@@ -106,16 +106,18 @@ try {
     Assert-ExportCheck (-not (Test-Path -LiteralPath (Join-Path $private 'signing-probe.jar'))) "Remove temporary probe after failure."
 
     $pkcsFile = Join-Path $private 'throwaway-test.keystore'
-    $pkcsPassword = 'test-only-' + [char]0xE1 + '-quotes-"-&-spaces '
+    # Java 17's PKCS12 provider requires ASCII passwords when creating the key.
+    # Unicode is exercised with the JKS fixture above instead.
+    $pkcsPassword = 'test-only-quotes-"-&-spaces '
     [IO.File]::WriteAllText($storePassFile, $pkcsPassword)
     $pkcsArguments = @('-J-Dfile.encoding=UTF-8', '-genkeypair', '-keystore', ('"{0}"' -f $pkcsFile),
         '-storetype', 'PKCS12', '-storepass:file', ('"{0}"' -f $storePassFile), '-alias', 'catsvsdemons',
         '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000', '-dname', '"CN=Throwaway PKCS12 Test"')
     $pkcsGeneration = Start-Process -FilePath $keytool -ArgumentList $pkcsArguments -Wait -PassThru `
         -RedirectStandardOutput (Join-Path $private 'fixture-output.log') -RedirectStandardError (Join-Path $private 'fixture-error.log')
-    Assert-ExportCheck ($pkcsGeneration.ExitCode -eq 0) "Create PKCS12 fixture with Unicode and punctuation."
+    Assert-ExportCheck ($pkcsGeneration.ExitCode -eq 0) "Create PKCS12 fixture with punctuation and spaces."
     Assert-UploadKeySigns $jarsigner $pkcsFile 'catsvsdemons' $pkcsPassword $pkcsPassword $private
-    Assert-ExportCheck $true "Accept new-key PKCS12 format and Unicode password."
+    Assert-ExportCheck $true "Accept new-key PKCS12 format with punctuation and spaces."
     Assert-ExportRejects { Assert-UploadKeySigns $jarsigner $pkcsFile 'catsvsdemons' $pkcsPassword 'incorrect-test-password' $private } "Reject wrong PKCS12 private-key password."
 }
 finally { Remove-Item -LiteralPath $private -Recurse -Force }
