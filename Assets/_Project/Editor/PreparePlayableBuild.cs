@@ -152,21 +152,32 @@ namespace CatsVsDemons.Editor
         [MenuItem("Tools/Cats vs Demons/Exportar para Play Store (AAB)")]
         public static void ExportPlayStoreBundle()
         {
-            ConfigureScenes();
-            ApplyVersionCodeFromEnvironment();
-            ConfigurePlayStorePlayer();
-            ApplySigningFromEnvironment();
-            System.Collections.Generic.List<string> errors =
-                PlayStoreBuildValidator.CollectErrors(true);
-            if (errors.Count > 0)
+            bool injectedSigning = ApplySigningFromEnvironment();
+            try
             {
-                string message = string.Join("\n\n", errors);
-                Debug.LogError("Exportação bloqueada:\n" + message);
-                if (Application.isBatchMode) throw new BuildFailedException(message);
-                EditorUtility.DisplayDialog("Corrigir antes de exportar", message, "OK");
-                return;
+                ConfigureScenes();
+                ApplyVersionCodeFromEnvironment();
+                ConfigurePlayStorePlayer();
+                System.Collections.Generic.List<string> errors =
+                    PlayStoreBuildValidator.CollectErrors(true);
+                if (errors.Count > 0)
+                {
+                    string message = string.Join("\n\n", errors);
+                    Debug.LogError("Exportação bloqueada:\n" + message);
+                    if (Application.isBatchMode) throw new BuildFailedException(message);
+                    EditorUtility.DisplayDialog("Corrigir antes de exportar", message, "OK");
+                    return;
+                }
+                BuildPlayStoreBundle();
             }
-            BuildPlayStoreBundle();
+            finally
+            {
+                if (injectedSigning)
+                {
+                    PlayerSettings.Android.keystorePass = string.Empty;
+                    PlayerSettings.Android.keyaliasPass = string.Empty;
+                }
+            }
         }
 
         private static void ApplyVersionCodeFromEnvironment()
@@ -332,20 +343,73 @@ namespace CatsVsDemons.Editor
             PlayStoreBuildValidator.ValidateFromMenu();
         }
 
-        private static void ApplySigningFromEnvironment()
+        [Serializable]
+        private sealed class SigningCredentials
         {
-            string keystore = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PATH");
-            if (!string.IsNullOrWhiteSpace(keystore))
-            {
-                PlayerSettings.Android.useCustomKeystore = true;
-                PlayerSettings.Android.keystoreName = keystore;
-            }
-            string alias = Environment.GetEnvironmentVariable("CVD_KEY_ALIAS");
-            if (!string.IsNullOrWhiteSpace(alias)) PlayerSettings.Android.keyaliasName = alias;
+            public string keystorePath;
+            public string keyAlias;
+            public string keystorePassword;
+            public string keyPassword;
+        }
+
+        private static bool ApplySigningFromEnvironment()
+        {
+            string payloadPath = Environment.GetEnvironmentVariable("CVD_SIGNING_FILE");
             string storePassword = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PASSWORD");
-            if (!string.IsNullOrEmpty(storePassword)) PlayerSettings.Android.keystorePass = storePassword;
             string keyPassword = Environment.GetEnvironmentVariable("CVD_KEY_PASSWORD");
-            if (!string.IsNullOrEmpty(keyPassword)) PlayerSettings.Android.keyaliasPass = keyPassword;
+            // Gradle failures can print the entire inherited environment. Consume
+            // legacy CI secrets before launching any build/import processes.
+            Environment.SetEnvironmentVariable("CVD_SIGNING_FILE", null);
+            Environment.SetEnvironmentVariable("CVD_KEYSTORE_PASSWORD", null);
+            Environment.SetEnvironmentVariable("CVD_KEY_PASSWORD", null);
+            SigningCredentials credentials = null;
+            try
+            {
+                string keystore = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PATH");
+                string alias = Environment.GetEnvironmentVariable("CVD_KEY_ALIAS");
+                if (!string.IsNullOrWhiteSpace(payloadPath))
+                {
+                    try
+                    {
+                        credentials = JsonUtility.FromJson<SigningCredentials>(File.ReadAllText(payloadPath));
+                    }
+                    catch
+                    {
+                        throw new BuildFailedException("Não foi possível ler as credenciais temporárias de assinatura. Execute novamente o exportador atualizado.");
+                    }
+                    finally
+                    {
+                        if (File.Exists(payloadPath)) File.Delete(payloadPath);
+                    }
+                    if (credentials == null || string.IsNullOrWhiteSpace(credentials.keystorePath) ||
+                        string.IsNullOrWhiteSpace(credentials.keyAlias) ||
+                        string.IsNullOrEmpty(credentials.keystorePassword) || string.IsNullOrEmpty(credentials.keyPassword))
+                        throw new BuildFailedException("Credenciais temporárias de assinatura incompletas. Execute novamente o exportador.");
+                    keystore = credentials.keystorePath;
+                    alias = credentials.keyAlias;
+                    storePassword = credentials.keystorePassword;
+                    keyPassword = credentials.keyPassword;
+                }
+                if (!string.IsNullOrWhiteSpace(keystore))
+                {
+                    PlayerSettings.Android.useCustomKeystore = true;
+                    PlayerSettings.Android.keystoreName = keystore;
+                }
+                if (!string.IsNullOrWhiteSpace(alias)) PlayerSettings.Android.keyaliasName = alias;
+                if (!string.IsNullOrEmpty(storePassword)) PlayerSettings.Android.keystorePass = storePassword;
+                if (!string.IsNullOrEmpty(keyPassword)) PlayerSettings.Android.keyaliasPass = keyPassword;
+                return !string.IsNullOrEmpty(storePassword) || !string.IsNullOrEmpty(keyPassword);
+            }
+            finally
+            {
+                storePassword = null;
+                keyPassword = null;
+                if (credentials != null)
+                {
+                    credentials.keystorePassword = null;
+                    credentials.keyPassword = null;
+                }
+            }
         }
 
         private static void OptimizeImportedAssets()

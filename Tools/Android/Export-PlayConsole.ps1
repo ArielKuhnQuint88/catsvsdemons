@@ -45,6 +45,79 @@ function Read-BuildPassword {
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer); $secure.Dispose() }
 }
 
+function New-PrivateSigningDirectory {
+    $folder = Join-Path ([IO.Path]::GetTempPath()) ("cvd-signing-" + [Guid]::NewGuid().ToString('N'))
+    $null = New-Item -ItemType Directory -Path $folder
+    try {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent().User
+        $acl = New-Object Security.AccessControl.DirectorySecurity
+        $acl.SetOwner($identity)
+        $acl.SetAccessRuleProtection($true, $false)
+        $rule = New-Object Security.AccessControl.FileSystemAccessRule(
+            $identity, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow')
+        $acl.AddAccessRule($rule)
+        Set-Acl -LiteralPath $folder -AclObject $acl
+        return $folder
+    }
+    catch { Remove-Item -LiteralPath $folder -Recurse -Force; throw "Nao foi possivel proteger a pasta temporaria de assinatura." }
+}
+
+function Assert-UploadKeySigns {
+    param([string]$JarSigner, [string]$KeyFile, [string]$Alias,
+        [string]$StorePassword, [string]$KeyPassword, [string]$PrivateFolder)
+    $storeFile = Join-Path $PrivateFolder 'store-password'
+    $keyPassFile = Join-Path $PrivateFolder 'key-password'
+    $probe = Join-Path $PrivateFolder 'signing-probe.jar'
+    $signedProbe = Join-Path $PrivateFolder 'signed-probe.jar'
+    $output = Join-Path $PrivateFolder 'probe-output.log'
+    $errorOutput = Join-Path $PrivateFolder 'probe-error.log'
+    try {
+        [IO.File]::WriteAllText($storeFile, $StorePassword)
+        [IO.File]::WriteAllText($keyPassFile, $KeyPassword)
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $archive = [IO.Compression.ZipFile]::Open($probe, 'Create')
+        try {
+            $entry = $archive.CreateEntry('signing-check.txt')
+            $writer = New-Object IO.StreamWriter($entry.Open())
+            try { $writer.Write('Cats vs Demons upload-key validation; not a game build.') }
+            finally { $writer.Dispose() }
+        }
+        finally { $archive.Dispose() }
+        $arguments = @('-J-Duser.language=en', '-J-Duser.country=US', '-J-Dfile.encoding=UTF-8', '-keystore', ('"{0}"' -f $KeyFile),
+            '-storepass:file', ('"{0}"' -f $storeFile), '-keypass:file', ('"{0}"' -f $keyPassFile),
+            '-signedjar', ('"{0}"' -f $signedProbe), ('"{0}"' -f $probe), ('"{0}"' -f $Alias))
+        $process = Start-Process -FilePath $JarSigner -ArgumentList $arguments -Wait -PassThru `
+            -RedirectStandardOutput $output -RedirectStandardError $errorOutput
+        if ($process.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $signedProbe -PathType Leaf)) {
+            throw "A chave nao assinou o teste. Confira o arquivo selecionado, o alias e as duas senhas. A Unity nao foi iniciada."
+        }
+        $verifyArguments = @('-J-Duser.language=en', '-J-Duser.country=US', '-verify', ('"{0}"' -f $signedProbe))
+        $verified = Start-Process -FilePath $JarSigner -ArgumentList $verifyArguments -Wait -PassThru `
+            -RedirectStandardOutput $output -RedirectStandardError $errorOutput
+        if ($verified.ExitCode -ne 0 -or (Get-Content -LiteralPath $output -Raw) -notmatch 'jar verified') {
+            throw "O Java nao confirmou a assinatura de teste. A Unity nao foi iniciada."
+        }
+    }
+    finally {
+        foreach ($file in @($storeFile, $keyPassFile, $probe, $signedProbe, $output, $errorOutput)) {
+            if (Test-Path -LiteralPath $file) { Remove-Item -LiteralPath $file -Force }
+        }
+    }
+}
+
+function Protect-BuildLog {
+    param([string]$LogPath, [string[]]$Passwords)
+    if ([string]::IsNullOrWhiteSpace($LogPath) -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) { return }
+    $content = [IO.File]::ReadAllText($LogPath)
+    $sanitized = [regex]::Replace($content, '(?im)(CVD_KEY(?:STORE)?_PASSWORD\s*=\s*)[^\r\n]*', '$1[REDACTED]')
+    foreach ($password in $Passwords) {
+        if (-not [string]::IsNullOrEmpty($password) -and $password.Length -ge 6) {
+            $sanitized = $sanitized.Replace($password, '[REDACTED]')
+        }
+    }
+    if ($sanitized -cne $content) { [IO.File]::WriteAllText($LogPath, $sanitized) }
+}
+
 function Invoke-PlayConsoleExport {
     $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
     $versionFile = Join-Path $projectRoot "ProjectSettings\ProjectVersion.txt"
@@ -100,38 +173,49 @@ function Invoke-PlayConsoleExport {
     }
     $keyFile = $KeystorePath
     if ([string]::IsNullOrWhiteSpace($keyFile)) {
-        $defaultKey = Join-Path ([Environment]::GetFolderPath('MyDocuments')) "Chaves\catsvsdemons-upload.keystore"
-        if (Test-Path -LiteralPath $defaultKey -PathType Leaf) { $keyFile = $defaultKey }
-        else {
-            Add-Type -AssemblyName System.Windows.Forms
-            $picker = New-Object System.Windows.Forms.OpenFileDialog
-            try {
-                $picker.Title = "Selecione a chave de upload JA usada no Play Console"
-                $picker.Filter = "Chave de upload (*.keystore;*.jks)|*.keystore;*.jks|Todos os arquivos|*.*"
-                if ($picker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { throw "Selecao da chave cancelada." }
-                $keyFile = $picker.FileName
-            }
-            finally { $picker.Dispose() }
+        Add-Type -AssemblyName System.Windows.Forms
+        $picker = New-Object System.Windows.Forms.OpenFileDialog
+        try {
+            $picker.Title = "Selecione a chave de upload ATIVA no Play Console"
+            $picker.Filter = "Chave de upload (*.keystore;*.jks)|*.keystore;*.jks|Todos os arquivos|*.*"
+            $keysFolder = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'Chaves'
+            if (Test-Path -LiteralPath $keysFolder -PathType Container) { $picker.InitialDirectory = $keysFolder }
+            if ($picker.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { throw "Selecao da chave cancelada." }
+            $keyFile = $picker.FileName
         }
+        finally { $picker.Dispose() }
     }
     if (-not (Test-Path -LiteralPath $keyFile -PathType Leaf)) { throw "Chave de upload nao encontrada." }
     $keyFile = (Resolve-Path -LiteralPath $keyFile).Path
     if ([string]::IsNullOrWhiteSpace($KeyAlias)) { throw "Informe -KeyAlias com o alias da chave de upload." }
+    if ($KeyAlias.IndexOfAny([char[]]@([char]34, [char]13, [char]10)) -ge 0) { throw "O alias nao pode conter aspas nem quebras de linha." }
     Write-Host "Unity $editorVersion | versao $releaseVersion | novo codigo $buildCode"
-    $storePassword = Read-BuildPassword "Senha do keystore (digitacao oculta)"
-    $keyPassword = Read-BuildPassword "Senha do alias $KeyAlias (digitacao oculta)"
-    if ([string]::IsNullOrEmpty($storePassword) -or [string]::IsNullOrEmpty($keyPassword)) { throw "As duas senhas sao necessarias." }
-
-    $buildEnvironment = @{
-        CVD_KEYSTORE_PATH = $keyFile
-        CVD_KEY_ALIAS = $KeyAlias
-        CVD_KEYSTORE_PASSWORD = $storePassword
-        CVD_KEY_PASSWORD = $keyPassword
-        CVD_VERSION_CODE = [string]$buildCode
-    }
+    Write-Host "Chave selecionada: $keyFile | alias: $KeyAlias"
+    Write-Host "Se houve redefinicao, use a nova chave depois da ativacao pelo Google."
+    $storePassword = $null; $keyPassword = $null; $privateFolder = $null; $logPath = $null
+    $buildEnvironment = @{}
     $previousEnvironment = @{}
-    foreach ($name in $buildEnvironment.Keys) { $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
     try {
+        $storePassword = Read-BuildPassword "Senha do keystore (digitacao oculta)"
+        $keyPassword = Read-BuildPassword "Senha do alias $KeyAlias (digitacao oculta)"
+        if ([string]::IsNullOrEmpty($storePassword) -or [string]::IsNullOrEmpty($keyPassword)) { throw "As duas senhas sao necessarias." }
+        $privateFolder = New-PrivateSigningDirectory
+        Write-Host "Verificando a chave antes de compilar..."
+        Assert-UploadKeySigns -JarSigner $jarSigner -KeyFile $keyFile -Alias $KeyAlias `
+            -StorePassword $storePassword -KeyPassword $keyPassword -PrivateFolder $privateFolder
+        $payload = Join-Path $privateFolder 'signing.json'
+        $credentials = @{ keystorePath = $keyFile; keyAlias = $KeyAlias; keystorePassword = $storePassword; keyPassword = $keyPassword }
+        [IO.File]::WriteAllText($payload, ($credentials | ConvertTo-Json -Compress))
+        $credentials.Clear()
+        $buildEnvironment = @{
+            CVD_SIGNING_FILE = $payload
+            CVD_KEYSTORE_PATH = $keyFile
+            CVD_KEY_ALIAS = $KeyAlias
+            CVD_KEYSTORE_PASSWORD = $null
+            CVD_KEY_PASSWORD = $null
+            CVD_VERSION_CODE = [string]$buildCode
+        }
+        foreach ($name in $buildEnvironment.Keys) { $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
         foreach ($name in $buildEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $buildEnvironment[$name], 'Process') }
         $null = New-Item -ItemType Directory -Path $buildFolder -Force
         $logPath = Join-Path $buildFolder "play-console-build.log"
@@ -141,6 +225,7 @@ function Invoke-PlayConsoleExport {
         $process = Start-Process -FilePath $editor -ArgumentList $arguments -Wait -PassThru
         foreach ($name in $buildEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process') }
         if ($process.ExitCode -ne 0) { throw "A Unity falhou (codigo $($process.ExitCode)). Consulte $logPath" }
+        if (Test-Path -LiteralPath $payload) { throw "A Unity nao leu as credenciais temporarias. Atualize PreparePlayableBuild.cs junto com este exportador." }
         Assert-PlayBuildReceipt -BundlePath $bundlePath -VersionCode $buildCode
         $signatureLog = Join-Path $buildFolder "signature-check.log"
         $signatureError = Join-Path $buildFolder "signature-check-error.log"
@@ -157,8 +242,12 @@ function Invoke-PlayConsoleExport {
     }
     finally {
         foreach ($name in $buildEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process') }
-        $storePassword = $null; $keyPassword = $null
-        $buildEnvironment.Clear(); $previousEnvironment.Clear()
+        try { Protect-BuildLog -LogPath $logPath -Passwords @($storePassword, $keyPassword) }
+        finally {
+            if ($null -ne $privateFolder -and (Test-Path -LiteralPath $privateFolder)) { Remove-Item -LiteralPath $privateFolder -Recurse -Force }
+            $storePassword = $null; $keyPassword = $null
+            $buildEnvironment.Clear(); $previousEnvironment.Clear()
+        }
     }
 }
 

@@ -29,10 +29,21 @@ confere o módulo Android/OpenJDK e pede o maior **Bundle Version Code já envia
 ao Console (digite 0 se nunca enviou). Ele escolhe um código superior ao enviado,
 sem reduzir o código do projeto.
 
-Selecione a chave de upload existente e digite as senhas nos campos ocultos.
-A chave padrão é buscada em `Documentos/Chaves/catsvsdemons-upload.keystore`, com
-alias `catsvsdemons`. As senhas passam apenas para o processo de build; depois,
-o ambiente original é restaurado. Elas não entram nos argumentos nem em arquivos.
+Selecione a chave de upload **ativa no Play Console** e digite as senhas nos
+campos ocultos. O seletor sempre abre, mesmo quando existe uma chave antiga em
+Documentos/Chaves. O alias padrão é `catsvsdemons`; o caminho selecionado aparece
+antes dos pedidos de senha.
+
+Antes de iniciar a Unity, o Java assina e verifica um pequeno arquivo de teste.
+Senha errada, alias ausente ou chave sem acesso interrompem a exportação nessa
+etapa, preservando o keystore. Isso evita esperar a compilação inteira para
+descobrir que a assinatura não funciona.
+
+O lançador entrega as credenciais por um arquivo temporário com acesso restrito
+à conta atual do Windows. A Unity o lê e apaga antes de compilar. O lançador também
+remove a pasta temporária ao terminar, inclusive em falhas. As senhas não são
+passadas em argumentos nem no ambiente herdado pela Unity/Gradle. O log final
+também recebe uma limpeza das credenciais de assinatura reconhecidas.
 
 O lançador executa o exportador da Unity, confere o relatório e o SHA-256, verifica
 a assinatura criptográfica com o `jarsigner` do OpenJDK e abre a pasta do AAB.
@@ -57,9 +68,10 @@ no Console automaticamente.
 1. Aguarde a importação e confirme que o Console não tem erros de compilação.
 2. Execute **Tools > Cats vs Demons > Preparar Android para Play Console**.
 3. Em **Player > Android > Publishing Settings**, selecione a chave de upload
-   **já usada no Play Console** e informe as duas senhas. No fluxo anterior, o
-   arquivo local era `C:\Users\Qip\Documents\Chaves\catsvsdemons-upload.keystore`
-   e o alias era `catsvsdemons`. Não crie outra chave para atualizar o mesmo app.
+   **ativa no Play Console** e informe as duas senhas. Se houve redefinição por
+   senha esquecida, use o novo keystore apenas depois da ativação confirmada pelo
+   Google. O alias usado pelo assistente de nova chave é `catsvsdemons`, com a
+   mesma senha nova nos campos do arquivo e do alias.
 4. Em **Player > Android > Other Settings**, confira `Bundle Version Code`:
    a configuração base usa **2**, que precisa ser maior que todo código já enviado.
    Aumente-o se necessário. O identificador permanece
@@ -103,11 +115,18 @@ alinhamento, atualize a Unity ou o plugin apontado e refaça o build.
 
 ## Exportação por linha de comando
 
-O método também funciona em batch mode, em uma máquina com Unity licenciada e
-Android Build Support. As variáveis de assinatura abaixo são opcionais quando a chave já
-foi informada no Editor. `CVD_VERSION_CODE` permite escolher o código da versão
-no batch mode e rejeita números inválidos ou inferiores ao projeto. Use variáveis locais ou segredos do CI e não grave senhas
-em scripts, logs ou arquivos versionados:
+Prefira `Tools/Android/Export-PlayConsole.ps1`, que valida a chave e prepara o
+transporte temporário protegido. O método da Unity também funciona em batch mode,
+em uma máquina licenciada com Android Build Support. `CVD_SIGNING_FILE` indica
+um JSON temporário protegido contendo `keystorePath`, `keyAlias`,
+`keystorePassword` e `keyPassword`; ele é consumido e apagado ao entrar no método.
+Não crie esse arquivo dentro do repositório. `CVD_VERSION_CODE` escolhe o código
+da versão e rejeita números inválidos ou inferiores ao projeto.
+
+Por compatibilidade, as variáveis antigas abaixo ainda são aceitas. O método
+remove as duas senhas do ambiente imediatamente após a leitura. Use o lançador
+atualizado para evitar que processos iniciados durante a abertura da Unity
+recebam essas variáveis. Não grave senhas em scripts, logs ou arquivos versionados:
 
 ```text
 CVD_KEYSTORE_PATH
@@ -116,6 +135,12 @@ CVD_KEYSTORE_PASSWORD
 CVD_KEY_PASSWORD
 CVD_VERSION_CODE
 ```
+
+Se a senha foi esquecida e o app usa a Assinatura de apps do Google Play, gere uma
+nova chave de upload e solicite a redefinição com o certificado público `.pem`.
+Aguarde a confirmação e a data de ativação informadas pelo Console. Preserve o
+nome do pacote do aplicativo. Consulte as
+[instruções oficiais de redefinição](https://support.google.com/googleplay/android-developer/answer/9842756?hl=pt-br).
 
 ```powershell
 & 'C:\Program Files\Unity\Hub\Editor\6000.5.4f1\Editor\Unity.exe' `
