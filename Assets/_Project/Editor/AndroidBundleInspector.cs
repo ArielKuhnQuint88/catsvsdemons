@@ -40,6 +40,32 @@ namespace CatsVsDemons.Editor
             return errors;
         }
 
+        public static List<string> InspectApk(string path)
+        {
+            List<string> errors = new();
+            using ZipArchive archive = ZipFile.OpenRead(path);
+            foreach (string required in new[] { "AndroidManifest.xml", "classes.dex",
+                "lib/arm64-v8a/libunity.so", "lib/arm64-v8a/libil2cpp.so" })
+            {
+                ZipArchiveEntry entry = archive.GetEntry(required);
+                if (entry == null || entry.Length == 0) errors.Add("Arquivo obrigatório ausente ou vazio no APK: " + required);
+            }
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                if (!entry.FullName.StartsWith("lib/", StringComparison.Ordinal) ||
+                    !entry.FullName.EndsWith(".so", StringComparison.Ordinal)) continue;
+                if (!entry.FullName.StartsWith("lib/arm64-v8a/", StringComparison.Ordinal))
+                {
+                    errors.Add("Biblioteca fora do perfil ARM64: " + entry.FullName);
+                    continue;
+                }
+                using Stream stream = entry.Open();
+                string error = InspectElf(stream);
+                if (error != null) errors.Add(entry.FullName + ": " + error);
+            }
+            return errors;
+        }
+
         public static string InspectElf(Stream stream)
         {
             using BinaryReader reader = new(stream, System.Text.Encoding.UTF8, true);

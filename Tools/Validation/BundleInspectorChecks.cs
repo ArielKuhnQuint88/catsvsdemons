@@ -33,6 +33,14 @@ internal static class BundleInspectorChecks
             Check("Reject missing manifest", () => Bundle(Elf(16384), true, false, "arm64-v8a") > 0);
             Check("Reject 32-bit-only bundle", () => Bundle(Elf(16384), true, true, "armeabi-v7a") > 0);
             Check("Reject 4 KB library inside otherwise signed bundle", () => Bundle(Elf(4096), true, true, "arm64-v8a") > 0);
+            Check("Accept ARM64 test APK structure", () => Apk(Elf(16384)) == 0);
+            Check("Reject APK without manifest", () => Apk(Elf(16384), "AndroidManifest.xml") > 0);
+            Check("Reject APK without classes.dex", () => Apk(Elf(16384), "classes.dex") > 0);
+            Check("Reject APK without IL2CPP", () => Apk(Elf(16384), "lib/arm64-v8a/libil2cpp.so") > 0);
+            Check("Reject APK without Unity engine", () => Apk(Elf(16384), "lib/arm64-v8a/libunity.so") > 0);
+            Check("Reject APK with 4 KB libraries", () => Apk(Elf(4096)) > 0);
+            Check("Reject APK with wrong native CPU", () => Apk(Elf(16384, 0, 62)) > 0);
+            Check("Reject APK with a 32-bit plugin", () => Apk(Elf(16384), null, true) > 0);
             Console.WriteLine($"{passed} checks passed against the production C# inspector.");
             return 0;
         }
@@ -72,6 +80,33 @@ internal static class BundleInspectorChecks
         writer.Write((ulong)0); writer.Write(address); writer.Write((ulong)0);
         writer.Write((ulong)4096); writer.Write((ulong)4096); writer.Write(alignment);
         return stream.ToArray();
+    }
+
+    private static int Apk(byte[] elf, string missing = null, bool extraAbi = false)
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cvd-apk-inspector-" + Guid.NewGuid() + ".apk");
+        try
+        {
+            using (ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create))
+            {
+                foreach (string name in new[] { "AndroidManifest.xml", "classes.dex",
+                    "lib/arm64-v8a/libil2cpp.so", "lib/arm64-v8a/libunity.so" })
+                {
+                    if (name == missing) continue;
+                    using Stream stream = archive.CreateEntry(name).Open();
+                    byte[] contents = name.EndsWith(".so") ? elf : new byte[] { 1 };
+                    stream.Write(contents, 0, contents.Length);
+                }
+                if (extraAbi)
+                {
+                    using Stream stream = archive.CreateEntry("lib/armeabi-v7a/plugin.so").Open();
+                    stream.Write(elf, 0, elf.Length);
+                }
+            }
+            // Synthetic structure only; crypto verification is a separate SDK step.
+            return AndroidBundleInspector.InspectApk(path).Count;
+        }
+        finally { File.Delete(path); }
     }
 
     private static int Bundle(byte[] elf, bool signed, bool manifest, string abi)

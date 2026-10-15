@@ -23,6 +23,33 @@ para essa versão. Instale também o SDK Android 36 se a Unity solicitar.
 
 ## Exportar no PC com dois cliques
 
+### APK para instalar e testar no celular
+
+Com a Unity fechada, execute **EXPORTAR_APK.cmd** na raiz do projeto.
+Ele gera um APK com a chave de desenvolvimento da Unity, sem solicitar a chave
+de upload nem suas senhas. O aplicativo aparece como **Cats vs Demons (Teste)**,
+com pacote `com.qipgames.catsvsdemons.test`, podendo coexistir com o jogo da loja.
+As configurações de identificação e assinatura anteriores são restauradas no
+fim da exportação, inclusive em falhas. Os dados e a progressão desse app de
+teste são próprios.
+
+A saída fica em `Builds/CatsVsDemons-Android/CatsVsDemons-Teste-<data>-<id>.apk`.
+Cada execução usa um nome novo. O lançador confere o relatório e o hash SHA-256,
+e usa `apksigner verify` do SDK para verificar a assinatura antes de abrir a pasta.
+O inspetor também confere os arquivos obrigatórios, ARM64 e alinhamento ELF de
+16 KB de todas as bibliotecas nativas. A instalação e a jogabilidade ainda
+precisam ser testadas no aparelho. Logs: `apk-build.log` e `apk-signature-check.log`.
+
+Copie o `.apk` para o Android e abra-o. Autorize a instalação pelo aplicativo
+usado para abrir esse arquivo, caso o sistema solicite. Esta versão usa Android
+8 ou superior e processador ARM64. O APK de teste é destinado à instalação
+direta; a publicação no Play Console continua pelo fluxo AAB abaixo.
+
+Também pode usar **Tools > Cats vs Demons > Exportar APK de teste (Android)**
+no Editor. A verificação criptográfica com `apksigner` é feita pelo lançador.
+
+### AAB para o Play Console
+
 Com o projeto atualizado e a Unity fechada, execute **EXPORTAR_PLAY_CONSOLE.cmd**
 na raiz do projeto. O lançador localiza a versão da Unity indicada no projeto,
 confere o módulo Android/OpenJDK e pede o maior **Bundle Version Code já enviado**
