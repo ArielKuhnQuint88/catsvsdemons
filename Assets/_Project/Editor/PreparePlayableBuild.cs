@@ -5,22 +5,18 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System;
+using System.Linq;
 
 namespace CatsVsDemons.Editor
 {
     public static class PreparePlayableBuild
     {
-        private const string ScenePath =
-            "Assets/_Project/Scenes/Game.unity";
-        private const string MenuScenePath =
-            "Assets/_Project/Scenes/MainMenu.unity";
         private const string BuildFolder = "Builds/CatsVsDemons-Windows";
         private const string ExecutablePath =
             BuildFolder + "/CatsVsDemons.exe";
         private const string AndroidBuildFolder =
             "Builds/CatsVsDemons-Android";
-        private const string ApkPath =
-            AndroidBuildFolder + "/CatsVsDemons.apk";
         private const string PlayStoreBuildFolder =
             "Builds/CatsVsDemons-PlayStore";
 
@@ -30,10 +26,10 @@ namespace CatsVsDemons.Editor
             ConfigureScenes();
             AssetDatabase.SaveAssets();
 
-            Debug.Log("Game scene added to Build Settings.");
+            Debug.Log("Menu e todas as cenas da campanha adicionados ao build.");
             EditorUtility.DisplayDialog(
                 "Cats vs Demons",
-                "Cena Game preparada para jogar e reiniciar.",
+                "Menu e campanha de 12 fases preparados para exportação.",
                 "OK"
             );
         }
@@ -54,7 +50,7 @@ namespace CatsVsDemons.Editor
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { MenuScenePath, ScenePath },
+                scenes = PlayStoreBuildValidator.ScenePaths,
                 locationPathName = ExecutablePath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.CompressWithLz4HC
@@ -94,118 +90,167 @@ namespace CatsVsDemons.Editor
             );
         }
 
-        [MenuItem("Tools/Cats vs Demons/Exportar Jogo Leve (Android APK)")]
+        [MenuItem("Tools/Cats vs Demons/Exportar APK de teste (Android)")]
         public static void ExportLightweightAndroid()
         {
             if (!BuildPipeline.IsBuildTargetSupported(
                 BuildTargetGroup.Android,
                 BuildTarget.Android))
             {
-                EditorUtility.DisplayDialog(
-                    "Android não instalado",
-                    "No Unity Hub, adicione Android Build Support, " +
-                    "Android SDK & NDK Tools e OpenJDK.",
-                    "OK"
-                );
+                ReportApkFailure("No Unity Hub, adicione Android Build Support, Android SDK & NDK Tools e OpenJDK.");
                 return;
             }
 
-            ConfigureScenes();
-            ConfigureLightweightAndroidPlayer();
-            OptimizeImportedAssets();
-            OptimizeAndroidTextures();
-
-            string absoluteFolder = Path.GetFullPath(AndroidBuildFolder);
-            Directory.CreateDirectory(absoluteFolder);
-            string absoluteApk = Path.GetFullPath(ApkPath);
-            if (File.Exists(absoluteApk))
+            string originalPackage = PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android);
+            string originalName = PlayerSettings.productName;
+            bool originalSigning = PlayerSettings.Android.useCustomKeystore;
+            string originalStorePassword = PlayerSettings.Android.keystorePass;
+            string originalKeyPassword = PlayerSettings.Android.keyaliasPass;
+            bool originalBundle = EditorUserBuildSettings.buildAppBundle;
+            bool originalDevelopment = EditorUserBuildSettings.development;
+            bool originalDebugging = EditorUserBuildSettings.allowDebugging;
+            bool originalProfiler = EditorUserBuildSettings.connectProfiler;
+            Environment.SetEnvironmentVariable("CVD_KEYSTORE_PASSWORD", null);
+            Environment.SetEnvironmentVariable("CVD_KEY_PASSWORD", null);
+            try
             {
-                File.Delete(absoluteApk);
+                ConfigureScenes();
+                ConfigureLightweightAndroidPlayer();
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, PlayStoreBuildValidator.TestPackageName);
+                PlayerSettings.productName = "Cats vs Demons (Teste)";
+                PlayerSettings.Android.useCustomKeystore = false;
+                PlayerSettings.Android.keystorePass = string.Empty;
+                PlayerSettings.Android.keyaliasPass = string.Empty;
+                EditorUserBuildSettings.development = false;
+                EditorUserBuildSettings.allowDebugging = false;
+                EditorUserBuildSettings.connectProfiler = false;
+                OptimizeImportedAssets();
+                OptimizeAndroidTextures();
+                var errors = PlayStoreBuildValidator.CollectErrors(false, PlayStoreBuildValidator.TestPackageName);
+                if (errors.Count > 0)
+                {
+                    ReportApkFailure(string.Join("\n\n", errors));
+                    return;
+                }
+                string absoluteFolder = Path.GetFullPath(AndroidBuildFolder);
+                Directory.CreateDirectory(absoluteFolder);
+                string requested = Environment.GetEnvironmentVariable("CVD_APK_OUTPUT");
+                string absoluteApk = Path.GetFullPath(string.IsNullOrWhiteSpace(requested)
+                    ? Path.Combine(absoluteFolder, "CatsVsDemons-Teste-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") +
+                        "-" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".apk")
+                    : requested);
+                if (!absoluteApk.StartsWith(absoluteFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(Path.GetExtension(absoluteApk), ".apk", StringComparison.OrdinalIgnoreCase))
+                    throw new BuildFailedException("A saída do APK deve ficar em Builds/CatsVsDemons-Android e terminar em .apk.");
+                if (File.Exists(absoluteApk)) throw new BuildFailedException("Já existe um APK nesse caminho. Preserve-o e execute novamente.");
+                BuildPlayerOptions options = new BuildPlayerOptions
+                {
+                    scenes = PlayStoreBuildValidator.ScenePaths,
+                    locationPathName = absoluteApk,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.None
+                };
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                if (report.summary.result != BuildResult.Succeeded)
+                {
+                    ReportApkFailure("A Unity não conseguiu gerar o APK. Consulte apk-build.log ou o Console da Unity.");
+                    return;
+                }
+                errors = AndroidBundleInspector.InspectApk(absoluteApk);
+                if (errors.Count > 0) throw new BuildFailedException(string.Join("\n", errors));
+                string receipt = PlayStoreBuildValidator.WriteTestApkReceipt(absoluteApk);
+                Debug.Log("APK de teste gerado: " + absoluteApk + "\nRelatório: " + receipt);
+                if (!Application.isBatchMode)
+                {
+                    EditorUtility.RevealInFinder(absoluteApk);
+                    EditorUtility.DisplayDialog("APK de teste exportado!", "Instale no Android:\n" + absoluteApk +
+                        "\n\nAplicativo: Cats vs Demons (Teste)", "OK");
+                }
             }
-
-            BuildPlayerOptions options = new BuildPlayerOptions
+            finally
             {
-                scenes = new[] { MenuScenePath, ScenePath },
-                locationPathName = ApkPath,
-                target = BuildTarget.Android,
-                options = BuildOptions.None
-            };
-
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            if (report.summary.result != BuildResult.Succeeded)
-            {
-                EditorUtility.DisplayDialog(
-                    "Exportação Android falhou",
-                    "Veja os erros no Console da Unity.",
-                    "OK"
-                );
-                return;
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, originalPackage);
+                PlayerSettings.productName = originalName;
+                PlayerSettings.Android.useCustomKeystore = originalSigning;
+                PlayerSettings.Android.keystorePass = originalStorePassword;
+                PlayerSettings.Android.keyaliasPass = originalKeyPassword;
+                EditorUserBuildSettings.buildAppBundle = originalBundle;
+                EditorUserBuildSettings.development = originalDevelopment;
+                EditorUserBuildSettings.allowDebugging = originalDebugging;
+                EditorUserBuildSettings.connectProfiler = originalProfiler;
+                AssetDatabase.SaveAssets();
             }
+        }
 
-            EditorUtility.RevealInFinder(absoluteApk);
-            EditorUtility.DisplayDialog(
-                "APK exportado!",
-                $"Arquivo pronto para instalar:\n{absoluteApk}\n\n" +
-                $"Tamanho: {report.summary.totalSize / 1048576f:0.0} MB",
-                "OK"
-            );
+        private static void ReportApkFailure(string message)
+        {
+            if (Application.isBatchMode) throw new BuildFailedException(message);
+            EditorUtility.DisplayDialog("Exportação do APK interrompida", message, "OK");
         }
 
         [MenuItem("Tools/Cats vs Demons/Exportar para Play Store (AAB)")]
         public static void ExportPlayStoreBundle()
         {
-            if (!BuildPipeline.IsBuildTargetSupported(
-                BuildTargetGroup.Android,
-                BuildTarget.Android))
+            bool injectedSigning = ApplySigningFromEnvironment();
+            try
             {
-                EditorUtility.DisplayDialog(
-                    "Android não instalado",
-                    "Adicione Android Build Support, SDK & NDK Tools e " +
-                    "OpenJDK pelo Unity Hub.",
-                    "OK"
-                );
-                return;
-            }
-
-            if (!HasReleaseSigningKey())
-            {
-                bool openSettings = EditorUtility.DisplayDialog(
-                    "Assinatura obrigatória",
-                    "A Play Store não aceita a chave de teste. Configure " +
-                    "um Custom Keystore e informe as senhas em Player > " +
-                    "Android > Publishing Settings. Guarde o arquivo e " +
-                    "as senhas fora do GitHub.",
-                    "Abrir Player Settings",
-                    "Cancelar"
-                );
-                if (openSettings)
+                ConfigureScenes();
+                ApplyVersionCodeFromEnvironment();
+                ConfigurePlayStorePlayer();
+                System.Collections.Generic.List<string> errors =
+                    PlayStoreBuildValidator.CollectErrors(true);
+                if (errors.Count > 0)
                 {
-                    SettingsService.OpenProjectSettings("Project/Player");
+                    string message = string.Join("\n\n", errors);
+                    Debug.LogError("Exportação bloqueada:\n" + message);
+                    if (Application.isBatchMode) throw new BuildFailedException(message);
+                    EditorUtility.DisplayDialog("Corrigir antes de exportar", message, "OK");
+                    return;
                 }
-                return;
+                BuildPlayStoreBundle();
             }
+            finally
+            {
+                if (injectedSigning)
+                {
+                    PlayerSettings.Android.keystorePass = string.Empty;
+                    PlayerSettings.Android.keyaliasPass = string.Empty;
+                }
+            }
+        }
 
-            ConfigureScenes();
-            ConfigurePlayStorePlayer();
+        private static void ApplyVersionCodeFromEnvironment()
+        {
+            string configured = Environment.GetEnvironmentVariable("CVD_VERSION_CODE");
+            if (string.IsNullOrWhiteSpace(configured)) return;
+            if (!int.TryParse(configured, out int code) || code < 1 || code > 2100000000 ||
+                code < PlayerSettings.Android.bundleVersionCode)
+                throw new BuildFailedException("CVD_VERSION_CODE precisa ser um inteiro positivo, " +
+                    "ate 2100000000, sem reduzir o codigo atual do projeto.");
+            PlayerSettings.Android.bundleVersionCode = code;
+        }
+
+        private static void BuildPlayStoreBundle()
+        {
             OptimizeImportedAssets();
             OptimizeAndroidTextures();
 
             string absoluteFolder = Path.GetFullPath(PlayStoreBuildFolder);
             Directory.CreateDirectory(absoluteFolder);
-            string safeVersion = PlayerSettings.bundleVersion.Replace('.', '-');
+            string safeVersion = new string(PlayerSettings.bundleVersion.Select(c =>
+                char.IsLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
             string relativeBundlePath =
                 $"{PlayStoreBuildFolder}/CatsVsDemons-v{safeVersion}-" +
                 $"{PlayerSettings.Android.bundleVersionCode}.aab";
             string absoluteBundlePath = Path.GetFullPath(relativeBundlePath);
             if (File.Exists(absoluteBundlePath))
-            {
-                File.Delete(absoluteBundlePath);
-            }
+                throw new BuildFailedException("Já existe um AAB desta versão em " +
+                    absoluteBundlePath + ". Aumente Bundle Version Code ou mova o arquivo anterior.");
 
             EditorUserBuildSettings.buildAppBundle = true;
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { MenuScenePath, ScenePath },
+                scenes = PlayStoreBuildValidator.ScenePaths,
                 locationPathName = relativeBundlePath,
                 target = BuildTarget.Android,
                 options = BuildOptions.None
@@ -214,6 +259,8 @@ namespace CatsVsDemons.Editor
             BuildReport report = BuildPipeline.BuildPlayer(options);
             if (report.summary.result != BuildResult.Succeeded)
             {
+                if (Application.isBatchMode)
+                    throw new BuildFailedException("A Unity não conseguiu gerar o AAB. Consulte o log.");
                 EditorUtility.DisplayDialog(
                     "Exportação para Play Store falhou",
                     "Veja o primeiro erro vermelho no Console da Unity.",
@@ -221,6 +268,12 @@ namespace CatsVsDemons.Editor
                 );
                 return;
             }
+
+            PlayStoreBuildValidator.VerifyBundle(absoluteBundlePath);
+            string receipt = PlayStoreBuildValidator.WriteBuildReceipt(absoluteBundlePath);
+            Debug.Log("AAB gerado e bibliotecas ARM64 verificadas: " + absoluteBundlePath +
+                "\nRelatório: " + receipt);
+            if (Application.isBatchMode) return;
 
             EditorUtility.RevealInFinder(absoluteBundlePath);
             EditorUtility.DisplayDialog(
@@ -236,16 +289,15 @@ namespace CatsVsDemons.Editor
 
         private static void ConfigureScenes()
         {
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(MenuScenePath, true),
-                new EditorBuildSettingsScene(ScenePath, true)
-            };
+            EditorBuildSettings.scenes = PlayStoreBuildValidator.ScenePaths
+                .Select(path => new EditorBuildSettingsScene(path, true)).ToArray();
+            PlayStoreBuildValidator.EnsureRuntimeShaders();
         }
 
         private static void ConfigureLightweightPlayer()
         {
             PlayerSettings.productName = "Cats vs Demons";
+            PlayerSettings.companyName = "Quint Games";
             PlayerSettings.defaultScreenWidth = 1280;
             PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -262,6 +314,7 @@ namespace CatsVsDemons.Editor
         private static void ConfigureLightweightAndroidPlayer()
         {
             PlayerSettings.productName = "Cats vs Demons";
+            PlayerSettings.companyName = "Quint Games";
             PlayerSettings.SetApplicationIdentifier(
                 NamedBuildTarget.Android,
                 "com.qipgames.catsvsdemons"
@@ -294,6 +347,7 @@ namespace CatsVsDemons.Editor
                 new[] { GraphicsDeviceType.OpenGLES3 }
             );
             EditorUserBuildSettings.buildAppBundle = false;
+            EditorUserBuildSettings.exportAsGoogleAndroidProject = false;
         }
 
         private static void ConfigurePlayStorePlayer()
@@ -312,20 +366,89 @@ namespace CatsVsDemons.Editor
             PlayerSettings.Android.targetSdkVersion =
                 AndroidSdkVersions.AndroidApiLevel36;
             EditorUserBuildSettings.buildAppBundle = true;
+            EditorUserBuildSettings.development = false;
+            EditorUserBuildSettings.allowDebugging = false;
+            EditorUserBuildSettings.connectProfiler = false;
             AssetDatabase.SaveAssets();
         }
 
-        private static bool HasReleaseSigningKey()
+        [MenuItem("Tools/Cats vs Demons/Preparar Android para Play Console")]
+        public static void PreparePlayConsole()
         {
-            return PlayerSettings.Android.useCustomKeystore &&
-                !string.IsNullOrWhiteSpace(
-                    PlayerSettings.Android.keystoreName
-                ) &&
-                !string.IsNullOrWhiteSpace(
-                    PlayerSettings.Android.keyaliasName
-                ) &&
-                !string.IsNullOrEmpty(PlayerSettings.Android.keystorePass) &&
-                !string.IsNullOrEmpty(PlayerSettings.Android.keyaliasPass);
+            ConfigureScenes();
+            ConfigurePlayStorePlayer();
+            OptimizeImportedAssets();
+            OptimizeAndroidTextures();
+            PlayStoreBuildValidator.ValidateFromMenu();
+        }
+
+        [Serializable]
+        private sealed class SigningCredentials
+        {
+            public string keystorePath;
+            public string keyAlias;
+            public string keystorePassword;
+            public string keyPassword;
+        }
+
+        private static bool ApplySigningFromEnvironment()
+        {
+            string payloadPath = Environment.GetEnvironmentVariable("CVD_SIGNING_FILE");
+            string storePassword = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PASSWORD");
+            string keyPassword = Environment.GetEnvironmentVariable("CVD_KEY_PASSWORD");
+            // Gradle failures can print the entire inherited environment. Consume
+            // legacy CI secrets before launching any build/import processes.
+            Environment.SetEnvironmentVariable("CVD_SIGNING_FILE", null);
+            Environment.SetEnvironmentVariable("CVD_KEYSTORE_PASSWORD", null);
+            Environment.SetEnvironmentVariable("CVD_KEY_PASSWORD", null);
+            SigningCredentials credentials = null;
+            try
+            {
+                string keystore = Environment.GetEnvironmentVariable("CVD_KEYSTORE_PATH");
+                string alias = Environment.GetEnvironmentVariable("CVD_KEY_ALIAS");
+                if (!string.IsNullOrWhiteSpace(payloadPath))
+                {
+                    try
+                    {
+                        credentials = JsonUtility.FromJson<SigningCredentials>(File.ReadAllText(payloadPath));
+                    }
+                    catch
+                    {
+                        throw new BuildFailedException("Não foi possível ler as credenciais temporárias de assinatura. Execute novamente o exportador atualizado.");
+                    }
+                    finally
+                    {
+                        if (File.Exists(payloadPath)) File.Delete(payloadPath);
+                    }
+                    if (credentials == null || string.IsNullOrWhiteSpace(credentials.keystorePath) ||
+                        string.IsNullOrWhiteSpace(credentials.keyAlias) ||
+                        string.IsNullOrEmpty(credentials.keystorePassword) || string.IsNullOrEmpty(credentials.keyPassword))
+                        throw new BuildFailedException("Credenciais temporárias de assinatura incompletas. Execute novamente o exportador.");
+                    keystore = credentials.keystorePath;
+                    alias = credentials.keyAlias;
+                    storePassword = credentials.keystorePassword;
+                    keyPassword = credentials.keyPassword;
+                }
+                if (!string.IsNullOrWhiteSpace(keystore))
+                {
+                    PlayerSettings.Android.useCustomKeystore = true;
+                    PlayerSettings.Android.keystoreName = keystore;
+                }
+                if (!string.IsNullOrWhiteSpace(alias)) PlayerSettings.Android.keyaliasName = alias;
+                if (!string.IsNullOrEmpty(storePassword)) PlayerSettings.Android.keystorePass = storePassword;
+                if (!string.IsNullOrEmpty(keyPassword)) PlayerSettings.Android.keyaliasPass = keyPassword;
+                return !string.IsNullOrEmpty(storePassword) || !string.IsNullOrEmpty(keyPassword);
+            }
+            finally
+            {
+                storePassword = null;
+                keyPassword = null;
+                if (credentials != null)
+                {
+                    credentials.keystorePassword = null;
+                    credentials.keyPassword = null;
+                }
+            }
         }
 
         private static void OptimizeImportedAssets()
@@ -377,18 +500,19 @@ namespace CatsVsDemons.Editor
                     continue;
                 }
 
+                bool readable = CharacterRigModelImporter.IsCharacterModel(path);
                 bool changed = importer.meshCompression !=
                         ModelImporterMeshCompression.Medium ||
                     !importer.optimizeMeshPolygons ||
                     !importer.optimizeMeshVertices ||
-                    importer.isReadable;
+                    importer.isReadable != readable;
                 if (changed)
                 {
                     importer.meshCompression =
                         ModelImporterMeshCompression.Medium;
                     importer.optimizeMeshPolygons = true;
                     importer.optimizeMeshVertices = true;
-                    importer.isReadable = false;
+                    importer.isReadable = readable;
                     importer.SaveAndReimport();
                 }
             }
@@ -419,6 +543,11 @@ namespace CatsVsDemons.Editor
                 android.maxTextureSize = path.Contains("/UI/") ? 2048 : 1024;
                 android.format = TextureImporterFormat.ASTC_6x6;
                 android.compressionQuality = 60;
+                android.androidETC2FallbackOverride = AndroidETC2FallbackOverride.Quality32Bit;
+                TextureImporterPlatformSettings previous = importer.GetPlatformTextureSettings("Android");
+                if (previous.overridden && previous.maxTextureSize == android.maxTextureSize &&
+                    previous.format == android.format && previous.compressionQuality == android.compressionQuality &&
+                    previous.androidETC2FallbackOverride == android.androidETC2FallbackOverride) continue;
                 importer.SetPlatformTextureSettings(android);
                 importer.SaveAndReimport();
             }

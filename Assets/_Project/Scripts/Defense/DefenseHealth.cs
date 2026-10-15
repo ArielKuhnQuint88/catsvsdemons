@@ -19,6 +19,7 @@ namespace CatsVsDemons.Defense
 
         public int CurrentHealth { get; private set; }
         public int MaxHealth => maxHealth;
+        public float LastDamageTime { get; private set; } = float.NegativeInfinity;
         public bool IsDestroyed => CurrentHealth <= 0;
         public event Action<int, int> HealthChanged;
 
@@ -48,6 +49,7 @@ namespace CatsVsDemons.Defense
             if (amount <= 0 || IsDestroyed)
                 return;
 
+            LastDamageTime = Time.time;
             CurrentHealth = Mathf.Max(0, CurrentHealth - amount);
             EnsureHealthBar();
             UpdateHealthBar();

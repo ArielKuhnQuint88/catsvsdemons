@@ -10,6 +10,13 @@ namespace CatsVsDemons.Defense
         public static void Register(DefenseHealth defense) => Active.Add(defense);
         public static void Unregister(DefenseHealth defense) => Active.Remove(defense);
 
+        public static void CopyActiveTo(List<DefenseHealth> destination)
+        {
+            destination.Clear();
+            foreach (DefenseHealth item in Active)
+                if (item != null && item.isActiveAndEnabled && !item.IsDestroyed) destination.Add(item);
+        }
+
         public static DefenseHealth FindNearest(Vector3 position, float range)
         {
             DefenseHealth nearest = null;

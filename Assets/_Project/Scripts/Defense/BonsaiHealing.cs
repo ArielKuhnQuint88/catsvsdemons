@@ -21,6 +21,7 @@ namespace CatsVsDemons.Defense
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             if (kin == null)
             {
                 kin = Object.FindFirstObjectByType<KinHealth>();

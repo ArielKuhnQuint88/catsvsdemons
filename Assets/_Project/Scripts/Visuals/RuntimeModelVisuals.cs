@@ -6,6 +6,36 @@ namespace CatsVsDemons.Visuals
     public static class RuntimeModelVisuals
     {
         private static readonly Dictionary<string, Material> Materials = new();
+        private static readonly Dictionary<Mesh, Mesh> KinFaceMeshes = new();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetFaceMeshes()
+        {
+            foreach (Mesh mesh in KinFaceMeshes.Values) if (mesh != null) Object.Destroy(mesh);
+            KinFaceMeshes.Clear();
+        }
+
+        private static void PreserveKinFace(GameObject visual)
+        {
+            foreach (MeshFilter filter in visual.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Mesh source = filter.sharedMesh;
+                if (source == null || !source.isReadable) continue;
+                if (!KinFaceMeshes.TryGetValue(source, out Mesh copy) || copy == null)
+                {
+                    copy = Object.Instantiate(source); copy.name = source.name + "_KinFaceMasked";
+                    Bounds bounds = source.bounds; float height = Mathf.Max(bounds.size.z, 0.001f);
+                    List<Vector2> mask = new();
+                    foreach (Vector3 vertex in source.vertices)
+                    {
+                        float h = (vertex.z - bounds.min.z) / height;
+                        mask.Add(new Vector2(Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.435f, 0.48f, h)), 0));
+                    }
+                    copy.SetUVs(2, mask); KinFaceMeshes[source] = copy;
+                }
+                filter.sharedMesh = copy;
+            }
+        }
 
         public static bool Attach(
             Transform parent,
@@ -22,28 +52,26 @@ namespace CatsVsDemons.Visuals
                 return false;
             }
 
-            if (hideExisting)
-            {
-                foreach (Renderer renderer in
-                    parent.GetComponentsInChildren<Renderer>(true))
-                {
-                    if (IsPrototypeRenderer(parent, renderer.transform))
-                    {
-                        renderer.enabled = false;
-                    }
-                }
-            }
-
             GameObject visual = Object.Instantiate(model, parent);
             visual.name = "GameplayModel";
+            visual.SetActive(true);
             visual.transform.localPosition = Vector3.zero;
             visual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
             visual.transform.localScale = Vector3.one;
+
+            MeshFilter meshFilter = visual.GetComponentInChildren<MeshFilter>(true);
+            if (meshFilter == null || meshFilter.sharedMesh == null || meshFilter.sharedMesh.vertexCount == 0)
+            {
+                Debug.LogWarning("Modelo sem geometria: " + resourcePath + ". Mantendo o personagem original.", parent);
+                Object.Destroy(visual);
+                return false;
+            }
 
             foreach (Collider collider in visual.GetComponentsInChildren<Collider>(true))
             {
                 Object.Destroy(collider);
             }
+            if (resourcePath == "Models/Kin") PreserveKinFace(visual);
 
             Bounds bounds = CalculateBounds(visual);
             if (bounds.size.y > 0.001f)
@@ -68,14 +96,19 @@ namespace CatsVsDemons.Visuals
             foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = true;
-                if (UsesPartPalette(resourcePath) &&
-                    renderer.sharedMaterials.Length > 1)
+                Material[] sourceMaterials = renderer.sharedMaterials;
+                MeshFilter partMesh = renderer.GetComponent<MeshFilter>();
+                int surfaceCount = partMesh != null && partMesh.sharedMesh != null
+                    ? partMesh.sharedMesh.subMeshCount : sourceMaterials.Length;
+                bool kinPalette = resourcePath == "Models/Kin" &&
+                    (surfaceCount > 1 || (sourceMaterials.Length == 1 && sourceMaterials[0] != null &&
+                        KinSurfacePalette.IsKnownPart(sourceMaterials[0].name)));
+                if (kinPalette || (UsesPartPalette(resourcePath) && sourceMaterials.Length > 1))
                 {
-                    Material[] sourceMaterials = renderer.sharedMaterials;
-                    Material[] palette = new Material[sourceMaterials.Length];
-                    for (int index = 0; index < sourceMaterials.Length; index++)
+                    Material[] palette = new Material[Mathf.Max(1, surfaceCount)];
+                    for (int index = 0; index < palette.Length; index++)
                     {
-                        Material source = sourceMaterials[index];
+                        Material source = index < sourceMaterials.Length ? sourceMaterials[index] : null;
                         Color partColor = color;
                         if (source != null)
                         {
@@ -88,9 +121,15 @@ namespace CatsVsDemons.Visuals
                                 partColor = source.color;
                             }
                         }
+                        string partName = source != null ? source.name : index.ToString();
+                        if (kinPalette)
+                        {
+                            partName = KinSurfacePalette.ResolvePart(partName, index);
+                            partColor = KinSurfacePalette.GetColor(partName);
+                        }
                         palette[index] = GetPartMaterial(
                             resourcePath,
-                            source != null ? source.name : index.ToString(),
+                            partName,
                             partColor,
                             modelBounds
                         );
@@ -104,6 +143,15 @@ namespace CatsVsDemons.Visuals
             }
 
             visual.AddComponent<ProceduralModelAnimator>();
+            if (UsesPartPalette(resourcePath))
+                visual.AddComponent<AutomaticCharacterRig>();
+
+            // Hide the scene prototype only after the imported visual is ready.
+            if (hideExisting)
+            {
+                foreach (Renderer renderer in parent.GetComponentsInChildren<Renderer>(true))
+                    if (IsPrototypeRenderer(parent, renderer.transform)) renderer.enabled = false;
+            }
             return true;
         }
 
@@ -153,7 +201,7 @@ namespace CatsVsDemons.Visuals
             Color fallbackColor,
             Bounds bounds)
         {
-            if (Materials.TryGetValue(key, out Material material))
+            if (Materials.TryGetValue(key, out Material material) && material != null)
             {
                 return material;
             }
@@ -172,7 +220,7 @@ namespace CatsVsDemons.Visuals
                     name = $"Runtime_{key.Replace('/', '_')}",
                     color = fallbackColor
                 };
-                Materials.Add(key, material);
+                Materials[key] = material;
                 return material;
             }
 
@@ -272,6 +320,7 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_AccentColor", accentColor);
             material.SetColor("_RimColor", rimColor);
             material.SetFloat("_UseBaseMap", 0f);
+            material.SetFloat("_UseHeightPalette", 1f);
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", topStart);
@@ -279,8 +328,9 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_AccentCenter", accentCenter);
             material.SetFloat("_AccentWidth", accentWidth);
             material.SetFloat("_RimStrength", 0.3f);
+            if (key == "Models/Kin") KinSurfacePalette.ApplySurfaceDetail(material, "WholeModel");
 
-            Materials.Add(key, material);
+            Materials[key] = material;
             return material;
         }
 
@@ -299,7 +349,7 @@ namespace CatsVsDemons.Visuals
             Bounds bounds)
         {
             string cacheKey = $"{modelKey}:{partName}";
-            if (Materials.TryGetValue(cacheKey, out Material cached))
+            if (Materials.TryGetValue(cacheKey, out Material cached) && cached != null)
             {
                 return cached;
             }
@@ -320,6 +370,13 @@ namespace CatsVsDemons.Visuals
             material.SetColor("_AccentColor", partColor);
             material.SetColor("_RimColor", Color.Lerp(partColor, Color.white, 0.45f));
             material.SetFloat("_UseBaseMap", 0f);
+            // Imported surfaces carry their own color; animated vertex height is irrelevant.
+            material.SetFloat("_UseHeightPalette", 0f);
+            if (modelKey == "Models/Kin")
+            {
+                material.SetFloat("_UseHeadColor", 1);
+                material.SetColor("_HeadColor", partColor);
+            }
             material.SetFloat("_MinHeight", bounds.min.z);
             material.SetFloat("_MaxHeight", bounds.max.z);
             material.SetFloat("_TopStart", 1f);
@@ -327,8 +384,9 @@ namespace CatsVsDemons.Visuals
             material.SetFloat("_AccentCenter", 0f);
             material.SetFloat("_AccentWidth", 0.01f);
             material.SetFloat("_RimStrength", 0.18f);
+            if (modelKey == "Models/Kin") KinSurfacePalette.ApplySurfaceDetail(material, partName);
 
-            Materials.Add(cacheKey, material);
+            Materials[cacheKey] = material;
             return material;
         }
     }

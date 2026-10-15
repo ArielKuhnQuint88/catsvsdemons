@@ -12,6 +12,13 @@ namespace CatsVsDemons.Enemies
         public static void Register(EnemyHealth enemy) => Active.Add(enemy);
         public static void Unregister(EnemyHealth enemy) => Active.Remove(enemy);
 
+        public static void CopyActiveTo(List<EnemyHealth> destination)
+        {
+            destination.Clear();
+            foreach (EnemyHealth item in Active)
+                if (item != null && item.isActiveAndEnabled && !item.IsDead) destination.Add(item);
+        }
+
         public static EnemyHealth FindNearest(Vector3 position, float range)
         {
             EnemyHealth nearest = null;

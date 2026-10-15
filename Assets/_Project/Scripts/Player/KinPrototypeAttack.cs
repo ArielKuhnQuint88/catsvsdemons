@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace CatsVsDemons.Player
 {
+    [DefaultExecutionOrder(-20)]
     public sealed class KinPrototypeAttack : MonoBehaviour
     {
         [SerializeField] private int damage = 10;
@@ -16,6 +17,10 @@ namespace CatsVsDemons.Player
         private int baseDamage;
 
         public int Damage => damage;
+        public EnemyHealth CurrentTarget { get; private set; }
+        public bool HasCombatTarget => CurrentTarget != null && !CurrentTarget.IsDead && CurrentTarget.isActiveAndEnabled;
+        public event System.Action AttackStarted;
+        private CatsVsDemons.CameraSystem.CameraModeController cameraMode;
 
         private void Awake()
         {
@@ -33,7 +38,9 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             EnemyHealth target = FindNearestTarget();
+            CurrentTarget = target;
             if (target == null)
             {
                 return;
@@ -41,12 +48,13 @@ namespace CatsVsDemons.Player
 
             Vector3 direction = target.transform.position - transform.position;
             direction.y = 0f;
-            if (direction.sqrMagnitude > 0.01f)
+            if (cameraMode == null && Camera.main != null) cameraMode = Camera.main.GetComponent<CatsVsDemons.CameraSystem.CameraModeController>();
+            if ((cameraMode == null || !cameraMode.IsFirstPerson) && direction.sqrMagnitude > .01f)
             {
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
                     Quaternion.LookRotation(direction),
-                    rotationSpeed * Time.deltaTime
+                    1f - Mathf.Exp(-rotationSpeed * Time.deltaTime)
                 );
             }
 
@@ -59,6 +67,7 @@ namespace CatsVsDemons.Player
         private void Attack(EnemyHealth target)
         {
             nextAttackTime = Time.time + cooldown;
+            AttackStarted?.Invoke();
 
             ProceduralModelAnimator modelAnimator =
                 GetComponentInChildren<ProceduralModelAnimator>();

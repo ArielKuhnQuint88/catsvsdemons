@@ -25,6 +25,8 @@ namespace CatsVsDemons.Editor
             importer.importNormals = ModelImporterNormals.Calculate;
             importer.importTangents = ModelImporterTangents.CalculateMikk;
             importer.meshCompression = ModelImporterMeshCompression.Medium;
+            if (assetPath.EndsWith("/Kin.obj"))
+                importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
         }
 
         [MenuItem("Tools/Cats vs Demons/Prepare Automatic Rigs")]
@@ -49,6 +51,8 @@ namespace CatsVsDemons.Editor
                     ModelImporterTangents.CalculateMikk;
                 importer.meshCompression =
                     ModelImporterMeshCompression.Medium;
+                if (path.EndsWith("/Kin.obj"))
+                    importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
                 importer.SaveAndReimport();
                 prepared++;
             }
@@ -62,7 +66,7 @@ namespace CatsVsDemons.Editor
             );
         }
 
-        private static bool IsCharacterModel(string path)
+        internal static bool IsCharacterModel(string path)
         {
             foreach (string model in CharacterModels)
             {
