@@ -8,6 +8,10 @@ Kin, um gato branco samurai, precisa proteger uma casa oriental contra ondas de 
 
 ## Status
 
+Atualização **1.0.2 / código 3**: Kin vira nas oito direções, inclusive no
+combate; os golpes acompanham a caminhada e os demônios preservam suas formas.
+Veja [correções de movimento e animação](docs/CHARACTER_MOTION_FIX.md).
+
 Versão em preparação para Android: campanha de 12 fases, loja, HUD animado e
 exportador AAB. A compilação na Unity e a validação em dispositivo ainda são
 necessárias antes da publicação. Veja o [guia de exportação para o Play Console](docs/PLAY_CONSOLE_RELEASE.md).

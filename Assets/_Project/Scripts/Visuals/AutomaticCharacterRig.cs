@@ -47,6 +47,15 @@ namespace CatsVsDemons.Visuals
                 return;
             }
             originalRenderer = sourceRenderer;
+            bool kinProfile = false;
+            foreach (Material material in sourceRenderer.sharedMaterials)
+                if (material != null && material.name.IndexOf("_Kin", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    kinProfile = true;
+            if (!kinProfile)
+            {
+                FallbackReason = "Modelo preservado; animação corporal sem deformação.";
+                return;
+            }
             // House previews clone a configured model. Reuse that skeleton rather than
             // building a second rig on top of the copied renderer and equipment.
             Transform existingRig = filter.transform.Find("RiggedModel");
@@ -80,11 +89,6 @@ namespace CatsVsDemons.Visuals
             float height = Mathf.Max(bounds.size.z, 0.001f);
             float width = Mathf.Max(bounds.size.x, 0.001f);
             float bottom = bounds.min.z;
-            bool kinProfile = false;
-            foreach (Material material in sourceRenderer.sharedMaterials)
-                if (material != null && material.name.IndexOf("_Kin", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                    kinProfile = true;
-
             Transform pelvis = CreateBone(
                 "Rig_Pelvis", meshRoot, meshRoot,
                 new Vector3(center.x, center.y, bottom + height * (kinProfile ? 0.235f : 0.4f))

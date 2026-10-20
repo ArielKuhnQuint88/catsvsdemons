@@ -22,7 +22,7 @@ namespace CatsVsDemons.Player
         private Mesh handMesh;
         private MeshRenderer gardenRenderer, firstPersonRenderer;
         private bool firstPerson;
-        private float attackTimer, nextModelCheck;
+        private float attackTimer, nextModelCheck, walkPhase;
         private string outfit;
         private static readonly Vector3 RestGrip = new(.278f, .292f, .076f);
         public bool HasGardenHand => gardenGrip != null;
@@ -138,18 +138,24 @@ namespace CatsVsDemons.Player
             attackTimer = Mathf.Max(0, attackTimer - Time.deltaTime);
             float p = 1 - attackTimer / KinPoseMath.AttackDuration;
             float strike = attackTimer > 0 ? KinPoseMath.Swing(p) : 0;
+            float prepare = attackTimer > 0 ? KinPoseMath.Anticipation(p) : 0;
             bool animated = rig != null && rig.IsUsingRig && wrist != null;
             Matrix4x4 delta = animated ? fitRoot.worldToLocalMatrix * wrist.localToWorldMatrix * wristBindpose * meshRoot.worldToLocalMatrix * fitRoot.localToWorldMatrix : Matrix4x4.identity;
             gardenGrip.localPosition = delta.MultiplyPoint3x4(RestGrip);
-            gardenGrip.localRotation = animated ? delta.rotation : Quaternion.Euler(-strike * 105, strike * 34, -strike * 20);
+            gardenGrip.localRotation = animated ? delta.rotation :
+                Quaternion.Euler(prepare * 24f - strike * 90f, strike * 30f, prepare * 5f - strike * 18f);
             gardenGrip.localScale = delta.lossyScale;
             gardenRenderer.enabled = (original != null && original.enabled) || (skinned != null && skinned.enabled);
             if (firstPerson && firstPersonGrip != null)
             {
                 float speed = movement != null ? Mathf.Clamp01(movement.PlanarVelocity.magnitude / 7) : 0;
-                float bob = Mathf.Sin(Time.time * 9) * .008f * speed;
-                firstPersonGrip.localPosition = new Vector3(.23f - strike * .13f, -.17f + bob + strike * .05f, .47f + strike * .10f);
-                firstPersonGrip.localRotation = Quaternion.Euler(9 - strike * 68, -12 + strike * 43, -18 + strike * 65);
+                walkPhase = KinPoseMath.AdvanceGait(walkPhase, speed * 7f, Time.deltaTime);
+                float bob = Mathf.Sin(walkPhase * 2f) * .006f * speed;
+                firstPersonGrip.localPosition = new Vector3(.23f - strike * .13f + prepare * .025f,
+                    -.17f + bob + strike * .05f - prepare * .018f,
+                    .47f + strike * .10f - prepare * .035f);
+                firstPersonGrip.localRotation = Quaternion.Euler(9 + prepare * 16f - strike * 68,
+                    -12 - prepare * 12f + strike * 43, -18 - prepare * 14f + strike * 65);
                 firstPersonGrip.localScale = Vector3.one * .88f;
             }
         }

@@ -102,7 +102,7 @@ no Console automaticamente.
 4. Em **Player > Android > Other Settings**, confira `Bundle Version Code`:
    a configuração base usa **2**, que precisa ser maior que todo código já enviado.
    Aumente-o se necessário. O identificador permanece
-   **com.qipgames.catsvsdemons**, e a versão é **1.0.1**.
+   **com.qipgames.catsvsdemons**, e a versão é **1.0.2** (código base **3**).
 5. Execute **Tools > Cats vs Demons > Exportar para Play Store (AAB)**.
 
 O exportador configura **IL2CPP, ARM64, API 36, orientação horizontal e build de

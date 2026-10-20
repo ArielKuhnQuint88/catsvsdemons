@@ -26,7 +26,7 @@ namespace CatsVsDemons.Player
             float response = direction.sqrMagnitude > .0001f ? 42f : 54f;
             return Vector3.MoveTowards(current, direction * speed, response * dt);
         }
-        public static bool TurnWithMovement(Vector2 input, bool firstPerson, bool combat) =>
-            !firstPerson && !combat && input.y >= -.05f && input.sqrMagnitude > .001f;
+        public static bool TurnWithMovement(Vector2 input, bool firstPerson) =>
+            !firstPerson && input.sqrMagnitude > .001f;
     }
 }

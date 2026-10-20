@@ -14,11 +14,12 @@
 
 O movimento tem aceleração e frenagem suaves. Na visão isométrica, todas as
 direções usam a câmera: W sobe na tela, S desce e A/D seguem os lados. Essa
-regra continua igual quando Kin vira para um inimigo; atacar não troca os
+regra continua igual durante o combate; atacar não troca os
 eixos do controle. Diagonais não ganham velocidade e a inclinação da câmera
-não empurra Kin para cima/baixo do terreno. A direção do corpo e a animação
-de recuo são independentes do rumo do deslocamento. No combate, Kin mantém
-o olhar no alvo. Na primeira pessoa, deslocamento e recuo seguem a direção
+não empurra Kin para cima/baixo do terreno. Kin vira para a direção escolhida,
+inclusive S/↓ e diagonais, mesmo com um inimigo próximo. Ao ficar parado,
+ele pode voltar o olhar ao alvo do ataque automático. Na primeira pessoa,
+deslocamento e recuo seguem a direção
 do olhar. No celular, o joystick e o
 olhar podem usar dedos diferentes ao mesmo tempo. Toques sobre a interface
 não iniciam movimento ou rotação da câmera. Ao usar dois dedos na visão

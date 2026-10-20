@@ -22,9 +22,10 @@ namespace CatsVsDemons.Player
         private CharacterController characterController;
         private Camera mainCamera;
         private CameraModeController cameraMode;
-        private KinPrototypeAttack attack;
         private int movementFinger = -1;
         public Vector3 PlanarVelocity { get; private set; }
+        public Vector2 MovementInput { get; private set; }
+        public bool HasMovementInput => MovementInput.sqrMagnitude > .001f;
         public Vector3 LocalMotion => transform.InverseTransformDirection(PlanarVelocity) / Mathf.Max(.1f, moveSpeed);
         public bool IsMovingBackwards => LocalMotion.z < -.12f;
         private bool mobileDragActive;
@@ -41,7 +42,6 @@ namespace CatsVsDemons.Player
         {
             characterController = GetComponent<CharacterController>();
             mainCamera = Camera.main;
-            attack = GetComponent<KinPrototypeAttack>();
             joystickCircle = CreateCircleTexture(128);
             lastSafePosition = transform.position;
             EnsureSafetyFloor();
@@ -63,7 +63,7 @@ namespace CatsVsDemons.Player
         private void Update()
         {
             if (Time.timeScale <= 0 || KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame)
-            { PlanarVelocity = Vector3.zero; mobileDragActive = false; movementFinger = -1; return; }
+            { PlanarVelocity = Vector3.zero; MovementInput = Vector2.zero; mobileDragActive = false; movementFinger = -1; return; }
             if (characterController == null)
                 characterController = GetComponent<CharacterController>();
             if (!characterController.enabled)
@@ -89,6 +89,7 @@ namespace CatsVsDemons.Player
             }
 
             input = Vector2.ClampMagnitude(input, 1f);
+            MovementInput = input;
 
             if (mainCamera == null)
             {
@@ -104,11 +105,9 @@ namespace CatsVsDemons.Player
                 : Vector3.right;
 
             if (cameraMode == null && mainCamera != null) cameraMode = mainCamera.GetComponent<CameraModeController>();
-            if (attack == null) attack = GetComponent<KinPrototypeAttack>();
             bool firstPerson = cameraMode != null && cameraMode.IsFirstPerson;
-            bool combat = attack != null && attack.HasCombatTarget;
             Vector3 direction = KinMotionMath.Direction(input, forward, right, transform.forward, transform.right, firstPerson);
-            float speed = moveSpeed * (input.y < -.05f ? .85f : 1f);
+            float speed = moveSpeed * (firstPerson && input.y < -.05f ? .85f : 1f);
             PlanarVelocity = KinMotionMath.ApproachVelocity(PlanarVelocity, direction, speed, Time.deltaTime);
 
             if (characterController.isGrounded && verticalVelocity < 0f)
@@ -135,7 +134,7 @@ namespace CatsVsDemons.Player
             if (correction.sqrMagnitude > 0.0001f)
                 characterController.Move(correction);
 
-            if (KinMotionMath.TurnWithMovement(input, firstPerson, combat) && direction.sqrMagnitude > .01f)
+            if (KinMotionMath.TurnWithMovement(input, firstPerson) && direction.sqrMagnitude > .001f)
             {
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,
@@ -159,6 +158,7 @@ namespace CatsVsDemons.Player
             characterController.enabled = true;
             verticalVelocity = -2f;
             PlanarVelocity = Vector3.zero;
+            MovementInput = Vector2.zero;
             lastSafePosition = safeDestination;
         }
 

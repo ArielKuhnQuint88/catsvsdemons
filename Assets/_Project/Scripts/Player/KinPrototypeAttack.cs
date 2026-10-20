@@ -1,5 +1,6 @@
 using CatsVsDemons.Enemies;
 using CatsVsDemons.Visuals;
+using CatsVsDemons.UI;
 using UnityEngine;
 
 namespace CatsVsDemons.Player
@@ -14,6 +15,7 @@ namespace CatsVsDemons.Player
 
         private float nextAttackTime;
         private KinEnergy energy;
+        private KinPrototypeController locomotion;
         private int baseDamage;
 
         public int Damage => damage;
@@ -26,6 +28,7 @@ namespace CatsVsDemons.Player
         {
             baseDamage = Mathf.Max(1, damage);
             energy = GetComponent<KinEnergy>();
+            locomotion = GetComponent<KinPrototypeController>();
             if (energy == null) energy = gameObject.AddComponent<KinEnergy>();
             if (GetComponent<KinSpecialAttack>() == null)
                 gameObject.AddComponent<KinSpecialAttack>();
@@ -38,7 +41,7 @@ namespace CatsVsDemons.Player
 
         private void Update()
         {
-            if (Time.timeScale <= 0f) return;
+            if (Time.timeScale <= 0f || KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             EnemyHealth target = FindNearestTarget();
             CurrentTarget = target;
             if (target == null)
@@ -49,7 +52,11 @@ namespace CatsVsDemons.Player
             Vector3 direction = target.transform.position - transform.position;
             direction.y = 0f;
             if (cameraMode == null && Camera.main != null) cameraMode = Camera.main.GetComponent<CatsVsDemons.CameraSystem.CameraModeController>();
-            if ((cameraMode == null || !cameraMode.IsFirstPerson) && direction.sqrMagnitude > .01f)
+            if (locomotion == null) locomotion = GetComponent<KinPrototypeController>();
+            // Moving is a deliberate facing command. Auto-aim may turn an idle Kin,
+            // but it must not undo the controller's rotation later in the same frame.
+            if ((locomotion == null || !locomotion.HasMovementInput) &&
+                (cameraMode == null || !cameraMode.IsFirstPerson) && direction.sqrMagnitude > .01f)
             {
                 transform.rotation = Quaternion.Slerp(
                     transform.rotation,

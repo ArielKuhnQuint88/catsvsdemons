@@ -142,8 +142,11 @@ namespace CatsVsDemons.Visuals
                 }
             }
 
-            visual.AddComponent<ProceduralModelAnimator>();
-            if (UsesPartPalette(resourcePath))
+            ProceduralModelAnimator animation = visual.AddComponent<ProceduralModelAnimator>();
+            animation.Configure(resourcePath, bottomOffset);
+            // The demon sculpts have large round faces and short limbs. Human
+            // height-based skin weights cut those faces into moving arm/leg regions.
+            if (CharacterMotionMath.UsesArticulatedRig(resourcePath))
                 visual.AddComponent<AutomaticCharacterRig>();
 
             // Hide the scene prototype only after the imported visual is ready.

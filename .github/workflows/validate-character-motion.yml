@@ -1,0 +1,26 @@
+name: Validate character motion
+
+on:
+  push:
+    paths:
+      - "Assets/_Project/Scripts/Player/**"
+      - "Assets/_Project/Scripts/Visuals/**"
+      - "Tools/Validation/CharacterMotionChecks/**"
+      - ".github/workflows/validate-character-motion.yml"
+  pull_request:
+    paths:
+      - "Assets/_Project/Scripts/Player/**"
+      - "Assets/_Project/Scripts/Visuals/**"
+      - "Tools/Validation/CharacterMotionChecks/**"
+      - ".github/workflows/validate-character-motion.yml"
+
+jobs:
+  math:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Check gameplay movement and animation helpers
+        run: dotnet run --project Tools/Validation/CharacterMotionChecks/CharacterMotionChecks.csproj --configuration Release

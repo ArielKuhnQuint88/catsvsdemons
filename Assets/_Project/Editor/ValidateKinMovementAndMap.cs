@@ -39,7 +39,7 @@ namespace CatsVsDemons.Editor
             if (switchView == null) errors.Add("Botão de troca de visão ausente.");
             string message = errors.Count > 0 ? string.Join("\n", errors) :
                 "Pata/katana, câmera e minimapa encontrados. Demônios: " + map.VisibleDemons + "; torres: " + map.VisibleTowers +
-                "; alertas: " + map.TowersUnderAttack + ". Teste S/↓, ataque em movimento, V, ambas as câmeras, dano numa torre e joystick + olhar no Android. Confira a animação e a física na Game View.";
+                "; alertas: " + map.TowersUnderAttack + ". Teste as oito direções, inclusive S/↓ e diagonais perto de demônios: Kin deve virar para a direção escolhida. Confira ataque em movimento, V, ambas as câmeras, dano numa torre e joystick + olhar no Android. Confira a animação e a física na Game View.";
             if (errors.Count == 0) Debug.Log("[Kin e minimapa] " + message); else Debug.LogError("[Kin e minimapa] " + message);
             EditorUtility.DisplayDialog("Movimento, câmera e minimapa", message, "OK");
         }

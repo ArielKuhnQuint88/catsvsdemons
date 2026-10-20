@@ -100,6 +100,7 @@ namespace CatsVsDemons.Enemies
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             UpdateSlow();
             attackTimer -= Time.deltaTime;
 
@@ -165,6 +166,7 @@ namespace CatsVsDemons.Enemies
                 return true;
             }
 
+            FaceTowards(offset);
             if (attackTimer <= 0f)
             {
                 AttackCombatTarget();
@@ -260,10 +262,16 @@ namespace CatsVsDemons.Enemies
 
             transform.position +=
                 direction * moveSpeed * speedMultiplier * Time.deltaTime;
+            FaceTowards(direction);
+        }
+
+        private void FaceTowards(Vector3 direction)
+        {
+            if (direction.sqrMagnitude < .001f) return;
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
                 Quaternion.LookRotation(direction, Vector3.up),
-                rotationSpeed * Time.deltaTime
+                1f - Mathf.Exp(-rotationSpeed * Time.deltaTime)
             );
         }
 

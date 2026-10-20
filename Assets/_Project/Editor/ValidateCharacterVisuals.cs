@@ -15,7 +15,7 @@ namespace CatsVsDemons.Editor
                 return;
             }
             int passed = 0;
-            int usingFallback = 0;
+            int preservedModels = 0;
             foreach (string name in new[] { "Kin", "DemonSono", "DemonPoerix", "DemonFlamurk" })
             {
                 GameObject holder = new("Rig Check " + name);
@@ -46,6 +46,12 @@ namespace CatsVsDemons.Editor
                     rigValid &= source != null && AutomaticCharacterRig.ValidateRestPose(renderer, source.sharedMesh, out _);
                 }
                 bool valid = originalValid || rigValid;
+                if (name != "Kin" && rigValid)
+                {
+                    Debug.LogError("[Visual] " + name + ": auto-rig humano indevido. A malha do demônio deve permanecer preservada.");
+                    valid = false;
+                }
+                valid &= holder.GetComponentInChildren<ProceduralModelAnimator>() != null;
                 if (valid && name == "Kin")
                 {
                     Mesh mesh = rigValid ? renderer.sharedMesh : source.sharedMesh;
@@ -66,15 +72,15 @@ namespace CatsVsDemons.Editor
                 if (valid)
                 {
                     passed++;
-                    if (!rigValid) usingFallback++;
-                    Debug.Log("[Visual] " + name + ": modelo carregado; rig " + (rigValid ? "válido" : "em fallback") +
+                    if (!rigValid) preservedModels++;
+                    Debug.Log("[Visual] " + name + ": modelo carregado; animação " + (rigValid ? "articulada" : "com geometria preservada") +
                         "; malha original " + (originalValid ? "disponível" : "indisponível") + ".");
                 }
                 else Debug.LogError("[Visual] Falha em " + name + ". Verifique a importação do modelo e os shaders.");
                 Object.Destroy(holder);
             }
             EditorUtility.DisplayDialog("Verificação de personagens",
-                passed + "/4 modelos disponíveis; " + usingFallback + " em animação simples. " +
+                passed + "/4 modelos disponíveis; " + preservedModels + " com geometria preservada. " +
                 "A geometria do rig foi conferida quando disponível. Confira a Game View e o Console.", "OK");
         }
 
