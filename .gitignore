@@ -60,3 +60,9 @@ desktop.ini
 *.p12
 *.pem
 secrets/
+
+# Standalone checks compile production code without requiring the Unity editor
+!Tools/Validation/*.csproj
+!Tools/Validation/**/*.csproj
+Tools/Validation/bin/
+Tools/Validation/**/bin/

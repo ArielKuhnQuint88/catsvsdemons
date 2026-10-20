@@ -39,6 +39,7 @@ namespace CatsVsDemons.Player
 
         public bool TryUse()
         {
+            if (Time.timeScale <= 0f || CatsVsDemons.UI.KinGuideOverlay.ConsumedInputThisFrame) return false;
             if (energy == null || !energy.TryConsumeAll()) return false;
             var targets = EnemyRegistry.GetInRange(transform.position, radius);
             for (int index = targets.Count - 1; index >= 0; index--)

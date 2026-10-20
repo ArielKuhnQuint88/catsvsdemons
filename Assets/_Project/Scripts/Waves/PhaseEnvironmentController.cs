@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CatsVsDemons.CameraSystem;
+using CatsVsDemons.Visuals;
 using UnityEngine;
 
 namespace CatsVsDemons.Waves
@@ -17,9 +18,12 @@ namespace CatsVsDemons.Waves
         private const float EntranceBlend = 0.52f;
         private readonly Dictionary<Transform, Vector3[]> basePaths = new();
         private readonly Dictionary<Transform, Vector3> baseBuildSpots = new();
-        private readonly Dictionary<Renderer, Color> baseColors = new();
         private readonly Dictionary<Transform, Vector3[]> laidOutPaths = new();
         private readonly Dictionary<Color32, Material> runtimeMaterials = new();
+        private readonly Dictionary<MeshFilter, Mesh> pathMeshes = new();
+        private readonly List<Vector3[]> worldRoutes = new();
+        public IReadOnlyList<Vector3[]> WorldRoutes => worldRoutes;
+        public int RouteRevision { get; private set; }
 
         private EnemyWaveSpawner spawner;
         private Transform pathsRoot;
@@ -65,6 +69,8 @@ namespace CatsVsDemons.Waves
             {
                 spawner.PhaseStarted -= ApplyPhase;
             }
+            foreach (Mesh mesh in pathMeshes.Values) if (mesh != null) Destroy(mesh);
+            foreach (Material material in runtimeMaterials.Values) if (material != null) Destroy(material);
         }
 
         private void CaptureInitialState()
@@ -93,14 +99,6 @@ namespace CatsVsDemons.Waves
                 foreach (Transform spot in buildSpotsRoot)
                 {
                     baseBuildSpots[spot] = spot.localPosition;
-                }
-            }
-
-            foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-            {
-                if (renderer.sharedMaterial != null)
-                {
-                    baseColors[renderer] = renderer.sharedMaterial.color;
                 }
             }
 
@@ -218,15 +216,13 @@ namespace CatsVsDemons.Waves
                     position.z = Mathf.Clamp(position.z, -56f, 56f);
                     extended[index] = position;
 
-                    if (index < joints.Count)
-                    {
-                        joints[index].localPosition = position;
-                    }
                 }
 
+                extended = GardenPathGeometry.Smooth(extended, 6);
+                SynchronizeJoints(path, joints, extended);
                 laidOutPaths[path] = extended;
 
-                UpdateLegacySegments(path, extended);
+                HideLegacySegments(path);
                 UpdateRibbon(
                     path,
                     path.name + "_Border",
@@ -246,6 +242,14 @@ namespace CatsVsDemons.Waves
                 pathIndex++;
             }
 
+            worldRoutes.Clear();
+            foreach (KeyValuePair<Transform, Vector3[]> entry in laidOutPaths)
+            {
+                Vector3[] route = new Vector3[entry.Value.Length];
+                for (int index = 0; index < route.Length; index++) route[index] = entry.Key.TransformPoint(entry.Value[index]);
+                worldRoutes.Add(route);
+            }
+            RouteRevision++;
             RebuildPathBorders();
         }
 
@@ -317,7 +321,8 @@ namespace CatsVsDemons.Waves
                 Vector3 candidate = path.TransformPoint(
                     entrance + outwardDirection * extension
                 );
-                Vector3 viewport = gameCamera.WorldToViewportPoint(candidate);
+                CameraModeController controller = gameCamera.GetComponent<CameraModeController>();
+                Vector3 viewport = controller != null ? controller.WorldToIsometricViewport(candidate) : gameCamera.WorldToViewportPoint(candidate);
 
                 bool insidePaddedViewport =
                     viewport.z > 0f &&
@@ -784,46 +789,35 @@ namespace CatsVsDemons.Waves
             return material;
         }
 
-        private static void UpdateLegacySegments(
-            Transform path,
-            Vector3[] points)
+        private static void SynchronizeJoints(Transform path, List<Transform> joints, Vector3[] points)
         {
-            List<Transform> segments = new();
+            for (int index = 0; index < points.Length; index++)
+            {
+                Transform joint;
+                if (index < joints.Count) joint = joints[index];
+                else
+                {
+                    joint = new GameObject("Waypoint").transform;
+                    joint.SetParent(path, false);
+                }
+                joint.name = $"Joint_{index + 1:000}";
+                joint.localPosition = new Vector3(points[index].x, SurfaceHeight, points[index].z);
+            }
+            for (int index = points.Length; index < joints.Count; index++)
+            {
+                joints[index].gameObject.SetActive(false);
+                joints[index].SetParent(null);
+                Object.Destroy(joints[index].gameObject);
+            }
+        }
+
+        private static void HideLegacySegments(Transform path)
+        {
             foreach (Transform child in path)
             {
-                if (child.name.StartsWith("Segment_"))
-                {
-                    segments.Add(child);
-                }
-            }
-
-            segments.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
-            int segmentCount = Mathf.Min(segments.Count, points.Length - 1);
-
-            for (int index = 0; index < segmentCount; index++)
-            {
-                Transform segment = segments[index];
-                Vector3 start = points[index];
-                Vector3 end = points[index + 1];
-                Vector3 direction = end - start;
-                direction.y = 0f;
-
-                if (direction.sqrMagnitude < 0.0001f)
-                {
-                    continue;
-                }
-
-                Vector3 center = (start + end) * 0.5f;
-                center.y = segment.localPosition.y;
-                segment.localPosition = center;
-                segment.localRotation = Quaternion.LookRotation(
-                    direction.normalized,
-                    Vector3.up
-                );
-
-                Vector3 scale = segment.localScale;
-                scale.z = direction.magnitude;
-                segment.localScale = scale;
+                if (!child.name.StartsWith("Segment_")) continue;
+                foreach (Renderer renderer in child.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
+                foreach (Collider collider in child.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
             }
         }
 
@@ -850,60 +844,14 @@ namespace CatsVsDemons.Waves
         {
             int scenario = CampaignProgress.GetScenarioIndex(phase);
             int season = CampaignProgress.GetSeasonIndex(phase);
-            Color foliage = GetFoliageColor(scenario, season);
-            Color petals = GetPetalColor(scenario, season);
-            Color water = GetWaterColor(scenario, season);
-            Color lantern = GetLanternColor(scenario, season);
             Color ground = GetGroundColor(scenario, season);
-
-            foreach (KeyValuePair<Renderer, Color> entry in baseColors)
-            {
-                Renderer renderer = entry.Key;
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                Color color = entry.Value;
-                string objectName = renderer.gameObject.name;
-
-                if (ContainsAny(objectName, "Blossoms", "MapleCrown"))
-                {
-                    color = foliage;
-                }
-                else if (ContainsAny(objectName, "Petal"))
-                {
-                    color = petals;
-                }
-                else if (ContainsAny(objectName, "Water", "DeepWater"))
-                {
-                    color = water;
-                }
-                else if (ContainsAny(objectName, "LanternLight"))
-                {
-                    color = lantern;
-                }
-                else if (ContainsAny(objectName, "GardenGrass", "RakedSand"))
-                {
-                    color = ground;
-                }
-                else if (scenario == 1 &&
-                    ContainsAny(objectName, "BambooLeaves", "BambooStem"))
-                {
-                    color = foliage;
-                }
-                else if (scenario == 2 &&
-                    ContainsAny(objectName, "ZenStone", "PondRock", "ShoreRock"))
-                {
-                    color = Color.Lerp(color, new Color(0.30f, 0.24f, 0.42f), 0.5f);
-                }
-
-                renderer.material.color = color;
-            }
-
-            ApplyRuntimeFlowerTheme(petals);
-            RebuildScenarioLandmarks(scenario, season);
-            ApplyAtmosphere(scenario, season, ground);
+            // GardenArtDirector builds the scenery after the final camera/path refresh.
+            GardenVisualPolish polish = GetComponent<GardenVisualPolish>();
+            if (polish == null) polish = gameObject.AddComponent<GardenVisualPolish>();
+            polish.Apply(scenario, season, ground);
+            GardenArtDirector art = GetComponent<GardenArtDirector>();
+            if (art == null) art = gameObject.AddComponent<GardenArtDirector>();
+            art.Schedule(scenario, season, worldRoutes, buildSpotsRoot, BorderWidth);
         }
 
         private void ApplyRuntimeFlowerTheme(Color petals)
@@ -2076,86 +2024,33 @@ namespace CatsVsDemons.Waves
             return joints;
         }
 
-        private static void UpdateRibbon(
-            Transform path,
-            string ribbonName,
-            Vector3[] points,
-            float width,
-            float height,
-            bool updateCollider)
+        private void UpdateRibbon(Transform path, string ribbonName, Vector3[] points,
+            float width, float height, bool updateCollider)
         {
+            if (points.Length < 2) return;
             Transform ribbon = path.Find(ribbonName);
             if (ribbon == null)
             {
-                return;
+                ribbon = new GameObject(ribbonName).transform;
+                ribbon.SetParent(path, false);
+                ribbon.gameObject.AddComponent<MeshFilter>();
+                ribbon.gameObject.AddComponent<MeshRenderer>();
             }
-
+            ribbon.localPosition = Vector3.zero;
+            ribbon.localRotation = Quaternion.identity;
+            ribbon.localScale = Vector3.one;
             MeshFilter filter = ribbon.GetComponent<MeshFilter>();
-            if (filter == null)
-            {
-                return;
-            }
-
-            Mesh mesh = filter.mesh;
-            Vector3[] vertices = new Vector3[points.Length * 2];
-            Vector2[] uv = new Vector2[vertices.Length];
-            int[] triangles = new int[(points.Length - 1) * 6];
-            float travelled = 0f;
-
-            for (int index = 0; index < points.Length; index++)
-            {
-                Vector3 previous = points[Mathf.Max(index - 1, 0)];
-                Vector3 next = points[Mathf.Min(index + 1, points.Length - 1)];
-                Vector3 tangent = next - previous;
-                tangent.y = 0f;
-                if (tangent.sqrMagnitude < 0.0001f)
-                {
-                    tangent = Vector3.forward;
-                }
-                tangent.Normalize();
-
-                Vector3 side = Vector3.Cross(Vector3.up, tangent).normalized;
-                Vector3 center = new Vector3(points[index].x, height, points[index].z);
-                vertices[index * 2] = center - side * width * 0.5f;
-                vertices[index * 2 + 1] = center + side * width * 0.5f;
-
-                if (index > 0)
-                {
-                    travelled += Vector3.Distance(points[index - 1], points[index]);
-                }
-                uv[index * 2] = new Vector2(0f, travelled * 0.32f);
-                uv[index * 2 + 1] = new Vector2(1f, travelled * 0.32f);
-
-                if (index >= points.Length - 1)
-                {
-                    continue;
-                }
-
-                int triangle = index * 6;
-                int vertex = index * 2;
-                triangles[triangle] = vertex;
-                triangles[triangle + 1] = vertex + 2;
-                triangles[triangle + 2] = vertex + 1;
-                triangles[triangle + 3] = vertex + 1;
-                triangles[triangle + 4] = vertex + 2;
-                triangles[triangle + 5] = vertex + 3;
-            }
-
-            mesh.Clear();
-            mesh.vertices = vertices;
-            mesh.uv = uv;
-            mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
+            Mesh mesh = GardenPathGeometry.Ribbon(points, width, height);
+            if (pathMeshes.TryGetValue(filter, out Mesh old) && old != null) Destroy(old);
+            pathMeshes[filter] = mesh;
+            filter.sharedMesh = mesh;
+            ribbon.GetComponent<MeshRenderer>().enabled = true;
             if (updateCollider)
             {
                 MeshCollider collider = ribbon.GetComponent<MeshCollider>();
-                if (collider != null)
-                {
-                    collider.sharedMesh = null;
-                    collider.sharedMesh = mesh;
-                }
+                if (collider == null) collider = ribbon.gameObject.AddComponent<MeshCollider>();
+                collider.sharedMesh = null;
+                collider.sharedMesh = mesh;
             }
         }
     }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CatsVsDemons.CameraSystem;
 using CatsVsDemons.Economy;
 using CatsVsDemons.Player;
@@ -43,6 +44,8 @@ namespace CatsVsDemons.House
         private Text selectedName;
         private Text selectedDescription;
         private Text shopStatus;
+        private readonly Button[] categoryButtons = new Button[3];
+        private readonly Dictionary<HouseShopItem, Button> catalogButtons = new();
         private Button shopActionButton;
         private Text shopActionLabel;
         private Text houseInstruction;
@@ -248,7 +251,7 @@ namespace CatsVsDemons.House
                   $"(fase {nextPhase} de {totalPhases}).";
             ConfigureHouseControls(
                 "PRÓXIMA\nFASE",
-                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  PRÓXIMA FASE");
+                "Equipe Kin na loja e prepare-se para a próxima noite.");
             UpdateCoinLabels();
             kinPreviewYaw = 180f;
             RebuildKinPreview();
@@ -283,7 +286,7 @@ namespace CatsVsDemons.House
                 "Kin confere os equipamentos enquanto a batalha espera.";
             ConfigureHouseControls(
                 "CONTINUAR\nBATALHA",
-                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  CONTINUAR BATALHA");
+                "Visite a loja, confira o equipamento e volte ao jardim.");
             UpdateCoinLabels();
             kinPreviewYaw = 180f;
             RebuildKinPreview();
@@ -302,6 +305,7 @@ namespace CatsVsDemons.House
 
         private void ContinueToNextPhase()
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             if (!isOpen)
             {
                 return;
@@ -450,6 +454,7 @@ namespace CatsVsDemons.House
             canvas.gameObject.name = "House Intermission UI";
             canvas.sortingOrder = 650;
             interfaceRoot = canvas.gameObject;
+            interfaceRoot.AddComponent<HudReveal>();
 
             safeArea = ui.Rect("Safe Area", canvas.transform);
             safeArea.anchorMin = Vector2.zero;
@@ -468,7 +473,7 @@ namespace CatsVsDemons.House
             RectTransform backdrop = ui.Panel(
                 "House Night Backdrop",
                 safeArea,
-                new Color(0.006f, 0.014f, 0.04f, 1f),
+                RuntimeUiFactory.Ink,
                 Vector2.zero
             );
             Stretch(backdrop);
@@ -492,7 +497,7 @@ namespace CatsVsDemons.House
                 "Computer Hotspot",
                 "ABRIR LOJA",
                 houseBackgroundRect,
-                new Color(0.025f, 0.37f, 0.72f, 0.88f),
+                RuntimeUiFactory.Jade,
                 new Vector2(210f, 66f)
             );
             RectTransform computerRect = (RectTransform)computer.transform;
@@ -507,21 +512,23 @@ namespace CatsVsDemons.House
             RectTransform headerBorder = ui.Panel(
                 "House Header Border",
                 safeArea,
-                new Color(0.94f, 0.55f, 0.10f, 0.98f),
-                new Vector2(820f, 132f)
+                new Color(.32f, .43f, .32f, .9f),
+                new Vector2(810f, 122f)
             );
             headerBorder.anchorMin = headerBorder.anchorMax =
                 new Vector2(0.5f, 1f);
             headerBorder.pivot = new Vector2(0.5f, 1f);
             headerBorder.anchoredPosition = new Vector2(0f, -18f);
+            RuntimeUiFactory.Fit(headerBorder, new Vector2(660, 0));
 
             RectTransform header = ui.Panel(
                 "House Header",
                 headerBorder,
-                new Color(0.17f, 0.045f, 0.025f, 0.97f),
+                RuntimeUiFactory.Ink,
                 new Vector2(806f, 118f)
             );
 
+            ui.Trim(header, RuntimeUiFactory.Gold);
             phaseTitle = ui.Label("Phase Title", "FASE CONCLUÍDA", header,
                 38, RuntimeUiFactory.Gold, new Vector2(750f, 54f),
                 TextAnchor.MiddleCenter);
@@ -536,7 +543,7 @@ namespace CatsVsDemons.House
             RectTransform coinPanel = ui.Panel(
                 "House Coins",
                 safeArea,
-                new Color(0.12f, 0.035f, 0.02f, 0.94f),
+                RuntimeUiFactory.Ink,
                 new Vector2(300f, 70f)
             );
             coinPanel.anchorMin = coinPanel.anchorMax = new Vector2(0f, 1f);
@@ -548,7 +555,7 @@ namespace CatsVsDemons.House
 
             houseInstruction = ui.Label(
                 "House Instruction",
-                "COMPUTADOR: LOJA  •  PERFIL: EQUIPAMENTO DO KIN  •  PRÓXIMA FASE",
+                "Equipe Kin na loja e prepare-se para a próxima noite.",
                 safeArea,
                 20,
                 Color.white,
@@ -566,7 +573,7 @@ namespace CatsVsDemons.House
                 "Next Phase",
                 "PRÓXIMA FASE",
                 safeArea,
-                new Color(0.63f, 0.075f, 0.035f, 0.97f),
+                RuntimeUiFactory.Gold,
                 new Vector2(300f, 88f)
             );
             RectTransform nextRect =
@@ -599,8 +606,8 @@ namespace CatsVsDemons.House
             RectTransform border = ui.Panel(
                 "Kin Profile Border",
                 safeArea,
-                new Color(0.94f, 0.55f, 0.10f, 0.98f),
-                new Vector2(462f, 704f)
+                new Color(.32f, .43f, .32f, .9f),
+                new Vector2(452f, 694f)
             );
             border.anchorMin = border.anchorMax = new Vector2(0f, 0f);
             border.pivot = new Vector2(0f, 0f);
@@ -609,9 +616,11 @@ namespace CatsVsDemons.House
             RectTransform panel = ui.Panel(
                 "Kin Profile",
                 border,
-                new Color(0.055f, 0.018f, 0.025f, 0.96f),
+                RuntimeUiFactory.Ink,
                 new Vector2(448f, 690f)
             );
+            ui.Trim(panel, RuntimeUiFactory.Gold);
+            RuntimeUiFactory.Fit(border, new Vector2(850, 290));
             // Keep every stat and value inside the profile card on narrower
             // displays as an additional safeguard to their fixed layout.
             panel.gameObject.AddComponent<RectMask2D>();
@@ -631,7 +640,7 @@ namespace CatsVsDemons.House
             RectTransform portraitFrame = ui.Panel(
                 "Kin Preview Frame",
                 panel,
-                new Color(0.010f, 0.028f, 0.075f, 0.98f),
+                new Color(.13f, .23f, .21f, 1),
                 new Vector2(370f, 266f)
             );
             portraitFrame.anchoredPosition = new Vector2(0f, 96f);
@@ -643,10 +652,10 @@ namespace CatsVsDemons.House
 
             Button rotatePreview = ui.Button(
                 "Rotate Kin Preview",
-                "GIRAR\nKIN",
+                "GIRAR",
                 portraitFrame,
-                new Color(0.57f, 0.20f, 0.04f, 0.96f),
-                new Vector2(112f, 44f)
+                RuntimeUiFactory.Jade,
+                new Vector2(124f, 50f)
             );
             RectTransform rotateRect = (RectTransform)rotatePreview.transform;
             rotateRect.anchorMin = rotateRect.anchorMax =
@@ -656,13 +665,13 @@ namespace CatsVsDemons.House
             rotatePreview.onClick.AddListener(RotateKinPreview);
 
             kinHealthProgress = CreateKinProgressBar(panel, "VIDA", -80f,
-                new Color(0.92f, 0.18f, 0.12f), out kinHealthValue);
+                RuntimeUiFactory.Coral, out kinHealthValue);
             kinEnergyProgress = CreateKinProgressBar(panel, "ENERGIA", -150f,
-                new Color(0.18f, 0.75f, 0.34f), out kinEnergyValue);
+                new Color(.43f, .69f, .51f), out kinEnergyValue);
             kinAttackProgress = CreateKinProgressBar(panel, "ATAQUE", -220f,
-                new Color(0.98f, 0.60f, 0.10f), out kinAttackValue);
+                RuntimeUiFactory.Gold, out kinAttackValue);
             kinSpecialProgress = CreateKinProgressBar(panel, "GOLPE", -290f,
-                new Color(0.56f, 0.34f, 0.95f), out kinSpecialValue);
+                new Color(.51f, .66f, .72f), out kinSpecialValue);
         }
 
         private Image CreateKinProgressBar(Transform parent, string label,
@@ -760,6 +769,7 @@ namespace CatsVsDemons.House
 
         private void RotateKinPreview()
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             kinPreviewYaw = Mathf.Repeat(kinPreviewYaw + 180f, 360f);
             if (kinPreviewRoot == null)
             {
@@ -838,7 +848,7 @@ namespace CatsVsDemons.House
             kinPreviewCamera.orthographicSize = 1.7f;
             kinPreviewCamera.clearFlags = CameraClearFlags.SolidColor;
             kinPreviewCamera.backgroundColor =
-                new Color(0.010f, 0.028f, 0.075f, 1f);
+                new Color(.10f, .19f, .17f, 1f);
             kinPreviewCamera.cullingMask = 1 << KinPreviewLayer;
             kinPreviewCamera.nearClipPlane = 0.05f;
             kinPreviewCamera.farClipPlane = 20f;
@@ -863,6 +873,22 @@ namespace CatsVsDemons.House
             clone.transform.localPosition = source.localPosition;
             clone.transform.localRotation = source.localRotation;
             clone.transform.localScale = source.localScale;
+            foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true)) renderer.forceRenderingOff = false;
+            // This is a snapshot of the equipped gameplay model, including its gear.
+            // Preview cameras must not run movement, rig setup or equipment effects.
+            foreach (MonoBehaviour behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))
+                behaviour.enabled = false;
+            Transform wardrobe = clone.transform.GetComponentsInChildren<Transform>(true).
+                FirstOrDefault(t => t.name == "Equipped Kin Wardrobe");
+            if (wardrobe != null)
+                foreach (Renderer renderer in wardrobe.GetComponentsInChildren<Renderer>(true)) renderer.enabled = true;
+            MeshFilter body = clone.GetComponentInChildren<MeshFilter>(true);
+            SkinnedMeshRenderer bodyRig = clone.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (body != null && (bodyRig == null || !bodyRig.enabled))
+            {
+                MeshRenderer bodyRenderer = body.GetComponent<MeshRenderer>();
+                if (bodyRenderer != null) bodyRenderer.enabled = true;
+            }
         }
 
         private static Transform FindLatestChild(Transform parent,
@@ -923,26 +949,29 @@ namespace CatsVsDemons.House
             RectTransform shade = ui.Panel(
                 "Computer Overlay",
                 safeArea,
-                new Color(0.004f, 0.009f, 0.025f, 0.96f),
+                RuntimeUiFactory.Veil,
                 Vector2.zero
             );
             Stretch(shade);
             shopPanel = shade.gameObject;
+            shopPanel.AddComponent<HudReveal>();
 
             RectTransform goldFrame = ui.Panel(
                 "Computer Gold Frame",
                 shade,
-                new Color(0.88f, 0.48f, 0.08f, 1f),
-                new Vector2(1580f, 990f)
+                new Color(.32f, .43f, .32f, 1),
+                new Vector2(1570f, 980f)
             );
             RectTransform computer = ui.Panel(
                 "Kin Computer",
                 goldFrame,
-                new Color(0.075f, 0.024f, 0.018f, 1f),
+                RuntimeUiFactory.Ink,
                 new Vector2(1564f, 974f)
             );
 
-            Text title = ui.Label("Shop Title", "COMPUTADOR DO KIN",
+            RuntimeUiFactory.Fit(goldFrame, new Vector2(72, 72));
+            ui.Trim(computer, RuntimeUiFactory.Gold, true);
+            Text title = ui.Label("Shop Title", "LOJA DO KIN",
                 computer, 40, RuntimeUiFactory.Gold,
                 new Vector2(720f, 58f), TextAnchor.MiddleCenter);
             ((RectTransform)title.transform).anchoredPosition =
@@ -955,7 +984,7 @@ namespace CatsVsDemons.House
                 new Vector2(-625f, 438f);
 
             Button close = ui.Button("Close Shop", "FECHAR", computer,
-                new Color(0.56f, 0.07f, 0.035f), new Vector2(210f, 58f));
+                RuntimeUiFactory.Jade, new Vector2(210f, 58f));
             ((RectTransform)close.transform).anchoredPosition =
                 new Vector2(645f, 438f);
             close.onClick.AddListener(() => shopPanel.SetActive(false));
@@ -968,13 +997,12 @@ namespace CatsVsDemons.House
                     $"Shop {categories[index]}",
                     categories[index],
                     computer,
-                    index == 2
-                        ? new Color(0.45f, 0.15f, 0.55f)
-                        : new Color(0.45f, 0.075f, 0.035f),
+                    RuntimeUiFactory.Jade,
                     new Vector2(285f, 62f)
                 );
                 ((RectTransform)categoryButton.transform).anchoredPosition =
                     new Vector2((index - 1) * 315f, 370f);
+                categoryButtons[index] = categoryButton;
                 categoryButton.onClick.AddListener(
                     () => SelectShopCategory(category));
             }
@@ -982,10 +1010,10 @@ namespace CatsVsDemons.House
             catalogFrame = ui.Panel(
                 "Catalog Frame",
                 computer,
-                new Color(0.015f, 0.012f, 0.015f, 1f),
-                new Vector2(1450f, 690f)
+                new Color(.10f, .2f, .17f, 1),
+                new Vector2(1450f, 650f)
             );
-            catalogFrame.anchoredPosition = new Vector2(0f, -5f);
+            catalogFrame.anchoredPosition = new Vector2(0f, -30f);
 
             catalogArtworkRect = ui.Rect("Catalog Artwork", catalogFrame);
             catalogArtwork =
@@ -999,7 +1027,7 @@ namespace CatsVsDemons.House
             RectTransform selectedPanel = ui.Panel(
                 "Selected Item",
                 computer,
-                new Color(0.88f, 0.77f, 0.57f, 0.98f),
+                RuntimeUiFactory.Paper,
                 new Vector2(1110f, 104f)
             );
             selectedPanel.anchoredPosition = new Vector2(-157f, -421f);
@@ -1019,7 +1047,7 @@ namespace CatsVsDemons.House
                 "Shop Action",
                 "SELECIONE",
                 computer,
-                new Color(0.12f, 0.42f, 0.18f, 1f),
+                RuntimeUiFactory.Jade,
                 new Vector2(300f, 104f)
             );
             ((RectTransform)shopActionButton.transform).anchoredPosition =
@@ -1028,16 +1056,17 @@ namespace CatsVsDemons.House
             shopActionLabel = shopActionButton.GetComponentInChildren<Text>();
 
             shopStatus = ui.Label("Shop Status", "", computer, 18,
-                new Color(0.95f, 0.73f, 0.25f), new Vector2(720f, 32f),
+                RuntimeUiFactory.Gold, new Vector2(720f, 32f),
                 TextAnchor.MiddleCenter);
             ((RectTransform)shopStatus.transform).anchoredPosition =
-                new Vector2(0f, 329f);
+                new Vector2(0f, 319f);
 
             shopPanel.SetActive(false);
         }
 
         private void ShowShop()
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             shopPanel.SetActive(true);
             shopPanel.transform.SetAsLastSibling();
             shopStatus.text =
@@ -1049,6 +1078,13 @@ namespace CatsVsDemons.House
         private void SelectShopCategory(HouseShopCategory category)
         {
             selectedCategory = category;
+            for (int i = 0; i < categoryButtons.Length; i++)
+            {
+                Button tab = categoryButtons[i]; bool active = i == (int)category;
+                tab.GetComponent<Image>().color = active ? RuntimeUiFactory.Gold : RuntimeUiFactory.Jade;
+                tab.GetComponentInChildren<Text>().color = active ? RuntimeUiFactory.Ink : RuntimeUiFactory.Paper;
+                tab.GetComponent<HudMotion>().SetSelected(active);
+            }
             IReadOnlyList<HouseShopItem> items = HouseShopCatalog.Get(category);
             selectedItem = items.Count > 0 ? items[0] : null;
             RefreshCatalog();
@@ -1057,6 +1093,7 @@ namespace CatsVsDemons.House
 
         private void RefreshCatalog()
         {
+            catalogButtons.Clear();
             for (int index = catalogOverlay.childCount - 1; index >= 0; index--)
             {
                 Destroy(catalogOverlay.GetChild(index).gameObject);
@@ -1112,25 +1149,19 @@ namespace CatsVsDemons.House
             rect.offsetMax = new Vector2(-5f, -5f);
 
             Image image = rect.gameObject.AddComponent<Image>();
-            image.sprite = null;
-            image.color = drawFullCard
-                ? new Color(0.88f, 0.76f, 0.55f, 0.98f)
-                : new Color(1f, 0.58f, 0.10f, 0.015f);
-            Button button = rect.gameObject.AddComponent<Button>();
-            ColorBlock colors = button.colors;
-            colors.normalColor = image.color;
-            colors.highlightedColor = drawFullCard
-                ? new Color(1f, 0.86f, 0.59f, 1f)
-                : new Color(1f, 0.58f, 0.10f, 0.22f);
-            colors.pressedColor = new Color(0.95f, 0.48f, 0.08f, 0.55f);
-            colors.selectedColor = colors.highlightedColor;
-            button.colors = colors;
+            image.sprite = GameUiArt.Rounded; image.type = Image.Type.Sliced;
+            image.color = drawFullCard ? RuntimeUiFactory.Paper : new Color(.85f, .72f, .45f, .015f);
+            Button button = rect.gameObject.AddComponent<Button>(); RuntimeUiFactory.ConfigureButton(button);
+            button.targetGraphic = image; rect.gameObject.AddComponent<HudMotion>();
+            ui.Trim(rect, RuntimeUiFactory.Gold);
+            rect.Find("Fine Gold Contour").gameObject.SetActive(false);
+            catalogButtons[item] = button;
             button.onClick.AddListener(() => SelectItem(item));
 
             if (drawFullCard)
             {
                 Text name = ui.Label("Upgrade Name", item.Name.ToUpperInvariant(),
-                    rect, 27, new Color(0.43f, 0.055f, 0.025f),
+                    rect, 27, RuntimeUiFactory.Jade,
                     new Vector2(350f, 58f), TextAnchor.MiddleCenter);
                 ((RectTransform)name.transform).anchorMin =
                     ((RectTransform)name.transform).anchorMax =
@@ -1148,10 +1179,11 @@ namespace CatsVsDemons.House
                 "Item State",
                 rect,
                 HouseShopSave.IsEquipped(item)
-                    ? new Color(0.08f, 0.46f, 0.18f, 0.96f)
-                    : new Color(0.34f, 0.045f, 0.025f, 0.94f),
+                    ? RuntimeUiFactory.Jade
+                    : RuntimeUiFactory.Ink,
                 new Vector2(drawFullCard ? 190f : 165f, 42f)
             );
+            badge.GetComponent<Image>().raycastTarget = false;
             badge.anchorMin = badge.anchorMax = new Vector2(0.5f, 1f);
             badge.pivot = new Vector2(0.5f, 1f);
             badge.anchoredPosition = new Vector2(0f, -8f);
@@ -1162,6 +1194,7 @@ namespace CatsVsDemons.House
 
         private void SelectItem(HouseShopItem item)
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             selectedItem = item;
             RefreshSelectedItem();
             shopStatus.text = HouseShopSave.IsOwned(item)
@@ -1182,6 +1215,12 @@ namespace CatsVsDemons.House
                 return;
             }
 
+            foreach (var entry in catalogButtons)
+            {
+                bool chosen = entry.Key == selectedItem;
+                entry.Value.transform.Find("Fine Gold Contour").gameObject.SetActive(chosen);
+                entry.Value.GetComponent<HudMotion>().SetSelected(chosen);
+            }
             selectedName.text = selectedItem.Name.ToUpperInvariant();
             selectedDescription.text = selectedItem.Description;
             bool owned = HouseShopSave.IsOwned(selectedItem);
@@ -1208,6 +1247,7 @@ namespace CatsVsDemons.House
 
         private void UseSelectedItem()
         {
+            if (KinGuideOverlay.IsOpen || KinGuideOverlay.ConsumedInputThisFrame) return;
             if (selectedItem == null)
             {
                 return;

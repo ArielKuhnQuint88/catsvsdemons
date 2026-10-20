@@ -32,6 +32,7 @@ namespace CatsVsDemons.Defense
 
         private void Update()
         {
+            if (Time.timeScale <= 0f) return;
             if (Portals.Count < 2 || Time.time < nextTeleportTime)
             {
                 return;

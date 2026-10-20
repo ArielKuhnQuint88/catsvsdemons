@@ -8,7 +8,21 @@ Kin, um gato branco samurai, precisa proteger uma casa oriental contra ondas de 
 
 ## Status
 
-🧪 Pré-produção / protótipo digital em Unity.
+Atualização **1.0.2 / código 3**: Kin vira nas oito direções, inclusive no
+combate; os golpes acompanham a caminhada e os demônios preservam suas formas.
+Veja [correções de movimento e animação](docs/CHARACTER_MOTION_FIX.md).
+
+Versão em preparação para Android: campanha de 12 fases, loja, HUD animado e
+exportador AAB. A compilação na Unity e a validação em dispositivo ainda são
+necessárias antes da publicação. Veja o [guia de exportação para o Play Console](docs/PLAY_CONSOLE_RELEASE.md).
+
+A revisão visual inclui caminhos contínuos, jardim japonês com construções e
+vegetação variadas, montanhas, paleta integrada e HUD compacto. Veja as
+[mudanças e instruções para atualizar no PC](docs/ART_DIRECTION_POLISH.md).
+
+O [guia do Kin e os controles de construção](docs/GUIDE_KIN_AND_CONSTRUCTION.md)
+estão acessíveis durante a partida, pausa e loja. A revisão também preserva a
+paleta do personagem e acrescenta textura de detalhe ao pelo e à roupa.
 
 ## Loop principal
 

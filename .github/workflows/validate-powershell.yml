@@ -3,11 +3,11 @@ name: Validate PowerShell
 on:
   push:
     paths:
-      - "Tools/Git/*.ps1"
+      - "Tools/**/*.ps1"
       - ".github/workflows/validate-powershell.yml"
   pull_request:
     paths:
-      - "Tools/Git/*.ps1"
+      - "Tools/**/*.ps1"
       - ".github/workflows/validate-powershell.yml"
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
         shell: powershell
         run: |
           $failed = $false
-          Get-ChildItem "Tools/Git/*.ps1" | ForEach-Object {
+          Get-ChildItem "Tools" -Filter "*.ps1" -Recurse | ForEach-Object {
               $tokens = $null
               $errors = $null
               [System.Management.Automation.Language.Parser]::ParseFile(
@@ -38,3 +38,13 @@ jobs:
           if ($failed) {
               exit 1
           }
+
+      - name: Set up Java for signing checks
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Check Play Console export helpers
+        shell: powershell
+        run: ./Tools/Validation/PlayConsoleExportChecks.ps1
